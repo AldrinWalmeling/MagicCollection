@@ -1197,7 +1197,8 @@ QLabel#PrimaryCardLabel {
 ========================================================= */
 
 QFrame#CardSelectionPanel,
-QFrame#DeckCollectionPanel {
+QFrame#DeckCollectionPanel,
+QFrame#DeckScryfallPanel {
     background-color: #141518;
     border: 1px solid #303339;
     border-radius: 12px;

@@ -5,11 +5,18 @@ import requests
 from PySide6.QtCore import (
     Qt,
     Signal,
+    Slot,
     QObject,
     QTimer,
     QRunnable,
     QThreadPool,
     QSize,
+    QEvent,
+)
+
+from services.scryfall import (
+    autocomplete_card_names,
+    get_card_by_name,
 )
 
 from PySide6.QtGui import (
@@ -40,6 +47,9 @@ from database import (
     get_all_cards,
     get_card_by_id,
     get_card_image_path,
+    get_card_id_by_scryfall_id,
+    add_card as database_add_card,
+    add_card_to_deck,
 )
 
 from services.scryfall_symbols import (
@@ -2895,6 +2905,1340 @@ class DeckCollectionPanel(QFrame):
 
 
 # =========================================================
+# WORKER — SCRYFALL
+# =========================================================
+
+class ScryfallWorkerSignals(QObject):
+
+    finished = Signal(object)
+    error = Signal(str)
+
+
+class ScryfallWorker(QRunnable):
+
+    def __init__(
+        self,
+        text,
+    ):
+
+        super().__init__()
+
+        self.text = str(
+            text or ""
+        ).strip()
+
+        self.signals = ScryfallWorkerSignals()
+
+    def run(
+        self,
+    ):
+
+        try:
+
+            if not self.text:
+
+                self.signals.finished.emit(
+                    []
+                )
+
+                return
+
+            response = requests.get(
+                "https://api.scryfall.com/cards/search",
+                params={
+                    "q": self.text,
+                    "unique": "prints",
+                    "order": "name",
+                },
+                headers={
+                    "User-Agent":
+                        "MagicCollection/1.0"
+                },
+                timeout=10,
+            )
+
+            response.raise_for_status()
+
+            payload = response.json()
+
+            cards = payload.get(
+                "data",
+                []
+            )
+
+            if not isinstance(
+                cards,
+                list,
+            ):
+
+                cards = []
+
+            results = []
+
+            for card in cards[:20]:
+
+                if not isinstance(
+                    card,
+                    dict,
+                ):
+                    continue
+
+                image_uris = (
+                    card.get(
+                        "image_uris"
+                    )
+                    or {}
+                )
+
+                results.append(
+                    {
+                        "name":
+                            card.get(
+                                "name"
+                            )
+                            or "Carta",
+
+                        "set_name":
+                            card.get(
+                                "set_name"
+                            )
+                            or "",
+
+                        "collector_number":
+                            card.get(
+                                "collector_number"
+                            )
+                            or "",
+
+                        "mana_cost":
+                            card.get(
+                                "mana_cost"
+                            )
+                            or "",
+
+                        "type_line":
+                            card.get(
+                                "type_line"
+                            )
+                            or "",
+
+                        "oracle_text":
+                            card.get(
+                                "oracle_text"
+                            )
+                            or "",
+
+                        "image_url":
+                            image_uris.get(
+                                "normal"
+                            )
+                            or "",
+
+                        "scryfall_id":
+                            card.get(
+                                "id"
+                            )
+                            or "",
+
+                        "set":
+                            card.get(
+                                "set"
+                            )
+                            or "",
+
+                        "lang":
+                            card.get(
+                                "lang"
+                            )
+                            or "",
+                    }
+                )
+
+            self.signals.finished.emit(
+                results
+            )
+
+        except requests.RequestException as error:
+
+            self.signals.error.emit(
+                f"Falha de conexão com o Scryfall: {error}"
+            )
+
+        except Exception as error:
+
+            self.signals.error.emit(
+                f"Erro no worker do Scryfall: {error}"
+            )
+
+
+# =========================================================
+# DENTRO DE DeckScryfallPanel
+# =========================================================
+
+def __init__(
+    self,
+    parent=None,
+):
+
+    super().__init__(parent)
+
+    self.setObjectName(
+        "DeckScryfallPanell"
+    )
+
+    self.setFixedWidth(
+        380
+    )
+
+    self.deck_id = None
+
+    self.all_cards = []
+
+    self.filtered_cards = []
+
+    self.search_pool = QThreadPool(
+        self
+    )
+
+    self.search_pool.setMaxThreadCount(
+        2
+    )
+
+    self.current_search_id = 0
+
+    # Mantém referências aos workers ativos.
+    self._active_workers = {}
+
+    self.search_timer = QTimer(
+        self
+    )
+
+    self.search_timer.setSingleShot(
+        True
+    )
+
+    self.search_timer.setInterval(
+        300
+    )
+
+    self.search_timer.timeout.connect(
+        self.search_scryfall
+    )
+
+    self.setup_ui()
+
+
+# =========================================================
+# PESQUISAR NO SCRYFALL
+# =========================================================
+
+def search_scryfall(
+    self,
+):
+
+    text = (
+        self.search_input
+        .text()
+        .strip()
+    )
+
+    if not text:
+
+        return
+
+    self.current_search_id += 1
+
+    search_id = (
+        self.current_search_id
+    )
+
+    self.clear_list()
+
+    self.status_label.setText(
+        "Pesquisando no Scryfall..."
+    )
+
+    worker = ScryfallWorker(
+        text
+    )
+
+    self._active_workers[
+        search_id
+    ] = worker
+
+    worker.signals.finished.connect(
+        self._on_scryfall_finished
+    )
+
+    worker.signals.error.connect(
+        self._on_scryfall_error
+    )
+
+    self.search_pool.start(
+        worker
+    )
+
+
+# =========================================================
+# RESULTADO DO WORKER
+# IMPORTANTE:
+# ESSE MÉTODO RODA NA THREAD PRINCIPAL
+# =========================================================
+
+@Slot(object)
+def _on_scryfall_finished(
+    self,
+    cards,
+):
+
+    # Descobre o worker atual pelo texto/
+    # busca mais recente.
+    search_id = (
+        self.current_search_id
+    )
+
+    self._active_workers.pop(
+        search_id,
+        None
+    )
+
+    if not self.isVisible():
+
+        return
+
+    cards = list(
+        cards or []
+    )
+
+    self.all_cards = cards
+
+    self.filtered_cards = cards
+
+    if not cards:
+
+        self.status_label.setText(
+            "Nenhuma carta encontrada."
+        )
+
+    else:
+
+        self.status_label.setText(
+            f"{len(cards)} "
+            (
+                "resultado encontrado."
+                if len(cards) == 1
+                else "resultados encontrados."
+            )
+        )
+
+    self.render_cards(
+        cards
+    )
+
+
+# =========================================================
+# ERRO DO WORKER
+# =========================================================
+
+@Slot(str)
+def _on_scryfall_error(
+    self,
+    error,
+):
+
+    search_id = (
+        self.current_search_id
+    )
+
+    self._active_workers.pop(
+        search_id,
+        None
+    )
+
+    if not self.isVisible():
+
+        return
+
+    self.clear_list()
+
+    self.status_label.setText(
+        "Erro ao pesquisar no Scryfall."
+    )
+
+    print(
+        "[SCRYFALL] Erro:",
+        error,
+    )
+
+# =========================================================
+# PAINEL LATERAL — MAGIC / SCRYFALL
+# =========================================================
+
+class DeckScryfallPanel(QFrame):
+
+    closed = Signal()
+    cardAdded = Signal(int)
+
+    def __init__(
+        self,
+        parent=None,
+    ):
+        super().__init__(parent)
+
+        self.setObjectName(
+            "DeckScryfallPanel"
+        )
+
+        self.setFixedWidth(
+            380
+        )
+
+        self.deck_id = None
+
+        self.all_cards = []
+        self.filtered_cards = []
+
+        self.search_pool = QThreadPool(
+            self
+        )
+
+        self.search_pool.setMaxThreadCount(
+            2
+        )
+
+        self.current_search_id = 0
+
+        self.search_timer = QTimer(
+            self
+        )
+
+        self.search_timer.setSingleShot(
+            True
+        )
+
+        self.search_timer.setInterval(
+            300
+        )
+
+        self.search_timer.timeout.connect(
+            self.search_scryfall
+        )
+
+        self.setup_ui()
+
+    # =====================================================
+    # SETUP
+    # =====================================================
+
+    def setup_ui(self):
+
+        layout = QVBoxLayout(
+            self
+        )
+
+        layout.setContentsMargins(
+            16,
+            16,
+            16,
+            16,
+        )
+
+        layout.setSpacing(
+            12
+        )
+
+        # =================================================
+        # HEADER
+        # =================================================
+
+        header = QHBoxLayout()
+
+        title = QLabel(
+            "Magic / Scryfall"
+        )
+
+        title.setObjectName(
+            "DeckPanelTitle"
+        )
+
+        header.addWidget(
+            title
+        )
+
+        header.addStretch()
+
+        self.close_button = QPushButton(
+            "×"
+        )
+
+        self.close_button.setObjectName(
+            "DeckPanelCloseButton"
+        )
+
+        self.close_button.setFixedSize(
+            32,
+            32,
+        )
+
+        self.close_button.setCursor(
+            Qt.CursorShape.PointingHandCursor
+        )
+
+        self.close_button.setToolTip(
+            "Fechar painel"
+        )
+
+        self.close_button.clicked.connect(
+            self.close_panel
+        )
+
+        header.addWidget(
+            self.close_button
+        )
+
+        layout.addLayout(
+            header
+        )
+
+        # =================================================
+        # DESCRIÇÃO
+        # =================================================
+
+        description = QLabel(
+            "Pesquise cartas do Magic "
+            "diretamente no Scryfall."
+        )
+
+        description.setObjectName(
+            "DeckPanelStatus"
+        )
+
+        description.setWordWrap(
+            True
+        )
+
+        layout.addWidget(
+            description
+        )
+
+        # =================================================
+        # BUSCA
+        # =================================================
+
+        search_frame = QFrame()
+
+        search_frame.setObjectName(
+            "DeckPanelSearchFrame"
+        )
+
+        search_layout = QHBoxLayout(
+            search_frame
+        )
+
+        search_layout.setContentsMargins(
+            10,
+            0,
+            10,
+            0,
+        )
+
+        search_layout.setSpacing(
+            8
+        )
+
+        search_icon = QLabel(
+            "🔎"
+        )
+
+        search_layout.addWidget(
+            search_icon
+        )
+
+        self.search_input = QLineEdit()
+
+        self.search_input.setPlaceholderText(
+            "Pesquisar carta..."
+        )
+
+        self.search_input.setFrame(
+            False
+        )
+
+        self.search_input.textChanged.connect(
+            self.schedule_search
+        )
+
+        self.search_input.installEventFilter(
+            self
+        )
+
+        search_layout.addWidget(
+            self.search_input,
+            1,
+        )
+
+        layout.addWidget(
+            search_frame
+        )
+
+        # =================================================
+        # STATUS
+        # =================================================
+
+        self.status_label = QLabel(
+            "Digite o nome de uma carta."
+        )
+
+        self.status_label.setObjectName(
+            "DeckPanelStatus"
+        )
+
+        self.status_label.setWordWrap(
+            True
+        )
+
+        layout.addWidget(
+            self.status_label
+        )
+
+        # =================================================
+        # LISTA
+        # =================================================
+
+        self.scroll_area = QScrollArea()
+
+        self.scroll_area.setWidgetResizable(
+            True
+        )
+
+        self.scroll_area.setFrameShape(
+            QFrame.Shape.NoFrame
+        )
+
+        self.list_container = QWidget()
+
+        self.list_layout = QVBoxLayout(
+            self.list_container
+        )
+
+        self.list_layout.setContentsMargins(
+            0,
+            0,
+            0,
+            0,
+        )
+
+        self.list_layout.setSpacing(
+            7
+        )
+
+        self.list_layout.setAlignment(
+            Qt.AlignmentFlag.AlignTop
+        )
+
+        self.scroll_area.setWidget(
+            self.list_container
+        )
+
+        layout.addWidget(
+            self.scroll_area,
+            1,
+        )
+
+    # =====================================================
+    # ABRIR
+    # =====================================================
+
+    def open(
+        self,
+        deck_id,
+    ):
+
+        try:
+
+            deck_id = int(
+                deck_id
+            )
+
+        except (
+            TypeError,
+            ValueError,
+        ):
+
+            return
+
+        if deck_id <= 0:
+            return
+
+        self.deck_id = deck_id
+
+        self.search_timer.stop()
+
+        self.search_input.blockSignals(
+            True
+        )
+
+        self.search_input.clear()
+
+        self.search_input.blockSignals(
+            False
+        )
+
+        self.all_cards = []
+        self.filtered_cards = []
+
+        self.clear_list()
+
+        self.status_label.setText(
+            "Digite o nome de uma carta."
+        )
+
+        self.show()
+
+        self.raise_()
+
+        self.search_input.setFocus()
+
+    # =====================================================
+    # BUSCA
+    # =====================================================
+
+    def schedule_search(
+        self,
+        _text,
+    ):
+
+        self.search_timer.stop()
+
+        text = (
+            self.search_input
+            .text()
+            .strip()
+        )
+
+        if not text:
+
+            self.clear_list()
+
+            self.status_label.setText(
+                "Digite o nome de uma carta."
+            )
+
+            return
+
+        self.status_label.setText(
+            "Pesquisando..."
+        )
+
+        self.search_timer.start()
+
+    # =====================================================
+    # PESQUISAR NO SCRYFALL
+    # =====================================================
+
+    def search_scryfall(
+            self,
+    ):
+
+        text = (
+            self.search_input
+            .text()
+            .strip()
+        )
+
+        if not text:
+            return
+
+        self.current_search_id += 1
+
+        search_id = (
+            self.current_search_id
+        )
+
+        self.clear_list()
+
+        self.status_label.setText(
+            "Pesquisando no Scryfall..."
+        )
+
+        worker = ScryfallWorker(
+            text
+        )
+
+        worker.signals.finished.connect(
+            lambda cards,
+                   sid=search_id:
+            self._scryfall_search_finished(
+                sid,
+                cards,
+            )
+        )
+
+        worker.signals.error.connect(
+            lambda error,
+                   sid=search_id:
+            self._scryfall_search_error(
+                sid,
+                error,
+            )
+        )
+
+        self.search_pool.start(
+            worker
+        )
+
+    # =====================================================
+    # SCRYFALL — RESULTADO
+    # =====================================================
+
+    def _scryfall_search_finished(
+            self,
+            search_id,
+            cards,
+    ):
+
+        if (
+                search_id
+                != self.current_search_id
+        ):
+            return
+
+        if not self.isVisible():
+            return
+
+        cards = list(
+            cards or []
+        )
+
+        self.all_cards = cards
+
+        self.filtered_cards = cards
+
+        if not cards:
+
+            self.status_label.setText(
+                "Nenhuma carta encontrada."
+            )
+
+        else:
+
+            self.status_label.setText(
+                f"{len(cards)} "
+                f"{'resultado encontrado' if len(cards) == 1 else 'resultados encontrados'}."
+            )
+
+        self.render_cards(
+            cards
+        )
+
+    # =====================================================
+    # SCRYFALL — ERRO
+    # =====================================================
+
+    def _scryfall_search_error(
+            self,
+            search_id,
+            error,
+    ):
+
+        if (
+                search_id
+                != self.current_search_id
+        ):
+            return
+
+        self.clear_list()
+
+        self.status_label.setText(
+            "Erro ao pesquisar no Scryfall."
+        )
+
+        print(
+            "[SCRYFALL] Erro:",
+            error,
+        )
+    # =====================================================
+    # RENDERIZAR RESULTADOS
+    # =====================================================
+
+    def render_cards(
+        self,
+        cards,
+    ):
+
+        self.clear_list()
+
+        self.filtered_cards = list(
+            cards or []
+        )
+
+        if not self.filtered_cards:
+
+            empty = QLabel(
+                "Nenhuma carta encontrada."
+            )
+
+            empty.setObjectName(
+                "DeckPanelEmpty"
+            )
+
+            empty.setAlignment(
+                Qt.AlignmentFlag.AlignCenter
+            )
+
+            empty.setWordWrap(
+                True
+            )
+
+            self.list_layout.addWidget(
+                empty
+            )
+
+            return
+
+        for card in self.filtered_cards:
+
+            item = self.create_card_item(
+                card
+            )
+
+            if item:
+
+                self.list_layout.addWidget(
+                    item
+                )
+
+        self.list_layout.addStretch()
+
+    # =====================================================
+    # ITEM DA CARTA
+    # =====================================================
+
+    def create_card_item(
+        self,
+        card,
+    ):
+
+        if not isinstance(
+            card,
+            dict,
+        ):
+            return None
+
+        name = str(
+            card.get(
+                "name",
+                "Carta",
+            )
+            or "Carta"
+        )
+
+        set_name = str(
+            card.get(
+                "set_name",
+                "",
+            )
+            or ""
+        )
+
+        collector_number = str(
+            card.get(
+                "collector_number",
+                "",
+            )
+            or ""
+        )
+
+        item = QPushButton()
+
+        item.setObjectName(
+            "DeckScryfallCardItem"
+        )
+
+        item.setCursor(
+            Qt.CursorShape.PointingHandCursor
+        )
+
+        item.setMinimumHeight(
+            62
+        )
+
+        text = name
+
+        if set_name:
+
+            text += (
+                f"\n{set_name}"
+            )
+
+        if collector_number:
+
+            text += (
+                f" • {collector_number}"
+            )
+
+        item.setText(
+            text
+        )
+
+        item.setToolTip(
+            "Adicionar esta carta ao deck"
+        )
+
+        item.clicked.connect(
+            lambda checked=False,
+            card_data=card:
+            self.add_card(
+                card_data
+            )
+        )
+
+        return item
+
+    # =====================================================
+    # ADICIONAR CARTA
+    # =====================================================
+
+    def add_card(
+            self,
+            card,
+    ):
+
+        if not self.deck_id:
+            self.status_label.setText(
+                "Nenhum deck está aberto."
+            )
+
+            return
+
+        if not isinstance(
+                card,
+                dict,
+        ):
+            self.status_label.setText(
+                "Dados da carta inválidos."
+            )
+
+            return
+
+        name = str(
+            card.get(
+                "name",
+                "Carta",
+            )
+            or "Carta"
+        ).strip()
+
+        scryfall_id = str(
+            card.get(
+                "scryfall_id",
+                "",
+            )
+            or ""
+        ).strip()
+
+        if not name:
+            self.status_label.setText(
+                "A carta não possui um nome válido."
+            )
+
+            return
+
+        if not scryfall_id:
+            self.status_label.setText(
+                "A carta não possui um Scryfall ID válido."
+            )
+
+            return
+
+        self.status_label.setText(
+            f"Adicionando {name}..."
+        )
+
+        # =================================================
+        # CADASTRAR / ATUALIZAR CARTA NA COLEÇÃO
+        # =================================================
+
+        collection_success = database_add_card(
+            card,
+            1,
+        )
+
+        if not collection_success:
+            self.status_label.setText(
+                f"Não foi possível cadastrar "
+                f"{name} na coleção."
+            )
+
+            return
+
+        # =================================================
+        # OBTER ID LOCAL DA CARTA
+        # =================================================
+
+        card_id = get_card_id_by_scryfall_id(
+            scryfall_id
+        )
+
+        if not card_id:
+            self.status_label.setText(
+                f"{name} foi cadastrada, "
+                "mas não foi possível obter "
+                "o ID local da carta."
+            )
+
+            return
+
+        # =================================================
+        # ADICIONAR AO DECK
+        # =================================================
+
+        deck_success = add_card_to_deck(
+            self.deck_id,
+            card_id,
+            1,
+        )
+
+        if not deck_success:
+            self.status_label.setText(
+                f"{name} foi cadastrada na coleção, "
+                "mas não pôde ser adicionada ao deck."
+            )
+
+            return
+
+        # =================================================
+        # SUCESSO
+        # =================================================
+
+        self.status_label.setText(
+            f"{name} adicionada ao deck."
+        )
+
+        print(
+            "[SCRYFALL] Carta adicionada ao deck:",
+            name,
+            "| card_id=",
+            card_id,
+            "| deck_id=",
+            self.deck_id,
+        )
+
+        # =================================================
+        # AVISAR A PÁGINA DO DECK
+        # =================================================
+
+        self.cardAdded.emit(
+            int(card_id)
+        )
+
+    # =====================================================
+    # LIMPAR LISTA
+    # =====================================================
+
+    def clear_list(
+        self,
+    ):
+
+        while self.list_layout.count():
+
+            item = self.list_layout.takeAt(
+                0
+            )
+
+            widget = item.widget()
+
+            if widget:
+
+                widget.deleteLater()
+
+    # =====================================================
+    # TECLADO
+    # =====================================================
+
+    def eventFilter(
+        self,
+        obj,
+        event,
+    ):
+
+        if (
+            obj
+            is self.search_input
+            and event.type()
+            == QEvent.Type.KeyPress
+        ):
+
+            key = event.key()
+
+            if key == Qt.Key.Key_Down:
+
+                self.move_selection(
+                    1
+                )
+
+                return True
+
+            if key == Qt.Key.Key_Up:
+
+                self.move_selection(
+                    -1
+                )
+
+                return True
+
+            if key in (
+                Qt.Key.Key_Return,
+                Qt.Key.Key_Enter,
+            ):
+
+                self.activate_selected()
+
+                return True
+
+            if key == Qt.Key.Key_Escape:
+
+                self.close_panel()
+
+                return True
+
+        return super().eventFilter(
+            obj,
+            event
+        )
+
+    # =====================================================
+    # NAVEGAR PELOS RESULTADOS
+    # =====================================================
+
+    def move_selection(
+        self,
+        direction,
+    ):
+
+        buttons = []
+
+        for index in range(
+            self.list_layout.count()
+        ):
+
+            item = self.list_layout.itemAt(
+                index
+            )
+
+            widget = item.widget()
+
+            if isinstance(
+                widget,
+                QPushButton,
+            ):
+
+                buttons.append(
+                    widget
+                )
+
+        if not buttons:
+            return
+
+        current_index = -1
+
+        for index, button in enumerate(
+            buttons
+        ):
+
+            if button.hasFocus():
+
+                current_index = index
+
+                break
+
+        if current_index < 0:
+
+            new_index = (
+                0
+                if direction > 0
+                else len(buttons) - 1
+            )
+
+        else:
+
+            new_index = (
+                current_index
+                + direction
+            )
+
+            new_index = max(
+                0,
+                min(
+                    new_index,
+                    len(buttons) - 1,
+                )
+            )
+
+        buttons[
+            new_index
+        ].setFocus()
+
+        self.scroll_area.ensureWidgetVisible(
+            buttons[
+                new_index
+            ]
+        )
+
+    # =====================================================
+    # ATIVAR SELECIONADO
+    # =====================================================
+
+    def activate_selected(
+        self,
+    ):
+
+        focused = self.focusWidget()
+
+        if isinstance(
+            focused,
+            QPushButton,
+        ):
+
+            focused.click()
+
+    # =====================================================
+    # FECHAR
+    # =====================================================
+
+    def close_panel(
+            self,
+    ):
+
+        self.current_search_id += 1
+
+        self.search_timer.stop()
+
+        self.hide()
+
+        self.closed.emit()
+
+    # =====================================================
+    # CLOSE EVENT
+    # =====================================================
+
+    def closeEvent(
+            self,
+            event,
+    ):
+
+        self.current_search_id += 1
+
+        self.search_timer.stop()
+
+        self.hide()
+
+        self.closed.emit()
+
+        event.ignore()
+
+
+# =========================================================
 # DIALOG — NOME
 # =========================================================
 
@@ -2908,15 +4252,21 @@ class DeckNameDialog(QDialog):
     ):
         super().__init__(parent)
 
-        self.setWindowTitle(title)
+        self.setWindowTitle(
+            title
+        )
 
-        self.setMinimumWidth(420)
+        self.setMinimumWidth(
+            420
+        )
 
         self.setStyleSheet(
             DARK_THEME
         )
 
-        layout = QVBoxLayout(self)
+        layout = QVBoxLayout(
+            self
+        )
 
         layout.setContentsMargins(
             24,
@@ -2925,7 +4275,9 @@ class DeckNameDialog(QDialog):
             24,
         )
 
-        layout.setSpacing(14)
+        layout.setSpacing(
+            14
+        )
 
         label = QLabel(
             "Nome do deck"
@@ -2935,7 +4287,9 @@ class DeckNameDialog(QDialog):
             "DeckNameDialogLabel"
         )
 
-        layout.addWidget(label)
+        layout.addWidget(
+            label
+        )
 
         self.input = QLineEdit()
 
@@ -2975,7 +4329,9 @@ class DeckNameDialog(QDialog):
             self.validate
         )
 
-    def validate(self):
+    def validate(
+        self,
+    ):
 
         if not self.input.text().strip():
 
@@ -2985,7 +4341,9 @@ class DeckNameDialog(QDialog):
 
         self.accept()
 
-    def get_name(self):
+    def get_name(
+        self,
+    ):
 
         return (
             self.input
@@ -3024,7 +4382,9 @@ class DeckCardDetailsDialog(QDialog):
             DARK_THEME
         )
 
-        layout = QHBoxLayout(self)
+        layout = QHBoxLayout(
+            self
+        )
 
         layout.setContentsMargins(
             24,
@@ -3033,7 +4393,9 @@ class DeckCardDetailsDialog(QDialog):
             24,
         )
 
-        layout.setSpacing(24)
+        layout.setSpacing(
+            24
+        )
 
         self.image_label = QLabel()
 
@@ -3071,7 +4433,9 @@ class DeckCardDetailsDialog(QDialog):
 
         info = QWidget()
 
-        info_layout = QVBoxLayout(info)
+        info_layout = QVBoxLayout(
+            info
+        )
 
         info_layout.setContentsMargins(
             0,
@@ -3080,7 +4444,9 @@ class DeckCardDetailsDialog(QDialog):
             0,
         )
 
-        info_layout.setSpacing(10)
+        info_layout.setSpacing(
+            10
+        )
 
         name = QLabel(
             card.get(
@@ -3093,7 +4459,9 @@ class DeckCardDetailsDialog(QDialog):
             "CardDetailName"
         )
 
-        name.setWordWrap(True)
+        name.setWordWrap(
+            True
+        )
 
         info_layout.addWidget(
             name
@@ -3125,7 +4493,9 @@ class DeckCardDetailsDialog(QDialog):
             "CardDetailType"
         )
 
-        type_label.setWordWrap(True)
+        type_label.setWordWrap(
+            True
+        )
 
         info_layout.addWidget(
             type_label
@@ -3172,7 +4542,9 @@ class DeckCardDetailsDialog(QDialog):
             "CardDetailText"
         )
 
-        oracle.setWordWrap(True)
+        oracle.setWordWrap(
+            True
+        )
 
         oracle.setAlignment(
             Qt.AlignmentFlag.AlignTop
@@ -3268,7 +4640,9 @@ class DecksPage(QWidget):
     # SETUP
     # =====================================================
 
-    def setup_ui(self):
+    def setup_ui(
+        self,
+    ):
 
         self.main_layout = QVBoxLayout(
             self
@@ -3281,7 +4655,9 @@ class DecksPage(QWidget):
             28,
         )
 
-        self.main_layout.setSpacing(18)
+        self.main_layout.setSpacing(
+            18
+        )
 
         # -------------------------------------------------
         # HEADER
@@ -3291,7 +4667,9 @@ class DecksPage(QWidget):
 
         title_area = QVBoxLayout()
 
-        title_area.setSpacing(3)
+        title_area.setSpacing(
+            3
+        )
 
         self.title_label = QLabel(
             "Meus decks"
@@ -3437,7 +4815,9 @@ class DecksPage(QWidget):
             0,
         )
 
-        deck_layout.setSpacing(14)
+        deck_layout.setSpacing(
+            14
+        )
 
         # -------------------------------------------------
         # TOOLBAR
@@ -3461,7 +4841,9 @@ class DecksPage(QWidget):
             self.back_button
         )
 
-        toolbar.addSpacing(10)
+        toolbar.addSpacing(
+            10
+        )
 
         self.deck_name_label = QLabel(
             "Deck"
@@ -3538,7 +4920,9 @@ class DecksPage(QWidget):
             0,
         )
 
-        preview_row.setSpacing(14)
+        preview_row.setSpacing(
+            14
+        )
 
         # =================================================
         # CARD — CAPA DO DECK
@@ -3550,8 +4934,6 @@ class DecksPage(QWidget):
             "DeckPreviewSection"
         )
 
-        # IMPORTANTE:
-        # limita o tamanho do card da capa
         preview_section.setMaximumWidth(
             430
         )
@@ -3567,7 +4949,9 @@ class DecksPage(QWidget):
             14,
         )
 
-        preview_layout.setSpacing(14)
+        preview_layout.setSpacing(
+            14
+        )
 
         # -------------------------------------------------
         # IMAGEM DA CAPA
@@ -3727,9 +5111,9 @@ class DecksPage(QWidget):
             14
         )
 
-        # -------------------------------------------------
-        # ÍCONE DA COLEÇÃO
-        # -------------------------------------------------
+        # =================================================
+        # ÍCONE
+        # =================================================
 
         collection_icon = QLabel()
 
@@ -3773,9 +5157,9 @@ class DecksPage(QWidget):
             collection_icon
         )
 
-        # -------------------------------------------------
+        # =================================================
         # INFORMAÇÕES
-        # -------------------------------------------------
+        # =================================================
 
         add_cards_info = QVBoxLayout()
 
@@ -3783,9 +5167,9 @@ class DecksPage(QWidget):
             6
         )
 
-        # -------------------------------------------------
+        # =================================================
         # TÍTULO
-        # -------------------------------------------------
+        # =================================================
 
         add_cards_title = QLabel(
             "Adicionar cartas"
@@ -3799,13 +5183,13 @@ class DecksPage(QWidget):
             add_cards_title
         )
 
-        # -------------------------------------------------
+        # =================================================
         # DESCRIÇÃO
-        # -------------------------------------------------
+        # =================================================
 
         add_cards_description = QLabel(
-            "Adicione cartas vindas da "
-            "sua coleção ao deck."
+            "Adicione cartas da sua coleção "
+            "ou pesquise cartas do Magic."
         )
 
         add_cards_description.setObjectName(
@@ -3824,12 +5208,12 @@ class DecksPage(QWidget):
             4
         )
 
-        # -------------------------------------------------
-        # BOTÃO
-        # -------------------------------------------------
+        # =================================================
+        # BOTÃO — COLEÇÃO
+        # =================================================
 
         self.add_cards_button = QPushButton(
-            "+ Adicionar cartas"
+            "▦  Da coleção"
         )
 
         self.add_cards_button.setObjectName(
@@ -3840,12 +5224,44 @@ class DecksPage(QWidget):
             Qt.CursorShape.PointingHandCursor
         )
 
+        self.add_cards_button.setToolTip(
+            "Adicionar cartas que estão na sua coleção"
+        )
+
         self.add_cards_button.clicked.connect(
             self.toggle_collection_panel
         )
 
         add_cards_info.addWidget(
             self.add_cards_button
+        )
+
+        # =================================================
+        # BOTÃO — MAGIC / SCRYFALL
+        # =================================================
+
+        self.add_magic_cards_button = QPushButton(
+            "✦  Magic / Scryfall"
+        )
+
+        self.add_magic_cards_button.setObjectName(
+            "DeckAddCardsButton"
+        )
+
+        self.add_magic_cards_button.setCursor(
+            Qt.CursorShape.PointingHandCursor
+        )
+
+        self.add_magic_cards_button.setToolTip(
+            "Pesquisar cartas do Magic diretamente no Scryfall"
+        )
+
+        self.add_magic_cards_button.clicked.connect(
+            self.toggle_scryfall_panel
+        )
+
+        add_cards_info.addWidget(
+            self.add_magic_cards_button
         )
 
         add_cards_info.addStretch()
@@ -3856,7 +5272,7 @@ class DecksPage(QWidget):
         )
 
         # =================================================
-        # ADICIONA OS DOIS CARDS
+        # ADICIONA OS CARDS
         # =================================================
 
         preview_row.addWidget(
@@ -3872,6 +5288,7 @@ class DecksPage(QWidget):
         deck_layout.addLayout(
             preview_row
         )
+
         # =================================================
         # CONTEÚDO
         # =================================================
@@ -3944,7 +5361,7 @@ class DecksPage(QWidget):
         )
 
         # -------------------------------------------------
-        # PAINEL
+        # PAINEL — COLEÇÃO
         # -------------------------------------------------
 
         self.collection_panel = DeckCollectionPanel(
@@ -3963,6 +5380,29 @@ class DecksPage(QWidget):
 
         self.deck_content_layout.addWidget(
             self.collection_panel,
+            0,
+        )
+
+        # -------------------------------------------------
+        # PAINEL — SCRYFALL
+        # -------------------------------------------------
+
+        self.scryfall_panel = DeckScryfallPanel(
+            self
+        )
+
+        self.scryfall_panel.hide()
+
+        self.scryfall_panel.closed.connect(
+            self.close_scryfall_panel
+        )
+
+        self.scryfall_panel.cardAdded.connect(
+            self._panel_card_changed
+        )
+
+        self.deck_content_layout.addWidget(
+            self.scryfall_panel,
             0,
         )
 
@@ -3999,20 +5439,25 @@ class DecksPage(QWidget):
 
         while grid.count():
 
-            item = grid.takeAt(0)
+            item = grid.takeAt(
+                0
+            )
 
             widget = item.widget()
 
             if widget:
 
                 widget.setParent(None)
+
                 widget.deleteLater()
 
     # =====================================================
     # MOSTRAR DECKS
     # =====================================================
 
-    def show_decks(self):
+    def show_decks(
+        self,
+    ):
 
         self.clear_grid(
             self.decks_grid
@@ -4022,7 +5467,9 @@ class DecksPage(QWidget):
 
         columns = 4
 
-        for index, deck in enumerate(decks):
+        for index, deck in enumerate(
+            decks
+        ):
 
             preview_pixmap = (
                 self.get_deck_preview_pixmap(
@@ -4048,6 +5495,7 @@ class DecksPage(QWidget):
             )
 
             row = index // columns
+
             column = index % columns
 
             self.decks_grid.addWidget(
@@ -4067,6 +5515,7 @@ class DecksPage(QWidget):
         index = len(decks)
 
         row = index // columns
+
         column = index % columns
 
         self.decks_grid.addWidget(
@@ -4148,7 +5597,9 @@ class DecksPage(QWidget):
     # CRIAR DECK
     # =====================================================
 
-    def create_new_deck(self):
+    def create_new_deck(
+        self,
+    ):
 
         dialog = DeckNameDialog(
             "Novo deck",
@@ -4192,7 +5643,9 @@ class DecksPage(QWidget):
         deck_id,
     ):
 
-        if not deck_exists(deck_id):
+        if not deck_exists(
+            deck_id
+        ):
             return
 
         self.current_deck_id = int(
@@ -4212,7 +5665,9 @@ class DecksPage(QWidget):
         )
 
         if not deck:
+
             self.current_deck_id = None
+
             return
 
         self.current_deck_name = (
@@ -4227,7 +5682,9 @@ class DecksPage(QWidget):
             self.deck_page
         )
 
-        self.collection_panel.hide()
+        self.close_collection_panel()
+
+        self.close_scryfall_panel()
 
         self.panel_open = False
 
@@ -4265,6 +5722,7 @@ class DecksPage(QWidget):
         )
 
         if load_preview:
+
             self.load_current_preview()
 
     # =====================================================
@@ -4284,7 +5742,10 @@ class DecksPage(QWidget):
         try:
 
             if cards is None:
-                cards = self.current_deck_cards
+
+                cards = (
+                    self.current_deck_cards
+                )
 
             self.clear_grid(
                 self.cards_grid
@@ -4321,12 +5782,14 @@ class DecksPage(QWidget):
             )
 
             if viewport_width <= 0:
+
                 viewport_width = (
                     self.cards_scroll.width()
                     or 800
                 )
 
             spacing = 14
+
             card_width = 160
 
             columns = max(
@@ -4396,6 +5859,7 @@ class DecksPage(QWidget):
                 )
 
                 row = index // columns
+
                 column = index % columns
 
                 self.cards_grid.addWidget(
@@ -4574,6 +6038,7 @@ class DecksPage(QWidget):
             )
 
             if label:
+
                 label.setPixmap(
                     scaled
                 )
@@ -4600,27 +6065,33 @@ class DecksPage(QWidget):
         if not self.current_deck_id:
             return
 
-        if change_deck_card_quantity(
+        success = change_deck_card_quantity(
             self.current_deck_id,
             card_id,
             amount,
-        ):
+        )
 
-            self.refresh_current_deck()
+        if not success:
+            return
 
-            if (
-                self.collection_panel.isVisible()
-            ):
-                self.collection_panel.load_cards()
+        self.refresh_current_deck()
+
+        if self.collection_panel.isVisible():
+
+            self.collection_panel.load_cards()
 
     # =====================================================
-    # ABRIR PAINEL
+    # ABRIR PAINEL — COLEÇÃO
     # =====================================================
 
-    def open_collection_panel(self):
+    def open_collection_panel(
+        self,
+    ):
 
         if not self.current_deck_id:
             return
+
+        self.close_scryfall_panel()
 
         self.collection_panel.open(
             self.current_deck_id
@@ -4629,10 +6100,12 @@ class DecksPage(QWidget):
         self.panel_open = True
 
     # =====================================================
-    # TOGGLE PAINEL
+    # TOGGLE PAINEL — COLEÇÃO
     # =====================================================
 
-    def toggle_collection_panel(self):
+    def toggle_collection_panel(
+        self,
+    ):
 
         if not self.current_deck_id:
             return
@@ -4646,28 +6119,91 @@ class DecksPage(QWidget):
             self.open_collection_panel()
 
     # =====================================================
-    # FECHAR PAINEL
+    # FECHAR PAINEL — COLEÇÃO
     # =====================================================
 
-    def close_collection_panel(self):
+    def close_collection_panel(
+        self,
+    ):
 
         self.panel_open = False
 
         if self.collection_panel:
 
             self.collection_panel.search_timer.stop()
+
             self.collection_panel.hide()
+
+    # =====================================================
+    # ABRIR PAINEL — SCRYFALL
+    # =====================================================
+
+    def open_scryfall_panel(
+        self,
+    ):
+
+        if not self.current_deck_id:
+            return
+
+        self.close_collection_panel()
+
+        self.scryfall_panel.open(
+            self.current_deck_id
+        )
+
+        self.panel_open = True
+
+    # =====================================================
+    # TOGGLE PAINEL — SCRYFALL
+    # =====================================================
+
+    def toggle_scryfall_panel(
+        self,
+    ):
+
+        if not self.current_deck_id:
+            return
+
+        if self.scryfall_panel.isVisible():
+
+            self.close_scryfall_panel()
+
+        else:
+
+            self.open_scryfall_panel()
+
+    # =====================================================
+    # FECHAR PAINEL — SCRYFALL
+    # =====================================================
+
+    def close_scryfall_panel(
+        self,
+    ):
+
+        self.panel_open = False
+
+        if self.scryfall_panel:
+
+            self.scryfall_panel.search_timer.stop()
+
+            self.scryfall_panel.hide()
 
     # =====================================================
     # FECHAR DECK
     # =====================================================
 
-    def close_deck(self):
+    def close_deck(
+        self,
+    ):
 
         self.close_collection_panel()
 
+        self.close_scryfall_panel()
+
         self.current_deck_id = None
+
         self.current_deck_name = ""
+
         self.current_deck_cards = []
 
         self.show_decks()
@@ -4676,7 +6212,9 @@ class DecksPage(QWidget):
     # RENOMEAR
     # =====================================================
 
-    def rename_current_deck(self):
+    def rename_current_deck(
+        self,
+    ):
 
         if not self.current_deck_id:
             return
@@ -4716,7 +6254,9 @@ class DecksPage(QWidget):
     # EXCLUIR
     # =====================================================
 
-    def delete_current_deck(self):
+    def delete_current_deck(
+        self,
+    ):
 
         if not self.current_deck_id:
             return
@@ -4748,8 +6288,12 @@ class DecksPage(QWidget):
 
             self.close_collection_panel()
 
+            self.close_scryfall_panel()
+
             self.current_deck_id = None
+
             self.current_deck_name = ""
+
             self.current_deck_cards = []
 
             self.show_decks()
@@ -5055,7 +6599,9 @@ class DecksPage(QWidget):
         event,
     ):
 
-        super().resizeEvent(event)
+        super().resizeEvent(
+            event
+        )
 
         if (
             self.current_deck_id
@@ -5102,7 +6648,14 @@ class DecksPage(QWidget):
             if self.collection_panel:
 
                 self.collection_panel.search_timer.stop()
+
                 self.collection_panel.hide()
+
+            if self.scryfall_panel:
+
+                self.scryfall_panel.search_timer.stop()
+
+                self.scryfall_panel.hide()
 
             if self.image_pool:
 

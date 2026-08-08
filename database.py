@@ -1472,7 +1472,63 @@ def get_card_by_id(
 
     return dict(row)
 
+# =========================================================
+# CARTA POR SCRYFALL ID
+# =========================================================
 
+def get_card_id_by_scryfall_id(
+    scryfall_id
+):
+    if not scryfall_id:
+        return None
+
+    scryfall_id = str(
+        scryfall_id
+    ).strip()
+
+    if not scryfall_id:
+        return None
+
+    connection = get_connection()
+
+    try:
+
+        cursor = connection.cursor()
+
+        cursor.execute(
+            """
+            SELECT id
+            FROM cards
+            WHERE scryfall_id = ?
+            LIMIT 1
+            """,
+            (
+                scryfall_id,
+            )
+        )
+
+        row = cursor.fetchone()
+
+        if not row:
+            return None
+
+        return int(
+            row["id"]
+        )
+
+    except Exception as error:
+
+        print(
+            "[DATABASE] Erro ao buscar "
+            "carta pelo Scryfall ID:",
+            error,
+        )
+
+        return None
+
+    finally:
+
+        connection.close()
 # =========================================================
 # EXPORTAÇÃO
 # =========================================================
