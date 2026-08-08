@@ -30,6 +30,7 @@ from PySide6.QtWidgets import (
     QMenu,
     QDialog,
     QDialogButtonBox,
+    QGridLayout,
 )
 
 from services.scryfall import (
@@ -91,12 +92,11 @@ class ScryfallTask(QRunnable):
 
         try:
 
-            suggestions = autocomplete_card_names(
-                self.query
+            suggestions = (
+                autocomplete_card_names(
+                    self.query
+                )
             )
-
-            if not suggestions:
-                suggestions = []
 
             suggestions = suggestions[:8]
 
@@ -345,6 +345,347 @@ class CardFrame(QFrame):
 
 
 # =========================================================
+# IMAGEM CLICÁVEL
+# =========================================================
+
+class CardImageLabel(QLabel):
+
+    doubleClicked = Signal()
+
+    def mouseDoubleClickEvent(
+        self,
+        event
+    ):
+
+        if (
+            event.button()
+            == Qt.MouseButton.LeftButton
+        ):
+
+            self.doubleClicked.emit()
+
+            event.accept()
+
+            return
+
+        super().mouseDoubleClickEvent(
+            event
+        )
+
+
+# =========================================================
+# CARTA DA GRADE
+# =========================================================
+
+class GridCardFrame(QFrame):
+
+    doubleClicked = Signal()
+
+    def __init__(
+        self,
+        parent=None
+    ):
+
+        super().__init__(
+            parent
+        )
+
+        self.setObjectName(
+            "GridCardFrame"
+        )
+
+        self.setMouseTracking(
+            True
+        )
+
+        self.setAttribute(
+            Qt.WidgetAttribute.WA_Hover,
+            True
+        )
+
+        # =================================================
+        # TAMANHO INICIAL
+        # =================================================
+
+        self.setMinimumSize(
+            120,
+            168
+        )
+
+        self.setMaximumWidth(
+            500
+        )
+
+        self.setSizePolicy(
+            QSizePolicy.Policy.Expanding,
+            QSizePolicy.Policy.Fixed
+        )
+
+        # =================================================
+        # IMAGEM
+        # =================================================
+
+        self.image_label = CardImageLabel(
+            self
+        )
+
+        self.image_label.setObjectName(
+            "GridCardImage"
+        )
+
+        self.image_label.setAlignment(
+            Qt.AlignmentFlag.AlignCenter
+        )
+
+        self.image_label.setText(
+            "🃏"
+        )
+
+        self.image_label.setAttribute(
+            Qt.WidgetAttribute.WA_TransparentForMouseEvents,
+            False
+        )
+
+        self.image_label.doubleClicked.connect(
+            self.doubleClicked.emit
+        )
+
+        # =================================================
+        # OVERLAY DE QUANTIDADE
+        # =================================================
+
+        self.quantity_overlay = QFrame(
+            self
+        )
+
+        self.quantity_overlay.setObjectName(
+            "GridQuantityOverlay"
+        )
+
+        self.quantity_overlay.setFixedHeight(
+            48
+        )
+
+        overlay_layout = QHBoxLayout(
+            self.quantity_overlay
+        )
+
+        overlay_layout.setContentsMargins(
+            8,
+            7,
+            8,
+            7
+        )
+
+        overlay_layout.setSpacing(
+            6
+        )
+
+        # =================================================
+        # MENOS
+        # =================================================
+
+        self.minus_button = QPushButton(
+            "−",
+            self.quantity_overlay
+        )
+
+        self.minus_button.setObjectName(
+            "GridQuantityButton"
+        )
+
+        self.minus_button.setFixedSize(
+            34,
+            34
+        )
+
+        overlay_layout.addWidget(
+            self.minus_button
+        )
+
+        # =================================================
+        # QUANTIDADE
+        # =================================================
+
+        self.quantity_label = QLabel(
+            "0",
+            self.quantity_overlay
+        )
+
+        self.quantity_label.setObjectName(
+            "GridQuantityLabel"
+        )
+
+        self.quantity_label.setAlignment(
+            Qt.AlignmentFlag.AlignCenter
+        )
+
+        self.quantity_label.setFixedWidth(
+            42
+        )
+
+        overlay_layout.addWidget(
+            self.quantity_label
+        )
+
+        # =================================================
+        # MAIS
+        # =================================================
+
+        self.plus_button = QPushButton(
+            "+",
+            self.quantity_overlay
+        )
+
+        self.plus_button.setObjectName(
+            "GridQuantityButton"
+        )
+
+        self.plus_button.setFixedSize(
+            34,
+            34
+        )
+
+        overlay_layout.addWidget(
+            self.plus_button
+        )
+
+        self.quantity_overlay.hide()
+
+    # =====================================================
+    # DEFINIR TAMANHO DA CARTA
+    # =====================================================
+
+    def set_card_width(
+        self,
+        width
+    ):
+
+        width = max(
+            120,
+            int(width)
+        )
+
+        # MTG aproximadamente 63:88
+        height = round(
+            width * 88 / 63
+        )
+
+        self.setFixedSize(
+            width,
+            height
+        )
+
+        self.image_label.setGeometry(
+            0,
+            0,
+            width,
+            height
+        )
+
+        overlay_height = 48
+
+        self.quantity_overlay.setGeometry(
+            0,
+            height - overlay_height,
+            width,
+            overlay_height
+        )
+
+        self.quantity_overlay.raise_()
+
+    # =====================================================
+    # RESIZE
+    # =====================================================
+
+    def resizeEvent(
+        self,
+        event
+    ):
+
+        width = self.width()
+        height = self.height()
+
+        self.image_label.setGeometry(
+            0,
+            0,
+            width,
+            height
+        )
+
+        overlay_height = 48
+
+        self.quantity_overlay.setGeometry(
+            0,
+            height - overlay_height,
+            width,
+            overlay_height
+        )
+
+        self.quantity_overlay.raise_()
+
+        super().resizeEvent(
+            event
+        )
+
+    # =====================================================
+    # HOVER
+    # =====================================================
+
+    def enterEvent(
+        self,
+        event
+    ):
+
+        self.quantity_overlay.show()
+
+        self.quantity_overlay.raise_()
+
+        super().enterEvent(
+            event
+        )
+
+    def leaveEvent(
+        self,
+        event
+    ):
+
+        self.quantity_overlay.hide()
+
+        super().leaveEvent(
+            event
+        )
+
+
+# =========================================================
+# CONTAINER DA GRADE
+# =========================================================
+
+class CardsContainer(QWidget):
+
+    resized = Signal()
+
+    def resizeEvent(
+        self,
+        event
+    ):
+
+        old_size = event.oldSize()
+        new_size = event.size()
+
+        super().resizeEvent(
+            event
+        )
+
+        if (
+            old_size.width()
+            != new_size.width()
+        ):
+
+            self.resized.emit()
+
+
+# =========================================================
 # COLLECTION PAGE
 # =========================================================
 
@@ -369,17 +710,13 @@ class CollectionPage(QWidget):
 
         self.pending_search = ""
 
-        self.last_completed_query = ""
-
-        self.scryfall_pool = QThreadPool()
-
-        # Não deixar uma quantidade enorme de requisições
-        # serem executadas simultaneamente.
-        self.scryfall_pool.setMaxThreadCount(
-            2
+        self.scryfall_pool = (
+            QThreadPool()
         )
 
-        self.search_timer = QTimer()
+        self.search_timer = (
+            QTimer()
+        )
 
         self.search_timer.setSingleShot(
             True
@@ -397,24 +734,16 @@ class CollectionPage(QWidget):
         # BUSCA DE CARTA COMPLETA
         # =================================================
 
-        self.card_search_pool = QThreadPool()
-
-        self.card_search_pool.setMaxThreadCount(
-            2
+        self.card_search_pool = (
+            QThreadPool()
         )
-
-        self.card_search_in_progress = False
-
-        self.pending_card_name = ""
 
         # =================================================
         # IMAGENS
         # =================================================
 
-        self.image_pool = QThreadPool()
-
-        self.image_pool.setMaxThreadCount(
-            4
+        self.image_pool = (
+            QThreadPool()
         )
 
         self.image_cache = {}
@@ -424,6 +753,30 @@ class CollectionPage(QWidget):
         # =================================================
 
         self.card_rows = {}
+
+        # =================================================
+        # LAYOUT ATUAL
+        # =================================================
+
+        self.current_layout = "list"
+
+        self.current_cards = []
+
+        self.rebuilding_grid = False
+
+        self._grid_columns = None
+
+        # Evita reconstruções excessivas durante resize
+        self._grid_resize_timer = QTimer()
+        self._grid_resize_timer.setSingleShot(
+            True
+        )
+        self._grid_resize_timer.setInterval(
+            80
+        )
+        self._grid_resize_timer.timeout.connect(
+            self.rebuild_grid_after_resize
+        )
 
         # =================================================
         # UI
@@ -485,10 +838,25 @@ class CollectionPage(QWidget):
         )
 
         # =================================================
-        # EXPORTAR
+        # AÇÕES DO TOPO
         # =================================================
 
-        export_layout = QHBoxLayout()
+        actions_layout = QHBoxLayout()
+
+        actions_layout.setContentsMargins(
+            0,
+            0,
+            0,
+            0
+        )
+
+        actions_layout.setSpacing(
+            8
+        )
+
+        # =================================================
+        # EXPORTAR
+        # =================================================
 
         self.export_button = QPushButton(
             "Exportar"
@@ -502,18 +870,38 @@ class CollectionPage(QWidget):
             self.export_collection
         )
 
-        export_layout.addWidget(
+        actions_layout.addWidget(
             self.export_button
         )
 
-        export_layout.addStretch()
+        actions_layout.addStretch()
+
+        # =================================================
+        # LAYOUTS
+        # =================================================
+
+        self.layout_button = QPushButton(
+            "Layouts"
+        )
+
+        self.layout_button.setObjectName(
+            "LayoutButton"
+        )
+
+        self.layout_button.clicked.connect(
+            self.show_layout_menu
+        )
+
+        actions_layout.addWidget(
+            self.layout_button
+        )
 
         self.main_layout.addLayout(
-            export_layout
+            actions_layout
         )
 
         # =================================================
-        # PESQUISA DA COLEÇÃO
+        # PESQUISA
         # =================================================
 
         search_frame = QFrame()
@@ -722,7 +1110,7 @@ class CollectionPage(QWidget):
         )
 
         # =================================================
-        # LISTA
+        # LISTA / GRADE
         # =================================================
 
         self.scroll_area = QScrollArea()
@@ -735,7 +1123,15 @@ class CollectionPage(QWidget):
             "CardsScrollArea"
         )
 
-        self.cards_container = QWidget()
+        self.scroll_area.setHorizontalScrollBarPolicy(
+            Qt.ScrollBarPolicy.ScrollBarAlwaysOff
+        )
+
+        self.scroll_area.setVerticalScrollBarPolicy(
+            Qt.ScrollBarPolicy.ScrollBarAsNeeded
+        )
+
+        self.cards_container = CardsContainer()
 
         self.cards_container.setObjectName(
             "CardsContainer"
@@ -760,12 +1156,183 @@ class CollectionPage(QWidget):
             Qt.AlignmentFlag.AlignTop
         )
 
+        self.cards_container.resized.connect(
+            self.handle_container_resize
+        )
+
         self.scroll_area.setWidget(
             self.cards_container
         )
 
         self.main_layout.addWidget(
             self.scroll_area
+        )
+
+    # =====================================================
+    # MENU DE LAYOUT
+    # =====================================================
+
+    def show_layout_menu(
+        self
+    ):
+
+        menu = QMenu(
+            self
+        )
+
+        menu.setObjectName(
+            "LayoutMenu"
+        )
+
+        list_action = menu.addAction(
+            "☰  Lista"
+        )
+
+        grid_action = menu.addAction(
+            "▦  Grade"
+        )
+
+        list_action.setCheckable(
+            True
+        )
+
+        grid_action.setCheckable(
+            True
+        )
+
+        list_action.setChecked(
+            self.current_layout == "list"
+        )
+
+        grid_action.setChecked(
+            self.current_layout == "grid"
+        )
+
+        list_action.triggered.connect(
+            lambda:
+            self.set_layout(
+                "list"
+            )
+        )
+
+        grid_action.triggered.connect(
+            lambda:
+            self.set_layout(
+                "grid"
+            )
+        )
+
+        menu.exec(
+            self.layout_button.mapToGlobal(
+                self.layout_button.rect().bottomLeft()
+            )
+        )
+
+    # =====================================================
+    # ALTERAR LAYOUT
+    # =====================================================
+
+    def set_layout(
+        self,
+        layout_name
+    ):
+
+        if layout_name not in (
+            "list",
+            "grid"
+        ):
+            return
+
+        if self.current_layout == layout_name:
+            return
+
+        self.current_layout = layout_name
+
+        self._grid_columns = None
+
+        self._grid_resize_timer.stop()
+
+        self.display_cards(
+            self.current_cards
+        )
+
+    # =====================================================
+    # RESIZE DO CONTAINER
+    # =====================================================
+
+    def handle_container_resize(
+        self
+    ):
+
+        if self.current_layout != "grid":
+            return
+
+        if self.rebuilding_grid:
+            return
+
+        if not self.current_cards:
+            return
+
+        # O viewport é a largura real disponível.
+        viewport_width = (
+            self.scroll_area
+            .viewport()
+            .width()
+        )
+
+        if viewport_width <= 0:
+            return
+
+        # Largura mínima desejada de uma carta.
+        min_card_width = 160
+
+        # Espaçamento entre cartas.
+        spacing = 14
+
+        # Calcula quantas cartas cabem.
+        columns = max(
+            1,
+            int(
+                (
+                    viewport_width + spacing
+                )
+                /
+                (
+                    min_card_width + spacing
+                )
+            )
+        )
+
+        # Não reconstrói se a quantidade
+        # de colunas continua igual.
+        if self._grid_columns == columns:
+            return
+
+        self._grid_columns = columns
+
+        # Aguarda um pouco para evitar reconstruções
+        # dezenas de vezes durante o resize da janela.
+        self._grid_resize_timer.start()
+
+    # =====================================================
+    # RECONSTRUIR GRADE
+    # =====================================================
+
+    def rebuild_grid_after_resize(
+        self
+    ):
+
+        if self.current_layout != "grid":
+            return
+
+        if self.rebuilding_grid:
+            return
+
+        if not self.current_cards:
+            return
+
+        self.display_cards(
+            self.current_cards
         )
 
     # =====================================================
@@ -835,11 +1402,13 @@ class CollectionPage(QWidget):
         if not cards:
             return
 
-        filepath, _ = QFileDialog.getSaveFileName(
-            self,
-            "Exportar backup da coleção",
-            "magic_collection_backup.json",
-            "JSON (*.json)"
+        filepath, _ = (
+            QFileDialog.getSaveFileName(
+                self,
+                "Exportar backup da coleção",
+                "magic_collection_backup.json",
+                "JSON (*.json)"
+            )
         )
 
         if not filepath:
@@ -867,11 +1436,13 @@ class CollectionPage(QWidget):
         if not cards:
             return
 
-        filepath, _ = QFileDialog.getSaveFileName(
-            self,
-            "Exportar coleção tratada",
-            "minha_colecao.json",
-            "JSON (*.json)"
+        filepath, _ = (
+            QFileDialog.getSaveFileName(
+                self,
+                "Exportar coleção tratada",
+                "minha_colecao.json",
+                "JSON (*.json)"
+            )
         )
 
         if not filepath:
@@ -899,11 +1470,13 @@ class CollectionPage(QWidget):
         if not cards:
             return
 
-        filepath, _ = QFileDialog.getSaveFileName(
-            self,
-            "Exportar coleção tratada",
-            "minha_colecao.txt",
-            "Texto (*.txt)"
+        filepath, _ = (
+            QFileDialog.getSaveFileName(
+                self,
+                "Exportar coleção tratada",
+                "minha_colecao.txt",
+                "Texto (*.txt)"
+            )
         )
 
         if not filepath:
@@ -931,11 +1504,13 @@ class CollectionPage(QWidget):
         if not cards:
             return
 
-        filepath, _ = QFileDialog.getSaveFileName(
-            self,
-            "Exportar coleção",
-            "minha_colecao.csv",
-            "CSV (*.csv)"
+        filepath, _ = (
+            QFileDialog.getSaveFileName(
+                self,
+                "Exportar coleção",
+                "minha_colecao.csv",
+                "CSV (*.csv)"
+            )
         )
 
         if not filepath:
@@ -967,10 +1542,9 @@ class CollectionPage(QWidget):
 
         self.search_timer.stop()
 
-        # Sempre invalida resultados antigos.
-        self.pending_search = text
-
         if len(text) < 2:
+
+            self.pending_search = ""
 
             self.suggestion_list.clear()
 
@@ -980,11 +1554,7 @@ class CollectionPage(QWidget):
 
             return
 
-        # Se já buscamos exatamente esse texto,
-        # não faça outra requisição.
-        if text == self.last_completed_query:
-
-            return
+        self.pending_search = text
 
         self.search_status.setText(
             "🔄"
@@ -996,22 +1566,9 @@ class CollectionPage(QWidget):
         self
     ):
 
-        query = self.pending_search.strip()
+        query = self.pending_search
 
-        if len(query) < 2:
-            return
-
-        # =================================================
-        # GARANTIR QUE O TEXTO AINDA É O MESMO
-        # =================================================
-
-        current_text = (
-            self.add_input
-            .text()
-            .strip()
-        )
-
-        if query != current_text:
+        if not query:
             return
 
         task = ScryfallTask(
@@ -1038,14 +1595,8 @@ class CollectionPage(QWidget):
             .strip()
         )
 
-        # =================================================
-        # RESPOSTA ANTIGA
-        # =================================================
-
         if query != current_text:
             return
-
-        self.last_completed_query = query
 
         self.search_status.clear()
 
@@ -1057,56 +1608,11 @@ class CollectionPage(QWidget):
 
             return
 
-        # =================================================
-        # REMOVER DUPLICATAS
-        # =================================================
+        for name in suggestions[:8]:
 
-        unique_suggestions = []
-
-        seen = set()
-
-        for name in suggestions:
-
-            if not name:
-                continue
-
-            name = str(
-                name
-            ).strip()
-
-            key = name.casefold()
-
-            if key in seen:
-                continue
-
-            seen.add(
-                key
-            )
-
-            unique_suggestions.append(
+            self.suggestion_list.addItem(
                 name
             )
-
-            if len(unique_suggestions) >= 8:
-                break
-
-        if not unique_suggestions:
-
-            self.suggestion_list.hide()
-
-            return
-
-        # =================================================
-        # ADICIONAR SUGESTÕES
-        # =================================================
-
-        self.suggestion_list.addItems(
-            unique_suggestions
-        )
-
-        self.suggestion_list.setCurrentRow(
-            -1
-        )
 
         self.suggestion_list.show()
 
@@ -1119,45 +1625,21 @@ class CollectionPage(QWidget):
         item
     ):
 
-        if not item:
-            return
+        name = item.text()
 
-        name = item.text().strip()
-
-        if not name:
-            return
-
-        # Primeiro define o texto.
-        self.add_input.blockSignals(
-            True
-        )
+        self.suggestion_list.hide()
 
         self.add_input.setText(
             name
         )
 
-        self.add_input.blockSignals(
-            False
-        )
-
-        self.pending_search = name
-
-        self.last_completed_query = name
-
-        self.suggestion_list.hide()
-
         self.add_input.setFocus()
 
-        # Busca a carta sem bloquear a interface.
         self.add_card_from_input()
 
     def handle_add_enter(
         self
     ):
-
-        # =================================================
-        # SE EXISTIR SUGESTÃO, USAR A PRIMEIRA
-        # =================================================
 
         if self.suggestion_list.isVisible():
 
@@ -1180,10 +1662,6 @@ class CollectionPage(QWidget):
                 )
 
                 return
-
-        # =================================================
-        # SEM SUGESTÃO
-        # =================================================
 
         self.add_card_from_input()
 
@@ -1212,22 +1690,6 @@ class CollectionPage(QWidget):
 
             return
 
-        # =================================================
-        # JÁ ESTÁ BUSCANDO
-        # =================================================
-
-        if self.card_search_in_progress:
-
-            return
-
-        # =================================================
-        # INICIAR BUSCA
-        # =================================================
-
-        self.card_search_in_progress = True
-
-        self.pending_card_name = name
-
         self.search_status.setText(
             "🔄"
         )
@@ -1236,47 +1698,28 @@ class CollectionPage(QWidget):
             False
         )
 
-        self.suggestion_list.hide()
+        try:
 
-        task = ScryfallCardTask(
-            name
-        )
+            card_data = get_card_by_name(
+                name
+            )
 
-        task.signals.finished.connect(
-            self.receive_card_data
-        )
+        except Exception as error:
 
-        task.signals.failed.connect(
-            self.receive_card_error
-        )
+            print(
+                "[SCRYFALL] Erro:",
+                error
+            )
 
-        self.card_search_pool.start(
-            task
-        )
+            self.search_status.setText(
+                "!"
+            )
 
-    # =====================================================
-    # CARTA RECEBIDA
-    # =====================================================
-
-    def receive_card_data(
-        self,
-        requested_name,
-        card_data
-    ):
-
-        # =================================================
-        # GARANTIR QUE É A BUSCA ATUAL
-        # =================================================
-
-        if requested_name != self.pending_card_name:
+            self.add_button.setEnabled(
+                True
+            )
 
             return
-
-        self.card_search_in_progress = False
-
-        self.add_button.setEnabled(
-            True
-        )
 
         if not card_data:
 
@@ -1284,14 +1727,11 @@ class CollectionPage(QWidget):
                 "!"
             )
 
-            return
+            self.add_button.setEnabled(
+                True
+            )
 
-        # =================================================
-        # SALVAR NO BANCO
-        #
-        # A operação é rápida e acontece apenas depois
-        # que a requisição HTTP terminou.
-        # =================================================
+            return
 
         try:
 
@@ -1315,25 +1755,13 @@ class CollectionPage(QWidget):
                 "!"
             )
 
+            self.add_button.setEnabled(
+                True
+            )
+
             return
 
-        # =================================================
-        # LIMPAR INPUT
-        # =================================================
-
-        self.add_input.blockSignals(
-            True
-        )
-
         self.add_input.clear()
-
-        self.add_input.blockSignals(
-            False
-        )
-
-        self.pending_search = ""
-
-        self.last_completed_query = ""
 
         self.suggestion_list.clear()
 
@@ -1341,44 +1769,13 @@ class CollectionPage(QWidget):
 
         self.search_status.clear()
 
-        self.add_input.setFocus()
-
-        # =================================================
-        # ATUALIZAR LISTA
-        # =================================================
-
-        self.load_cards()
-
-    # =====================================================
-    # ERRO AO BUSCAR CARTA
-    # =====================================================
-
-    def receive_card_error(
-        self,
-        requested_name,
-        error
-    ):
-
-        if requested_name != self.pending_card_name:
-
-            return
-
-        print(
-            "[SCRYFALL] Falha ao buscar carta:",
-            requested_name,
-            "|",
-            error
-        )
-
-        self.card_search_in_progress = False
-
         self.add_button.setEnabled(
             True
         )
 
-        self.search_status.setText(
-            "!"
-        )
+        self.add_input.setFocus()
+
+        self.load_cards()
 
     # =====================================================
     # CARREGAR
@@ -1388,18 +1785,7 @@ class CollectionPage(QWidget):
         self
     ):
 
-        try:
-
-            cards = get_all_cards()
-
-        except Exception as error:
-
-            print(
-                "[DATABASE] Erro ao carregar coleção:",
-                error
-            )
-
-            cards = []
+        cards = get_all_cards()
 
         self.display_cards(
             cards
@@ -1414,47 +1800,27 @@ class CollectionPage(QWidget):
         text
     ):
 
-        try:
+        if not text.strip():
 
-            if not text.strip():
+            cards = get_all_cards()
 
-                cards = get_all_cards()
+        else:
 
-            else:
-
-                cards = search_cards(
-                    text
-                )
-
-            self.display_cards(
-                cards
+            cards = search_cards(
+                text
             )
 
-        except Exception as error:
-
-            print(
-                "[DATABASE] Erro na pesquisa:",
-                error
-            )
+        self.display_cards(
+            cards
+        )
 
     # =====================================================
-    # DISPLAY
+    # LIMPAR LAYOUT
     # =====================================================
 
-    def display_cards(
-        self,
-        cards
+    def clear_cards_layout(
+        self
     ):
-
-        # =================================================
-        # LIMPAR REFERÊNCIAS ANTIGAS
-        # =================================================
-
-        self.card_rows.clear()
-
-        # =================================================
-        # LIMPAR LAYOUT
-        # =================================================
 
         while self.cards_layout.count():
 
@@ -1468,39 +1834,93 @@ class CollectionPage(QWidget):
 
                 widget.deleteLater()
 
-        # =================================================
-        # CRIAR CARTAS
-        # =================================================
+                continue
+
+            nested_layout = item.layout()
+
+            if nested_layout:
+
+                while nested_layout.count():
+
+                    nested_item = (
+                        nested_layout.takeAt(0)
+                    )
+
+                    nested_widget = (
+                        nested_item.widget()
+                    )
+
+                    if nested_widget:
+
+                        nested_widget.deleteLater()
+
+    # =====================================================
+    # DISPLAY
+    # =====================================================
+
+    def display_cards(
+        self,
+        cards
+    ):
+
+        if cards is None:
+            cards = []
+
+        self.current_cards = list(
+            cards
+        )
+
+        self.card_rows.clear()
+
+        self.rebuilding_grid = True
+
+        try:
+
+            self.clear_cards_layout()
+
+            if self.current_layout == "grid":
+
+                self.display_cards_grid(
+                    self.current_cards
+                )
+
+            else:
+
+                self.display_cards_list(
+                    self.current_cards
+                )
+
+        finally:
+
+            self.rebuilding_grid = False
+
+    # =====================================================
+    # DISPLAY — LISTA
+    # =====================================================
+
+    def display_cards_list(
+        self,
+        cards
+    ):
 
         for card in cards:
 
-            try:
-
-                (
-                    card_id,
-                    name,
-                    printed_name,
-                    lang,
-                    set_name,
-                    collector_number,
-                    mana_cost,
-                    type_line,
-                    oracle_text,
-                    image_url,
-                    quantity,
-                    image_path,
-                    power,
-                    toughness
-                ) = card
-
-            except ValueError:
-
-                print(
-                    "[DATABASE] Registro de carta inválido:",
-                    card
-                )
-
-                continue
+            (
+                card_id,
+                name,
+                printed_name,
+                lang,
+                set_name,
+                collector_number,
+                mana_cost,
+                type_line,
+                oracle_text,
+                image_url,
+                quantity,
+                image_path,
+                power,
+                toughness
+            ) = card
 
             self.create_card_widget(
                 card_id,
@@ -1517,6 +1937,350 @@ class CollectionPage(QWidget):
                 power,
                 toughness
             )
+
+    # =====================================================
+    # DISPLAY — GRADE
+    # =====================================================
+
+    def display_cards_grid(
+        self,
+        cards
+    ):
+
+        grid_layout = QGridLayout()
+
+        grid_layout.setContentsMargins(
+            0,
+            5,
+            0,
+            5
+        )
+
+        grid_layout.setHorizontalSpacing(
+            14
+        )
+
+        grid_layout.setVerticalSpacing(
+            14
+        )
+
+        # =================================================
+        # LARGURA DISPONÍVEL
+        # =================================================
+
+        available_width = (
+            self.scroll_area
+            .viewport()
+            .width()
+        )
+
+        if available_width <= 0:
+
+            available_width = (
+                self.cards_container.width()
+            )
+
+        if available_width <= 0:
+
+            available_width = 800
+
+        spacing = 14
+
+        # =================================================
+        # LARGURA MÍNIMA
+        # =================================================
+
+        min_card_width = 160
+
+        # =================================================
+        # CALCULAR COLUNAS
+        # =================================================
+
+        columns = max(
+            1,
+            int(
+                (
+                    available_width + spacing
+                )
+                /
+                (
+                    min_card_width + spacing
+                )
+            )
+        )
+
+        # =================================================
+        # LARGURA REAL DE CADA CARTA
+        # =================================================
+
+        total_spacing = (
+            (columns - 1)
+            * spacing
+        )
+
+        card_width = int(
+            (
+                available_width
+                - total_spacing
+            )
+            /
+            columns
+        )
+
+        card_width = max(
+            min_card_width,
+            card_width
+        )
+
+        # Evita ultrapassar demais a largura.
+        max_card_width = 500
+
+        card_width = min(
+            card_width,
+            max_card_width
+        )
+
+        # =================================================
+        # GUARDAR COLUNAS
+        # =================================================
+
+        self._grid_columns = columns
+
+        # =================================================
+        # CRIAR CARTAS
+        # =================================================
+
+        for index, card in enumerate(
+            cards
+        ):
+
+            (
+                card_id,
+                name,
+                printed_name,
+                lang,
+                set_name,
+                collector_number,
+                mana_cost,
+                type_line,
+                oracle_text,
+                image_url,
+                quantity,
+                image_path,
+                power,
+                toughness
+            ) = card
+
+            try:
+
+                card_id = int(
+                    card_id
+                )
+
+            except (
+                TypeError,
+                ValueError
+            ):
+
+                continue
+
+            if card_id <= 0:
+                continue
+
+            card_data = {
+                "id": card_id,
+                "name": name,
+                "printed_name": printed_name,
+                "set_name": set_name,
+                "collector_number": collector_number,
+                "mana_cost": mana_cost,
+                "type_line": type_line,
+                "oracle_text": oracle_text,
+                "image_url": image_url,
+                "image_path": image_path,
+                "quantity": quantity,
+                "power": power,
+                "toughness": toughness,
+            }
+
+            frame = GridCardFrame()
+
+            frame.set_card_width(
+                card_width
+            )
+
+            frame.setToolTip(
+                name or ""
+            )
+
+            frame.doubleClicked.connect(
+                lambda card=card_data:
+                self.show_card_details(
+                    card
+                )
+            )
+
+            # =================================================
+            # QUANTIDADE
+            # =================================================
+
+            frame.quantity_label.setText(
+                str(quantity)
+            )
+
+            frame.minus_button.clicked.connect(
+                lambda checked=False,
+                       cid=card_id:
+                self.change_card_quantity(
+                    cid,
+                    -1
+                )
+            )
+
+            frame.plus_button.clicked.connect(
+                lambda checked=False,
+                       cid=card_id:
+                self.change_card_quantity(
+                    cid,
+                    1
+                )
+            )
+
+            # =================================================
+            # REGISTRAR REFERÊNCIA
+            # =================================================
+
+            self.card_rows[card_id] = {
+                "frame": frame,
+                "quantity_label": (
+                    frame.quantity_label
+                ),
+                "grid": True,
+            }
+
+            row = (
+                index
+                // columns
+            )
+
+            column = (
+                index
+                % columns
+            )
+
+            grid_layout.addWidget(
+                frame,
+                row,
+                column,
+                Qt.AlignmentFlag.AlignTop
+                | Qt.AlignmentFlag.AlignLeft
+            )
+
+            # =================================================
+            # IMAGEM
+            # =================================================
+
+            local_path = None
+
+            if image_path:
+
+                local_path = Path(
+                    image_path
+                )
+
+            if local_path:
+
+                if (
+                    local_path.exists()
+                    and local_path.stat().st_size > 0
+                ):
+
+                    self.load_grid_thumbnail(
+                        frame.image_label,
+                        local_path
+                    )
+
+                    continue
+
+            # =================================================
+            # DOWNLOAD
+            # =================================================
+
+            if image_url:
+
+                if image_path:
+
+                    local_path = Path(
+                        image_path
+                    )
+
+                else:
+
+                    scryfall_id = (
+                        self.get_scryfall_id_from_url(
+                            image_url
+                        )
+                    )
+
+                    local_path = (
+                        get_card_image_path(
+                            scryfall_id
+                        )
+                        if scryfall_id
+                        else None
+                    )
+
+                if local_path:
+
+                    task = ImageTask(
+                        image_url,
+                        local_path
+                    )
+
+                    task.signals.finished.connect(
+                        lambda url,
+                               path,
+                               data,
+                               label=frame.image_label:
+                        self.receive_image(
+                            url,
+                            path,
+                            data,
+                            label
+                        )
+                    )
+
+                    task.signals.failed.connect(
+                        lambda url,
+                               error,
+                               label=frame.image_label:
+                        self.receive_image_error(
+                            url,
+                            error,
+                            label
+                        )
+                    )
+
+                    self.image_pool.start(
+                        task
+                    )
+
+        # =================================================
+        # ESTICAR COLUNAS
+        # =================================================
+
+        for column in range(
+            columns
+        ):
+
+            grid_layout.setColumnStretch(
+                column,
+                1
+            )
+
+        self.cards_layout.addLayout(
+            grid_layout
+        )
 
     # =====================================================
     # CRIAR LINHA DA CARTA
@@ -1599,7 +2363,9 @@ class CollectionPage(QWidget):
 
         frame.doubleClicked.connect(
             lambda card=card_data:
-            self.show_card_details(card)
+            self.show_card_details(
+                card
+            )
         )
 
         # =================================================
@@ -1625,7 +2391,7 @@ class CollectionPage(QWidget):
         # MINIATURA
         # =================================================
 
-        image_label = QLabel()
+        image_label = CardImageLabel()
 
         image_label.setObjectName(
             "CardThumbnail"
@@ -1642,6 +2408,13 @@ class CollectionPage(QWidget):
 
         image_label.setText(
             "🃏"
+        )
+
+        image_label.doubleClicked.connect(
+            lambda card=card_data:
+            self.show_card_details(
+                card
+            )
         )
 
         layout.addWidget(
@@ -1754,9 +2527,9 @@ class CollectionPage(QWidget):
                 9
             )
 
-            # =============================================
+            # =================================================
             # MANA
-            # =============================================
+            # =================================================
 
             if has_mana:
 
@@ -1784,9 +2557,9 @@ class CollectionPage(QWidget):
                     Qt.AlignmentFlag.AlignVCenter
                 )
 
-            # =============================================
+            # =================================================
             # SEPARADOR
-            # =============================================
+            # =================================================
 
             if has_mana and has_pt:
 
@@ -1820,9 +2593,9 @@ class CollectionPage(QWidget):
                     Qt.AlignmentFlag.AlignVCenter
                 )
 
-            # =============================================
+            # =================================================
             # POWER / TOUGHNESS
-            # =============================================
+            # =================================================
 
             if has_pt:
 
@@ -1854,9 +2627,9 @@ class CollectionPage(QWidget):
                     Qt.AlignmentFlag.AlignVCenter
                 )
 
-            # =============================================
+            # =================================================
             # CENTRALIZAÇÃO
-            # =============================================
+            # =================================================
 
             meta_row = QHBoxLayout()
 
@@ -1946,7 +2719,7 @@ class CollectionPage(QWidget):
 
         layout.addWidget(
             info_widget,
-            1
+            1,
         )
 
         # =================================================
@@ -1974,7 +2747,7 @@ class CollectionPage(QWidget):
         )
 
         # =================================================
-        # QUANTIDADE
+        # ÁREA DE QUANTIDADE
         # =================================================
 
         quantity_frame = QFrame()
@@ -2106,6 +2879,7 @@ class CollectionPage(QWidget):
         self.card_rows[card_id] = {
             "frame": frame,
             "quantity_label": quantity_label,
+            "grid": False,
         }
 
         # =================================================
@@ -2143,7 +2917,7 @@ class CollectionPage(QWidget):
                 return
 
         # =================================================
-        # DOWNLOAD DA IMAGEM
+        # DOWNLOAD
         # =================================================
 
         if image_url:
@@ -2171,28 +2945,6 @@ class CollectionPage(QWidget):
                 )
 
             if local_path:
-
-                # =================================================
-                # CACHE DE IMAGEM
-                # =================================================
-
-                cached_pixmap = (
-                    self.image_cache.get(
-                        image_url
-                    )
-                )
-
-                if (
-                    cached_pixmap
-                    and not cached_pixmap.isNull()
-                ):
-
-                    self.set_thumbnail(
-                        image_label,
-                        cached_pixmap
-                    )
-
-                    return
 
                 task = ImageTask(
                     image_url,
@@ -2260,7 +3012,7 @@ class CollectionPage(QWidget):
         return None
 
     # =====================================================
-    # IMAGEM LOCAL
+    # IMAGEM LOCAL — LISTA
     # =====================================================
 
     def load_local_thumbnail(
@@ -2283,14 +3035,41 @@ class CollectionPage(QWidget):
                 pixmap
             )
 
-            # Colocar também no cache pelo caminho.
-            # O cache principal por URL continuará sendo
-            # preenchido quando o download retornar.
-
         except Exception as error:
 
             print(
                 "[IMAGE] Erro:",
+                error
+            )
+
+    # =====================================================
+    # IMAGEM LOCAL — GRADE
+    # =====================================================
+
+    def load_grid_thumbnail(
+        self,
+        label,
+        path
+    ):
+
+        try:
+
+            pixmap = QPixmap(
+                str(path)
+            )
+
+            if pixmap.isNull():
+                return
+
+            self.set_grid_thumbnail(
+                label,
+                pixmap
+            )
+
+        except Exception as error:
+
+            print(
+                "[IMAGE] Erro ao carregar imagem da grade:",
                 error
             )
 
@@ -2318,26 +3097,23 @@ class CollectionPage(QWidget):
             url
         ] = pixmap
 
-        # =================================================
-        # GARANTIR QUE O LABEL AINDA EXISTE
-        # =================================================
+        if (
+            label
+            and label.objectName()
+            == "GridCardImage"
+        ):
 
-        try:
+            self.set_grid_thumbnail(
+                label,
+                pixmap
+            )
 
-            if label is None:
-
-                return
+        else:
 
             self.set_thumbnail(
                 label,
                 pixmap
             )
-
-        except RuntimeError:
-
-            # Widget pode ter sido destruído enquanto
-            # o download estava acontecendo.
-            pass
 
     def receive_image_error(
         self,
@@ -2350,18 +3126,12 @@ class CollectionPage(QWidget):
             f"[IMAGE] Falha: {url} | {error}"
         )
 
-        try:
-
-            label.setText(
-                "🃏"
-            )
-
-        except RuntimeError:
-
-            pass
+        label.setText(
+            "🃏"
+        )
 
     # =====================================================
-    # MINIATURA
+    # MINIATURA — LISTA
     # =====================================================
 
     def set_thumbnail(
@@ -2397,6 +3167,53 @@ class CollectionPage(QWidget):
         )
 
     # =====================================================
+    # MINIATURA — GRADE
+    # =====================================================
+
+    def set_grid_thumbnail(
+        self,
+        label,
+        pixmap
+    ):
+
+        if (
+            not pixmap
+            or pixmap.isNull()
+        ):
+
+            label.setText(
+                "🃏"
+            )
+
+            return
+
+        width = label.width()
+        height = label.height()
+
+        if width <= 0:
+            width = 160
+
+        if height <= 0:
+            height = round(
+                width * 88 / 63
+            )
+
+        scaled = pixmap.scaled(
+            width,
+            height,
+            Qt.AspectRatioMode.KeepAspectRatio,
+            Qt.TransformationMode.SmoothTransformation
+        )
+
+        label.setText(
+            ""
+        )
+
+        label.setPixmap(
+            scaled
+        )
+
+    # =====================================================
     # DETALHES DA CARTA
     # =====================================================
 
@@ -2409,7 +3226,7 @@ class CollectionPage(QWidget):
             return
 
         # =================================================
-        # TENTAR RECUPERAR DO CACHE
+        # CACHE
         # =================================================
 
         pixmap = None
@@ -2425,7 +3242,7 @@ class CollectionPage(QWidget):
             )
 
         # =================================================
-        # TENTAR CAMINHO LOCAL
+        # CAMINHO LOCAL
         # =================================================
 
         if (
@@ -2454,7 +3271,9 @@ class CollectionPage(QWidget):
                             str(path)
                         )
 
-                        if not local_pixmap.isNull():
+                        if (
+                            not local_pixmap.isNull()
+                        ):
 
                             pixmap = local_pixmap
 
@@ -2472,7 +3291,7 @@ class CollectionPage(QWidget):
                     )
 
         # =================================================
-        # ABRIR JANELA
+        # ABRIR
         # =================================================
 
         dialog = CardDetailsDialog(
@@ -2514,7 +3333,7 @@ class CollectionPage(QWidget):
             return
 
         # =================================================
-        # ALTERAR NO BANCO
+        # ALTERAR BANCO
         # =================================================
 
         success = change_quantity(
@@ -2534,6 +3353,9 @@ class CollectionPage(QWidget):
         )
 
         if not row_data:
+
+            self.load_cards()
+
             return
 
         quantity_label = row_data[
@@ -2577,12 +3399,26 @@ class CollectionPage(QWidget):
                 None
             )
 
-            frame.deleteLater()
+            self.current_cards = [
+                card
+                for card in self.current_cards
+                if str(card[0]) != str(card_id)
+            ]
+
+            if self.current_layout == "grid":
+
+                self.display_cards(
+                    self.current_cards
+                )
+
+            else:
+
+                frame.deleteLater()
 
             return
 
         # =================================================
-        # ATUALIZAR SOMENTE LABEL
+        # ATUALIZAR VISUAL
         # =================================================
 
         quantity_label.setText(
@@ -2768,9 +3604,9 @@ class CardDetailsDialog(QDialog):
                 9
             )
 
-            # =============================================
+            # =================================================
             # MANA
-            # =============================================
+            # =================================================
 
             if has_mana:
 
@@ -2800,9 +3636,9 @@ class CardDetailsDialog(QDialog):
                     mana_layout
                 )
 
-            # =============================================
+            # =================================================
             # SEPARADOR
-            # =============================================
+            # =================================================
 
             if has_mana and has_pt:
 
@@ -2834,9 +3670,9 @@ class CardDetailsDialog(QDialog):
                     Qt.AlignmentFlag.AlignVCenter
                 )
 
-            # =============================================
+            # =================================================
             # POWER / TOUGHNESS
-            # =============================================
+            # =================================================
 
             if has_pt:
 
@@ -2993,10 +3829,6 @@ class CardDetailsDialog(QDialog):
         layout.addWidget(
             info_widget
         )
-
-    # =====================================================
-    # IMAGEM
-    # =====================================================
 
     def set_image(
         self,

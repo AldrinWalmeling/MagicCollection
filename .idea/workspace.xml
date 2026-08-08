@@ -5,52 +5,15 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="14717f08-37a0-4c50-85ce-aa9bd2e175ab" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/.idea/MagicCollection.iml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/copilot.data.migration.agent.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/copilot.data.migration.ask.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/copilot.data.migration.ask2agent.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/copilot.data.migration.edit.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/inspectionProfiles/Project_Default.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/inspectionProfiles/profiles_settings.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/modules.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/vcs.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/config.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/database.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/database/magic.db" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/database/migrations/.gitkeep" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/export.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/main.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models/__init__.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models/card.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models/collection.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models/symbol.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/pages/collection_page.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/pages/decks_page.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/pages/settings_page.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/pages/statistics_page.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/repositories/__init__.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/repositories/card_repository.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/repositories/collection_repository.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/repositories/symbol_repository.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/requirementes.txt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/services/__init__.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/services/card_parser.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/services/oracle_parser.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/services/scryfall.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/services/scryfall_symbols.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ui/__init__.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ui/dialogs/add_card.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ui/dialogs/card_details.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ui/dialogs/export_dialog.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ui/main_window.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ui/theme.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ui/widgets/card_item.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ui/widgets/card_preview.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ui/widgets/oracle_text.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ui/widgets/search_bar.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ui/widgets/symbol_label.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/decks_database.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/collection.db" beforeDir="false" afterPath="$PROJECT_DIR$/collection.db" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/database.py" beforeDir="false" afterPath="$PROJECT_DIR$/database.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/main.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/collection_page.py" beforeDir="false" afterPath="$PROJECT_DIR$/pages/collection_page.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/decks_page.py" beforeDir="false" afterPath="$PROJECT_DIR$/pages/decks_page.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ui/main_window.py" beforeDir="false" afterPath="$PROJECT_DIR$/ui/main_window.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ui/theme.py" beforeDir="false" afterPath="$PROJECT_DIR$/ui/theme.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -89,7 +52,7 @@
     "Python.main_window (1).executor": "Run",
     "Python.main_window.executor": "Run",
     "RunOnceActivity.ShowReadmeOnStart": "true",
-    "git-widget-placeholder": "master"
+    "git-widget-placeholder": "main"
   }
 }]]></component>
   <component name="RecentsManager">

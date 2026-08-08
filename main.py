@@ -4,6 +4,7 @@ from PySide6.QtWidgets import QApplication
 
 from database import (
     initialize_database,
+    initialize_decks_database,
     rebuild_missing_image_paths,
 )
 
@@ -17,6 +18,8 @@ def main():
     # =====================================================
 
     initialize_database()
+
+    initialize_decks_database()
 
     rebuild_missing_image_paths()
 
@@ -46,5 +49,4 @@ def main():
 
 
 if __name__ == "__main__":
-
     main()

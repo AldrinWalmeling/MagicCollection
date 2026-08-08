@@ -30,6 +30,10 @@ def get_connection():
 
     connection.row_factory = sqlite3.Row
 
+    connection.execute(
+        "PRAGMA foreign_keys = ON"
+    )
+
     return connection
 
 
@@ -56,14 +60,14 @@ def build_scryfall_image_url(
 
     return (
         "https://cards.scryfall.io/"
-        f"normal/front/"
+        "normal/front/"
         f"{first}/{second}/"
         f"{scryfall_id}.jpg"
     )
 
 
 # =========================================================
-# LIMPAR URL DE IMAGEM
+# NORMALIZAR URL DA IMAGEM
 # =========================================================
 
 def normalize_image_url(
@@ -80,7 +84,7 @@ def normalize_image_url(
     # -----------------------------------------------------
     # Markdown:
     #
-    # [https://exemplo](https://exemplo)
+    # [texto](https://exemplo.com)
     # -----------------------------------------------------
 
     if (
@@ -95,12 +99,14 @@ def normalize_image_url(
                 1
             )[1]
 
-            image_url = image_url.rstrip(
-                ")"
-            )
+            image_url = image_url.rsplit(
+                ")",
+                1
+            )[0]
 
         except Exception:
-            pass
+
+            return None
 
     # -----------------------------------------------------
     # HTML entity
@@ -129,58 +135,6 @@ def normalize_image_url(
 # =========================================================
 # OBTER URL DA IMAGEM DOS DADOS DO SCRYFALL
 # =========================================================
-def normalize_image_url(image_url):
-
-    if not image_url:
-        return None
-
-    image_url = str(
-        image_url
-    ).strip()
-
-    # ---------------------------------------------
-    # Markdown:
-    # [texto](URL)
-    # ---------------------------------------------
-
-    if image_url.startswith("[") and "](" in image_url:
-
-        try:
-
-            image_url = image_url.split(
-                "](",
-                1
-            )[1]
-
-            image_url = image_url.rsplit(
-                ")",
-                1
-            )[0]
-
-        except Exception:
-            return None
-
-    # ---------------------------------------------
-    # HTML
-    # ---------------------------------------------
-
-    image_url = (
-        image_url
-        .replace("&amp;", "&")
-        .strip()
-    )
-
-    # ---------------------------------------------
-    # Garantir URL
-    # ---------------------------------------------
-
-    if not (
-        image_url.startswith("http://")
-        or image_url.startswith("https://")
-    ):
-        return None
-
-    return image_url
 
 def extract_image_url(
     card_data
@@ -310,7 +264,7 @@ def get_card_image_path(
 
 
 # =========================================================
-# INICIALIZAÇÃO
+# INICIALIZAÇÃO DA COLEÇÃO
 # =========================================================
 
 def init_database():
@@ -370,7 +324,7 @@ def init_database():
 
 
 # =========================================================
-# MIGRAÇÃO
+# MIGRAÇÃO DA COLEÇÃO
 # =========================================================
 
 def migrate_database():
@@ -455,14 +409,14 @@ def migrate_database():
             )
 
             print(
-                f"[DATABASE] Coluna adicionada: "
+                "[DATABASE] Coluna adicionada: "
                 f"{column_name}"
             )
 
         except sqlite3.OperationalError as error:
 
             print(
-                f"[DATABASE] Erro ao adicionar "
+                "[DATABASE] Erro ao adicionar "
                 f"{column_name}: {error}"
             )
 
@@ -541,6 +495,7 @@ def repair_invalid_ids():
         cursor.execute(
             """
             INSERT INTO cards (
+
                 scryfall_id,
                 name,
                 printed_name,
@@ -558,6 +513,7 @@ def repair_invalid_ids():
                 quantity,
                 created_at,
                 updated_at
+
             )
             VALUES (
                 ?, ?, ?, ?, ?, ?, ?, ?, ?,
@@ -602,14 +558,15 @@ def repair_invalid_ids():
     connection.close()
 
     print(
-        f"[DATABASE] IDs reparados: {repaired}"
+        "[DATABASE] IDs reparados: "
+        f"{repaired}"
     )
 
     return repaired
 
 
 # =========================================================
-# CORRIGIR URLs / CAMINHOS DAS IMAGENS
+# CORRIGIR URLS / CAMINHOS DAS IMAGENS
 # =========================================================
 
 def fix_image_urls():
@@ -726,14 +683,15 @@ def fix_image_urls():
     connection.close()
 
     print(
-        f"[DATABASE] Registros corrigidos: {fixed}"
+        "[DATABASE] Registros corrigidos: "
+        f"{fixed}"
     )
 
     return fixed
 
 
 # =========================================================
-# INICIALIZAÇÃO COMPLETA
+# INICIALIZAÇÃO COMPLETA DA COLEÇÃO
 # =========================================================
 
 def initialize_database():
@@ -753,7 +711,111 @@ def initialize_database():
 
 
 # =========================================================
-# ADICIONAR CARTA
+# BANCO DE DADOS DOS DECKS
+# =========================================================
+
+def initialize_decks_database():
+
+    connection = get_connection()
+
+    cursor = connection.cursor()
+
+    # =====================================================
+    # DECKS
+    # =====================================================
+
+    cursor.execute(
+        """
+        CREATE TABLE IF NOT EXISTS decks (
+
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+            name TEXT NOT NULL,
+
+            created_at TIMESTAMP
+                DEFAULT CURRENT_TIMESTAMP,
+
+            updated_at TIMESTAMP
+                DEFAULT CURRENT_TIMESTAMP
+        )
+        """
+    )
+
+    # =====================================================
+    # CARTAS DOS DECKS
+    # =====================================================
+
+    cursor.execute(
+        """
+        CREATE TABLE IF NOT EXISTS deck_cards (
+
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+            deck_id INTEGER NOT NULL,
+
+            card_id INTEGER NOT NULL,
+
+            quantity INTEGER NOT NULL DEFAULT 1,
+
+            created_at TIMESTAMP
+                DEFAULT CURRENT_TIMESTAMP,
+
+            updated_at TIMESTAMP
+                DEFAULT CURRENT_TIMESTAMP,
+
+            UNIQUE(
+                deck_id,
+                card_id
+            ),
+
+            FOREIGN KEY (
+                deck_id
+            )
+            REFERENCES decks(id)
+            ON DELETE CASCADE,
+
+            FOREIGN KEY (
+                card_id
+            )
+            REFERENCES cards(id)
+            ON DELETE CASCADE
+        )
+        """
+    )
+
+    # =====================================================
+    # ÍNDICES
+    # =====================================================
+
+    cursor.execute(
+        """
+        CREATE INDEX IF NOT EXISTS
+        idx_deck_cards_deck_id
+
+        ON deck_cards(deck_id)
+        """
+    )
+
+    cursor.execute(
+        """
+        CREATE INDEX IF NOT EXISTS
+        idx_deck_cards_card_id
+
+        ON deck_cards(card_id)
+        """
+    )
+
+    connection.commit()
+
+    connection.close()
+
+    print(
+        "[DATABASE] Banco de decks inicializado."
+    )
+
+
+# =========================================================
+# ADICIONAR CARTA À COLEÇÃO
 # =========================================================
 
 def add_card(
@@ -996,7 +1058,7 @@ def add_card(
             connection.commit()
 
             print(
-                f"[DATABASE] Carta atualizada: "
+                "[DATABASE] Carta atualizada: "
                 f"{name} | ID={existing_id} | "
                 f"Quantidade={new_quantity}"
             )
@@ -1010,6 +1072,7 @@ def add_card(
         cursor.execute(
             """
             INSERT INTO cards (
+
                 scryfall_id,
                 name,
                 printed_name,
@@ -1025,6 +1088,7 @@ def add_card(
                 image_url,
                 image_path,
                 quantity
+
             )
             VALUES (
                 ?, ?, ?, ?, ?, ?, ?, ?, ?,
@@ -1055,22 +1119,22 @@ def add_card(
         new_id = cursor.lastrowid
 
         print(
-            f"[DATABASE] Carta adicionada: "
+            "[DATABASE] Carta adicionada: "
             f"{name} | ID={new_id}"
         )
 
         print(
-            f"[DATABASE] Scryfall ID: "
+            "[DATABASE] Scryfall ID: "
             f"{scryfall_id}"
         )
 
         print(
-            f"[DATABASE] Imagem remota: "
+            "[DATABASE] Imagem remota: "
             f"{image_url}"
         )
 
         print(
-            f"[DATABASE] Imagem local: "
+            "[DATABASE] Imagem local: "
             f"{image_path_string}"
         )
 
@@ -1081,7 +1145,7 @@ def add_card(
         connection.rollback()
 
         print(
-            f"[DATABASE] Erro ao adicionar carta: "
+            "[DATABASE] Erro ao adicionar carta: "
             f"{error}"
         )
 
@@ -1205,7 +1269,7 @@ def search_cards(
 
 
 # =========================================================
-# ALTERAR QUANTIDADE
+# ALTERAR QUANTIDADE DA COLEÇÃO
 # =========================================================
 
 def change_quantity(
@@ -1229,7 +1293,7 @@ def change_quantity(
     ):
 
         print(
-            f"[DATABASE] ID ou quantidade inválida: "
+            "[DATABASE] ID ou quantidade inválida: "
             f"{card_id} / {amount}"
         )
 
@@ -1238,7 +1302,8 @@ def change_quantity(
     if card_id <= 0:
 
         print(
-            f"[DATABASE] ID inválido: {card_id}"
+            "[DATABASE] ID inválido: "
+            f"{card_id}"
         )
 
         return False
@@ -1267,7 +1332,7 @@ def change_quantity(
         if not row:
 
             print(
-                f"[DATABASE] Carta não encontrada. "
+                "[DATABASE] Carta não encontrada. "
                 f"ID: {card_id}"
             )
 
@@ -1298,7 +1363,7 @@ def change_quantity(
             )
 
             print(
-                f"[DATABASE] Carta removida. "
+                "[DATABASE] Carta removida. "
                 f"ID={card_id}"
             )
 
@@ -1320,7 +1385,7 @@ def change_quantity(
             )
 
             print(
-                f"[DATABASE] Quantidade alterada: "
+                "[DATABASE] Quantidade alterada: "
                 f"ID={card_id} | "
                 f"{current_quantity} -> "
                 f"{new_quantity}"
@@ -1335,7 +1400,7 @@ def change_quantity(
         connection.rollback()
 
         print(
-            f"[DATABASE] Erro ao alterar quantidade: "
+            "[DATABASE] Erro ao alterar quantidade: "
             f"{error}"
         )
 
@@ -1554,6 +1619,10 @@ def rebuild_missing_image_paths():
             expected_path
         )
 
+        # -------------------------------------------------
+        # CAMINHO
+        # -------------------------------------------------
+
         if row["image_path"] != expected_path:
 
             cursor.execute(
@@ -1572,6 +1641,10 @@ def rebuild_missing_image_paths():
             )
 
             fixed += 1
+
+        # -------------------------------------------------
+        # URL
+        # -------------------------------------------------
 
         if not row["image_url"]:
 
@@ -1604,4 +1677,1025 @@ def rebuild_missing_image_paths():
 
     connection.close()
 
+    print(
+        "[DATABASE] Caminhos de imagem "
+        f"reconstruídos: {fixed}"
+    )
+
     return fixed
+
+
+# =========================================================
+# =========================================================
+# DECKS
+# =========================================================
+# =========================================================
+
+
+# =========================================================
+# CRIAR DECK
+# =========================================================
+
+def create_deck(
+    name
+):
+
+    name = (
+        name or ""
+    ).strip()
+
+    if not name:
+        return None
+
+    connection = get_connection()
+
+    cursor = connection.cursor()
+
+    try:
+
+        cursor.execute(
+            """
+            INSERT INTO decks (
+                name
+            )
+            VALUES (?)
+            """,
+            (
+                name,
+            )
+        )
+
+        connection.commit()
+
+        deck_id = cursor.lastrowid
+
+        print(
+            "[DATABASE] Deck criado: "
+            f"{name} | ID={deck_id}"
+        )
+
+        return int(
+            deck_id
+        )
+
+    except Exception as error:
+
+        connection.rollback()
+
+        print(
+            "[DATABASE] Erro ao criar deck: "
+            f"{error}"
+        )
+
+        return None
+
+    finally:
+
+        connection.close()
+
+
+# =========================================================
+# TODOS OS DECKS
+# =========================================================
+
+def get_all_decks():
+
+    connection = get_connection()
+
+    cursor = connection.cursor()
+
+    cursor.execute(
+        """
+        SELECT
+            d.id,
+            d.name,
+            d.created_at,
+            d.updated_at,
+
+            COALESCE(
+                SUM(dc.quantity),
+                0
+            ) AS card_count
+
+        FROM decks d
+
+        LEFT JOIN deck_cards dc
+            ON dc.deck_id = d.id
+
+        GROUP BY
+            d.id
+
+        ORDER BY
+            d.name COLLATE NOCASE ASC
+        """
+    )
+
+    rows = cursor.fetchall()
+
+    connection.close()
+
+    return [
+        dict(row)
+        for row in rows
+    ]
+
+
+# =========================================================
+# DECK POR ID
+# =========================================================
+
+def get_deck_by_id(
+    deck_id
+):
+
+    try:
+
+        deck_id = int(
+            deck_id
+        )
+
+    except (
+        TypeError,
+        ValueError
+    ):
+
+        return None
+
+    connection = get_connection()
+
+    cursor = connection.cursor()
+
+    cursor.execute(
+        """
+        SELECT
+            d.id,
+            d.name,
+            d.created_at,
+            d.updated_at,
+
+            COALESCE(
+                SUM(dc.quantity),
+                0
+            ) AS card_count
+
+        FROM decks d
+
+        LEFT JOIN deck_cards dc
+            ON dc.deck_id = d.id
+
+        WHERE d.id = ?
+
+        GROUP BY
+            d.id
+        """,
+        (
+            deck_id,
+        )
+    )
+
+    row = cursor.fetchone()
+
+    connection.close()
+
+    if not row:
+        return None
+
+    return dict(row)
+
+
+# =========================================================
+# RENOMEAR DECK
+# =========================================================
+
+def rename_deck(
+    deck_id,
+    name
+):
+
+    try:
+
+        deck_id = int(
+            deck_id
+        )
+
+    except (
+        TypeError,
+        ValueError
+    ):
+
+        return False
+
+    name = (
+        name or ""
+    ).strip()
+
+    if not name:
+        return False
+
+    connection = get_connection()
+
+    cursor = connection.cursor()
+
+    try:
+
+        cursor.execute(
+            """
+            UPDATE decks
+            SET
+                name = ?,
+                updated_at =
+                    CURRENT_TIMESTAMP
+            WHERE id = ?
+            """,
+            (
+                name,
+                deck_id
+            )
+        )
+
+        changed = (
+            cursor.rowcount > 0
+        )
+
+        connection.commit()
+
+        if changed:
+
+            print(
+                "[DATABASE] Deck renomeado: "
+                f"ID={deck_id} | "
+                f"Nome={name}"
+            )
+
+        return changed
+
+    except Exception as error:
+
+        connection.rollback()
+
+        print(
+            "[DATABASE] Erro ao renomear deck: "
+            f"{error}"
+        )
+
+        return False
+
+    finally:
+
+        connection.close()
+
+
+# =========================================================
+# EXCLUIR DECK
+# =========================================================
+
+def delete_deck(
+    deck_id
+):
+
+    try:
+
+        deck_id = int(
+            deck_id
+        )
+
+    except (
+        TypeError,
+        ValueError
+    ):
+
+        return False
+
+    connection = get_connection()
+
+    cursor = connection.cursor()
+
+    try:
+
+        cursor.execute(
+            """
+            DELETE FROM decks
+            WHERE id = ?
+            """,
+            (
+                deck_id,
+            )
+        )
+
+        deleted = (
+            cursor.rowcount > 0
+        )
+
+        connection.commit()
+
+        if deleted:
+
+            print(
+                "[DATABASE] Deck excluído: "
+                f"ID={deck_id}"
+            )
+
+        return deleted
+
+    except Exception as error:
+
+        connection.rollback()
+
+        print(
+            "[DATABASE] Erro ao excluir deck: "
+            f"{error}"
+        )
+
+        return False
+
+    finally:
+
+        connection.close()
+
+
+# =========================================================
+# CARTAS DE UM DECK
+# =========================================================
+
+def get_deck_cards(
+    deck_id
+):
+
+    try:
+
+        deck_id = int(
+            deck_id
+        )
+
+    except (
+        TypeError,
+        ValueError
+    ):
+
+        return []
+
+    connection = get_connection()
+
+    cursor = connection.cursor()
+
+    cursor.execute(
+        """
+        SELECT
+
+            c.id,
+
+            c.scryfall_id,
+
+            c.name,
+
+            c.printed_name,
+
+            c.lang,
+
+            c.set_code,
+
+            c.set_name,
+
+            c.collector_number,
+
+            c.mana_cost,
+
+            c.type_line,
+
+            c.oracle_text,
+
+            c.power,
+
+            c.toughness,
+
+            c.image_url,
+
+            c.image_path,
+
+            c.quantity AS collection_quantity,
+
+            dc.quantity AS deck_quantity
+
+        FROM deck_cards dc
+
+        INNER JOIN cards c
+            ON c.id = dc.card_id
+
+        WHERE dc.deck_id = ?
+
+        ORDER BY
+            c.name COLLATE NOCASE ASC
+        """,
+        (
+            deck_id,
+        )
+    )
+
+    rows = cursor.fetchall()
+
+    connection.close()
+
+    return [
+        dict(row)
+        for row in rows
+    ]
+
+
+# =========================================================
+# CARTAS DISPONÍVEIS PARA ADICIONAR AO DECK
+# =========================================================
+
+def get_cards_available_for_deck(
+    deck_id,
+    search_text=""
+):
+
+    try:
+
+        deck_id = int(
+            deck_id
+        )
+
+    except (
+        TypeError,
+        ValueError
+    ):
+
+        return []
+
+    search_text = (
+        search_text or ""
+    ).strip()
+
+    connection = get_connection()
+
+    cursor = connection.cursor()
+
+    # -----------------------------------------------------
+    # SEM PESQUISA
+    # -----------------------------------------------------
+
+    if not search_text:
+
+        cursor.execute(
+            """
+            SELECT
+
+                c.id,
+
+                c.scryfall_id,
+
+                c.name,
+
+                c.printed_name,
+
+                c.lang,
+
+                c.set_code,
+
+                c.set_name,
+
+                c.collector_number,
+
+                c.mana_cost,
+
+                c.type_line,
+
+                c.oracle_text,
+
+                c.power,
+
+                c.toughness,
+
+                c.image_url,
+
+                c.image_path,
+
+                c.quantity
+                    AS collection_quantity,
+
+                COALESCE(
+                    dc.quantity,
+                    0
+                ) AS deck_quantity
+
+            FROM cards c
+
+            LEFT JOIN deck_cards dc
+                ON dc.card_id = c.id
+                AND dc.deck_id = ?
+
+            WHERE c.quantity > 0
+
+            ORDER BY
+                c.name COLLATE NOCASE ASC
+            """,
+            (
+                deck_id,
+            )
+        )
+
+    # -----------------------------------------------------
+    # COM PESQUISA
+    # -----------------------------------------------------
+
+    else:
+
+        search = (
+            f"%{search_text}%"
+        )
+
+        cursor.execute(
+            """
+            SELECT
+
+                c.id,
+
+                c.scryfall_id,
+
+                c.name,
+
+                c.printed_name,
+
+                c.lang,
+
+                c.set_code,
+
+                c.set_name,
+
+                c.collector_number,
+
+                c.mana_cost,
+
+                c.type_line,
+
+                c.oracle_text,
+
+                c.power,
+
+                c.toughness,
+
+                c.image_url,
+
+                c.image_path,
+
+                c.quantity
+                    AS collection_quantity,
+
+                COALESCE(
+                    dc.quantity,
+                    0
+                ) AS deck_quantity
+
+            FROM cards c
+
+            LEFT JOIN deck_cards dc
+                ON dc.card_id = c.id
+                AND dc.deck_id = ?
+
+            WHERE
+                c.quantity > 0
+
+                AND (
+
+                    c.name LIKE ?
+
+                    OR c.printed_name LIKE ?
+
+                    OR c.set_name LIKE ?
+
+                    OR c.collector_number LIKE ?
+
+                    OR c.type_line LIKE ?
+
+                    OR c.oracle_text LIKE ?
+
+                )
+
+            ORDER BY
+                c.name COLLATE NOCASE ASC
+            """,
+            (
+                deck_id,
+                search,
+                search,
+                search,
+                search,
+                search,
+                search
+            )
+        )
+
+    rows = cursor.fetchall()
+
+    connection.close()
+
+    return [
+        dict(row)
+        for row in rows
+    ]
+
+
+# =========================================================
+# ADICIONAR CARTA AO DECK
+# =========================================================
+
+def add_card_to_deck(
+    deck_id,
+    card_id,
+    quantity=1
+):
+
+    try:
+
+        deck_id = int(
+            deck_id
+        )
+
+        card_id = int(
+            card_id
+        )
+
+        quantity = int(
+            quantity
+        )
+
+    except (
+        TypeError,
+        ValueError
+    ):
+
+        return False
+
+    if deck_id <= 0:
+        return False
+
+    if card_id <= 0:
+        return False
+
+    if quantity <= 0:
+        return False
+
+    connection = get_connection()
+
+    cursor = connection.cursor()
+
+    try:
+
+        # =================================================
+        # VERIFICAR DECK
+        # =================================================
+
+        cursor.execute(
+            """
+            SELECT id
+            FROM decks
+            WHERE id = ?
+            """,
+            (
+                deck_id,
+            )
+        )
+
+        deck = cursor.fetchone()
+
+        if not deck:
+
+            print(
+                "[DATABASE] Deck não encontrado: "
+                f"{deck_id}"
+            )
+
+            return False
+
+        # =================================================
+        # VERIFICAR CARTA
+        # =================================================
+
+        cursor.execute(
+            """
+            SELECT
+                id,
+                quantity
+            FROM cards
+            WHERE id = ?
+            """,
+            (
+                card_id,
+            )
+        )
+
+        card = cursor.fetchone()
+
+        if not card:
+
+            print(
+                "[DATABASE] Carta não encontrada: "
+                f"{card_id}"
+            )
+
+            return False
+
+        collection_quantity = int(
+            card["quantity"]
+        )
+
+        # =================================================
+        # QUANTIDADE ATUAL NO DECK
+        # =================================================
+
+        cursor.execute(
+            """
+            SELECT
+                quantity
+            FROM deck_cards
+            WHERE
+                deck_id = ?
+                AND card_id = ?
+            """,
+            (
+                deck_id,
+                card_id
+            )
+        )
+
+        existing = cursor.fetchone()
+
+        current_quantity = (
+            int(existing["quantity"])
+            if existing
+            else 0
+        )
+
+        new_quantity = (
+            current_quantity
+            + quantity
+        )
+
+        # =================================================
+        # NÃO PODE USAR MAIS CARTAS QUE A COLEÇÃO
+        # =================================================
+
+        if new_quantity > collection_quantity:
+
+            print(
+                "[DATABASE] Quantidade insuficiente "
+                "na coleção. "
+                f"Coleção={collection_quantity} | "
+                f"Deck={current_quantity} | "
+                f"Solicitado={quantity}"
+            )
+
+            return False
+
+        # =================================================
+        # ATUALIZAR EXISTENTE
+        # =================================================
+
+        if existing:
+
+            cursor.execute(
+                """
+                UPDATE deck_cards
+                SET
+                    quantity = ?,
+                    updated_at =
+                        CURRENT_TIMESTAMP
+                WHERE
+                    deck_id = ?
+                    AND card_id = ?
+                """,
+                (
+                    new_quantity,
+                    deck_id,
+                    card_id
+                )
+            )
+
+        # =================================================
+        # NOVA CARTA
+        # =================================================
+
+        else:
+
+            cursor.execute(
+                """
+                INSERT INTO deck_cards (
+
+                    deck_id,
+                    card_id,
+                    quantity
+
+                )
+                VALUES (?, ?, ?)
+                """,
+                (
+                    deck_id,
+                    card_id,
+                    quantity
+                )
+            )
+
+        # =================================================
+        # ATUALIZAR DECK
+        # =================================================
+
+        cursor.execute(
+            """
+            UPDATE decks
+            SET
+                updated_at =
+                    CURRENT_TIMESTAMP
+            WHERE id = ?
+            """,
+            (
+                deck_id,
+            )
+        )
+
+        connection.commit()
+
+        print(
+            "[DATABASE] Carta adicionada ao deck: "
+            f"Deck={deck_id} | "
+            f"Carta={card_id} | "
+            f"Quantidade={new_quantity}"
+        )
+
+        return True
+
+    except Exception as error:
+
+        connection.rollback()
+
+        print(
+            "[DATABASE] Erro ao adicionar "
+            f"carta ao deck: {error}"
+        )
+
+        return False
+
+    finally:
+
+        connection.close()
+
+
+# =========================================================
+# REMOVER CARTA DO DECK
+# =========================================================
+
+def remove_card_from_deck(
+    deck_id,
+    card_id,
+    quantity=1
+):
+
+    try:
+
+        deck_id = int(
+            deck_id
+        )
+
+        card_id = int(
+            card_id
+        )
+
+        quantity = int(
+            quantity
+        )
+
+    except (
+        TypeError,
+        ValueError
+    ):
+
+        return False
+
+    if deck_id <= 0:
+        return False
+
+    if card_id <= 0:
+        return False
+
+    if quantity <= 0:
+        return False
+
+    connection = get_connection()
+
+    cursor = connection.cursor()
+
+    try:
+
+        cursor.execute(
+            """
+            SELECT
+                quantity
+            FROM deck_cards
+            WHERE
+                deck_id = ?
+                AND card_id = ?
+            """,
+            (
+                deck_id,
+                card_id
+            )
+        )
+
+        row = cursor.fetchone()
+
+        if not row:
+
+            print(
+                "[DATABASE] Carta não está no deck."
+            )
+
+            return False
+
+        current_quantity = int(
+            row["quantity"]
+        )
+
+        new_quantity = (
+            current_quantity
+            - quantity
+        )
+
+        if new_quantity <= 0:
+
+            cursor.execute(
+                """
+                DELETE FROM deck_cards
+                WHERE
+                    deck_id = ?
+                    AND card_id = ?
+                """,
+                (
+                    deck_id,
+                    card_id
+                )
+            )
+
+            new_quantity = 0
+
+        else:
+
+            cursor.execute(
+                """
+                UPDATE deck_cards
+                SET
+                    quantity = ?,
+                    updated_at =
+                        CURRENT_TIMESTAMP
+                WHERE
+                    deck_id = ?
+                    AND card_id = ?
+                """,
+                (
+                    new_quantity,
+                    deck_id,
+                    card_id
+                )
+            )
+
+        # =================================================
+        # ATUALIZAR DECK
+        # =================================================
+
+        cursor.execute(
+            """
+            UPDATE decks
+            SET
+                updated_at =
+                    CURRENT_TIMESTAMP
+            WHERE id = ?
+            """,
+            (
+                deck_id,
+            )
+        )
+
+        connection.commit()
+
+        print(
+            "[DATABASE] Carta removida do deck: "
+            f"Deck={deck_id} | "
+            f"Carta={card_id} | "
+            f"Quantidade={new_quantity}"
+        )
+
+        return True
+
+    except Exception as error:
+
+        connection.rollback()
+
+        print(
+            "[DATABASE] Erro ao remover "
+            f"carta do deck: {error}"
+        )
+
+        return False
+
+    finally:
+
+        connection.close()

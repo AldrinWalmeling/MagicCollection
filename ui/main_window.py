@@ -1,5 +1,3 @@
-from PySide6.QtCore import Qt
-
 from PySide6.QtWidgets import (
     QMainWindow,
     QWidget,
@@ -8,12 +6,10 @@ from PySide6.QtWidgets import (
     QLabel,
     QPushButton,
     QFrame,
-    QSizePolicy,
 )
 
-from pages.collection_page import (
-    CollectionPage,
-)
+from pages.collection_page import CollectionPage
+from pages.decks_page import DecksPage
 
 from ui.theme import DARK_THEME
 
@@ -24,10 +20,7 @@ from ui.theme import DARK_THEME
 
 class MainWindow(QMainWindow):
 
-    def __init__(
-        self
-    ):
-
+    def __init__(self):
         super().__init__()
 
         self.setWindowTitle(
@@ -56,9 +49,7 @@ class MainWindow(QMainWindow):
     # SETUP
     # =====================================================
 
-    def setup_ui(
-        self
-    ):
+    def setup_ui(self):
 
         central_widget = QWidget()
 
@@ -109,6 +100,10 @@ class MainWindow(QMainWindow):
         sidebar_layout.setSpacing(
             8
         )
+
+        # =================================================
+        # TÍTULO
+        # =================================================
 
         app_title = QLabel(
             "🃏  Magic Collection"
@@ -232,9 +227,7 @@ class MainWindow(QMainWindow):
     # COLEÇÃO
     # =====================================================
 
-    def show_collection(
-        self
-    ):
+    def show_collection(self):
 
         self.collection_button.setChecked(
             True
@@ -246,10 +239,8 @@ class MainWindow(QMainWindow):
 
         self.clear_content()
 
-        self.collection_page = (
-            CollectionPage(
-                self
-            )
+        self.collection_page = CollectionPage(
+            self
         )
 
         self.content_layout.addWidget(
@@ -264,9 +255,7 @@ class MainWindow(QMainWindow):
     # DECKS
     # =====================================================
 
-    def show_decks(
-        self
-    ):
+    def show_decks(self):
 
         self.collection_button.setChecked(
             False
@@ -278,49 +267,12 @@ class MainWindow(QMainWindow):
 
         self.clear_content()
 
-        title = QLabel(
-            "Meus Decks"
-        )
-
-        title.setObjectName(
-            "SectionTitle"
+        self.decks_page = DecksPage(
+            self
         )
 
         self.content_layout.addWidget(
-            title
-        )
-
-        description = QLabel(
-            "Aqui você poderá criar e organizar seus decks."
-        )
-
-        description.setObjectName(
-            "SectionDescription"
-        )
-
-        self.content_layout.addWidget(
-            description
-        )
-
-        coming_soon = QLabel(
-            "🎴\n\nConstrutor de decks em breve."
-        )
-
-        coming_soon.setObjectName(
-            "ComingSoon"
-        )
-
-        coming_soon.setAlignment(
-            Qt.AlignmentFlag.AlignCenter
-        )
-
-        coming_soon.setSizePolicy(
-            QSizePolicy.Policy.Expanding,
-            QSizePolicy.Policy.Expanding
-        )
-
-        self.content_layout.addWidget(
-            coming_soon
+            self.decks_page
         )
 
         self.sidebar_status.setText(
@@ -328,12 +280,10 @@ class MainWindow(QMainWindow):
         )
 
     # =====================================================
-    # LIMPAR
+    # LIMPAR CONTEÚDO
     # =====================================================
 
-    def clear_content(
-        self
-    ):
+    def clear_content(self):
 
         while self.content_layout.count():
 
