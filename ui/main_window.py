@@ -1,3 +1,8 @@
+
+from pathlib import Path
+
+from PySide6.QtCore import Qt, QSize
+from PySide6.QtGui import QIcon, QPixmap
 from PySide6.QtWidgets import (
     QMainWindow,
     QWidget,
@@ -15,13 +20,51 @@ from ui.theme import DARK_THEME
 
 
 # =========================================================
+# CAMINHOS DOS ASSETS
+# =========================================================
+
+BASE_DIR = Path(__file__).resolve().parent.parent
+
+ICONS_DIR = (
+    BASE_DIR
+    / "assets"
+    / "icons"
+)
+
+APP_ICON_PATH = (
+    ICONS_DIR
+    / "icon_app.png"
+)
+
+COLLECTION_ICON_PATH = (
+    ICONS_DIR
+    / "collection_icon.png"
+)
+
+DECKS_ICON_PATH = (
+    ICONS_DIR
+    / "decks_icon.png"
+)
+
+CARD_ICON_PATH = (
+    ICONS_DIR
+    / "card_icon.png"
+)
+
+
+# =========================================================
 # MAIN WINDOW
 # =========================================================
 
 class MainWindow(QMainWindow):
 
     def __init__(self):
+
         super().__init__()
+
+        # =================================================
+        # CONFIGURAÇÃO DA JANELA
+        # =================================================
 
         self.setWindowTitle(
             "Magic Collection"
@@ -37,13 +80,34 @@ class MainWindow(QMainWindow):
             600
         )
 
+        # =================================================
+        # ÍCONE DO APLICATIVO
+        # =================================================
+
+        if APP_ICON_PATH.exists():
+
+            self.setWindowIcon(
+                QIcon(
+                    str(APP_ICON_PATH)
+                )
+            )
+
+        # =================================================
+        # TEMA
+        # =================================================
+
         self.setStyleSheet(
             DARK_THEME
         )
 
+        # =================================================
+        # UI
+        # =================================================
+
         self.setup_ui()
 
         self.show_collection()
+
 
     # =====================================================
     # SETUP
@@ -72,6 +136,7 @@ class MainWindow(QMainWindow):
             0
         )
 
+
         # =================================================
         # SIDEBAR
         # =================================================
@@ -83,7 +148,7 @@ class MainWindow(QMainWindow):
         )
 
         sidebar.setFixedWidth(
-            220
+            265
         )
 
         sidebar_layout = QVBoxLayout(
@@ -91,9 +156,9 @@ class MainWindow(QMainWindow):
         )
 
         sidebar_layout.setContentsMargins(
-            16,
+            18,
             22,
-            16,
+            18,
             16
         )
 
@@ -101,35 +166,116 @@ class MainWindow(QMainWindow):
             8
         )
 
+
+        # =================================================
+        # HEADER DA SIDEBAR
+        # =================================================
+
+        app_header = QWidget()
+
+        app_header.setObjectName(
+            "AppHeader"
+        )
+
+        app_header_layout = QHBoxLayout(
+            app_header
+        )
+
+        app_header_layout.setContentsMargins(
+            4,
+            0,
+            4,
+            18
+        )
+
+        app_header_layout.setSpacing(
+            10
+        )
+
+
+        # =================================================
+        # ÍCONE DO APP
+        # =================================================
+
+        app_icon = QLabel()
+
+        app_icon.setObjectName(
+            "AppIcon"
+        )
+
+        # Aumente estes valores para aumentar
+        # o ícone do aplicativo.
+        app_icon.setFixedSize(
+            42,
+            42
+        )
+
+        app_icon.setAlignment(
+            Qt.AlignmentFlag.AlignCenter
+        )
+
+        if APP_ICON_PATH.exists():
+
+            pixmap = QPixmap(
+                str(APP_ICON_PATH)
+            )
+
+            if not pixmap.isNull():
+
+                pixmap = pixmap.scaled(
+                    42,
+                    42,
+                    Qt.AspectRatioMode.KeepAspectRatio,
+                    Qt.TransformationMode.SmoothTransformation
+                )
+
+                app_icon.setPixmap(
+                    pixmap
+                )
+
+        app_header_layout.addWidget(
+            app_icon,
+            0,
+            Qt.AlignmentFlag.AlignVCenter
+        )
+
+
         # =================================================
         # TÍTULO
         # =================================================
 
         app_title = QLabel(
-            "🃏  Magic Collection"
+            "Magic Collection"
         )
 
         app_title.setObjectName(
             "AppTitle"
         )
 
-        app_title.setContentsMargins(
-            4,
-            0,
-            0,
-            18
+        app_title.setAlignment(
+            Qt.AlignmentFlag.AlignVCenter
+        )
+
+        app_title.setMinimumWidth(
+            155
+        )
+
+        app_header_layout.addWidget(
+            app_title,
+            1
         )
 
         sidebar_layout.addWidget(
-            app_title
+            app_header
         )
+
 
         # =================================================
         # COLEÇÃO
         # =================================================
 
         self.collection_button = QPushButton(
-            "📦   Coleção"
+            "COLEÇÃO"
         )
 
         self.collection_button.setObjectName(
@@ -140,6 +286,34 @@ class MainWindow(QMainWindow):
             True
         )
 
+        self.collection_button.setCursor(
+            Qt.CursorShape.PointingHandCursor
+        )
+
+        self.collection_button.setMinimumHeight(
+            68
+        )
+
+        # -------------------------------------------------
+        # ÍCONE DA COLEÇÃO
+        # -------------------------------------------------
+
+        if COLLECTION_ICON_PATH.exists():
+
+            self.collection_button.setIcon(
+                QIcon(
+                    str(COLLECTION_ICON_PATH)
+                )
+            )
+
+        # TAMANHO DO ÍCONE DA COLEÇÃO
+        self.collection_button.setIconSize(
+            QSize(
+                64,
+                64
+            )
+        )
+
         self.collection_button.clicked.connect(
             self.show_collection
         )
@@ -148,12 +322,14 @@ class MainWindow(QMainWindow):
             self.collection_button
         )
 
+
         # =================================================
         # DECKS
         # =================================================
 
+        # PRIMEIRO criamos o botão.
         self.decks_button = QPushButton(
-            "🎴   Decks"
+            "DECKS"
         )
 
         self.decks_button.setObjectName(
@@ -164,6 +340,34 @@ class MainWindow(QMainWindow):
             True
         )
 
+        self.decks_button.setCursor(
+            Qt.CursorShape.PointingHandCursor
+        )
+
+        self.decks_button.setMinimumHeight(
+            68
+        )
+
+        # -------------------------------------------------
+        # ÍCONE DOS DECKS
+        # -------------------------------------------------
+
+        if DECKS_ICON_PATH.exists():
+
+            self.decks_button.setIcon(
+                QIcon(
+                    str(DECKS_ICON_PATH)
+                )
+            )
+
+        # TAMANHO DO ÍCONE DOS DECKS
+        self.decks_button.setIconSize(
+            QSize(
+                64,
+                64
+            )
+        )
+
         self.decks_button.clicked.connect(
             self.show_decks
         )
@@ -172,14 +376,20 @@ class MainWindow(QMainWindow):
             self.decks_button
         )
 
+
+        # =================================================
+        # ESPAÇAMENTO
+        # =================================================
+
         sidebar_layout.addStretch()
+
 
         # =================================================
         # STATUS
         # =================================================
 
         self.sidebar_status = QLabel(
-            "Magic Collection"
+            "Coleção"
         )
 
         self.sidebar_status.setObjectName(
@@ -190,19 +400,34 @@ class MainWindow(QMainWindow):
             True
         )
 
+        self.sidebar_status.setAlignment(
+            Qt.AlignmentFlag.AlignLeft
+            | Qt.AlignmentFlag.AlignVCenter
+        )
+
         sidebar_layout.addWidget(
             self.sidebar_status
         )
 
+
+        # =================================================
+        # ADICIONAR SIDEBAR
+        # =================================================
+
         main_layout.addWidget(
             sidebar
         )
+
 
         # =================================================
         # CONTEÚDO
         # =================================================
 
         self.content_widget = QWidget()
+
+        self.content_widget.setObjectName(
+            "ContentWidget"
+        )
 
         self.content_layout = QVBoxLayout(
             self.content_widget
@@ -220,8 +445,10 @@ class MainWindow(QMainWindow):
         )
 
         main_layout.addWidget(
-            self.content_widget
+            self.content_widget,
+            1
         )
+
 
     # =====================================================
     # COLEÇÃO
@@ -251,6 +478,7 @@ class MainWindow(QMainWindow):
             "Coleção"
         )
 
+
     # =====================================================
     # DECKS
     # =====================================================
@@ -278,6 +506,7 @@ class MainWindow(QMainWindow):
         self.sidebar_status.setText(
             "Decks"
         )
+
 
     # =====================================================
     # LIMPAR CONTEÚDO

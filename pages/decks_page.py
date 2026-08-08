@@ -2415,7 +2415,7 @@ class DeckCollectionPanel(QFrame):
 
         header.addStretch()
 
-        self.close_button = QPushButton("×")
+        self.close_button = QPushButton("X")
 
         self.close_button.setObjectName(
             "DeckPanelCloseButton"
@@ -3526,7 +3526,22 @@ class DecksPage(QWidget):
         )
 
         # =================================================
-        # CAPA
+        # CAPA + ADICIONAR CARTAS
+        # =================================================
+
+        preview_row = QHBoxLayout()
+
+        preview_row.setContentsMargins(
+            0,
+            0,
+            0,
+            0,
+        )
+
+        preview_row.setSpacing(14)
+
+        # =================================================
+        # CARD — CAPA DO DECK
         # =================================================
 
         preview_section = QFrame()
@@ -3535,18 +3550,28 @@ class DecksPage(QWidget):
             "DeckPreviewSection"
         )
 
+        # IMPORTANTE:
+        # limita o tamanho do card da capa
+        preview_section.setMaximumWidth(
+            430
+        )
+
         preview_layout = QHBoxLayout(
             preview_section
         )
 
         preview_layout.setContentsMargins(
-            10,
-            10,
-            10,
-            10,
+            14,
+            14,
+            14,
+            14,
         )
 
         preview_layout.setSpacing(14)
+
+        # -------------------------------------------------
+        # IMAGEM DA CAPA
+        # -------------------------------------------------
 
         self.deck_cover_label = QLabel()
 
@@ -3571,9 +3596,15 @@ class DecksPage(QWidget):
             self.deck_cover_label
         )
 
+        # -------------------------------------------------
+        # INFORMAÇÕES DA CAPA
+        # -------------------------------------------------
+
         cover_info = QVBoxLayout()
 
-        cover_info.setSpacing(8)
+        cover_info.setSpacing(
+            6
+        )
 
         cover_title = QLabel(
             "Capa do deck"
@@ -3588,24 +3619,32 @@ class DecksPage(QWidget):
         )
 
         cover_description = QLabel(
-            "Escolha uma carta do deck ou "
-            "uma imagem do computador."
+            "Escolha uma carta do deck "
+            "ou uma imagem do computador."
         )
 
         cover_description.setObjectName(
             "DeckCoverDescription"
         )
 
-        cover_description.setWordWrap(True)
+        cover_description.setWordWrap(
+            True
+        )
 
         cover_info.addWidget(
             cover_description
         )
 
-        cover_info.addSpacing(6)
+        cover_info.addSpacing(
+            4
+        )
+
+        # -------------------------------------------------
+        # BOTÕES
+        # -------------------------------------------------
 
         self.choose_card_cover_button = QPushButton(
-            "Escolher carta"
+            "Escolher capa do deck"
         )
 
         self.choose_card_cover_button.setObjectName(
@@ -3659,8 +3698,134 @@ class DecksPage(QWidget):
             1,
         )
 
+        # =================================================
+        # CARD — ADICIONAR CARTAS
+        # =================================================
+
+        add_cards_section = QFrame()
+
+        add_cards_section.setObjectName(
+            "DeckAddCardsSection"
+        )
+
+        add_cards_section.setMaximumWidth(
+            430
+        )
+
+        add_cards_layout = QHBoxLayout(
+            add_cards_section
+        )
+
+        add_cards_layout.setContentsMargins(
+            14,
+            14,
+            14,
+            14,
+        )
+
+        add_cards_layout.setSpacing(
+            14
+        )
+
         # -------------------------------------------------
-        # BOTÃO ADICIONAR CARTAS
+        # ÍCONE DA COLEÇÃO
+        # -------------------------------------------------
+
+        collection_icon = QLabel()
+
+        collection_icon.setObjectName(
+            "DeckCollectionIcon"
+        )
+
+        collection_icon.setFixedSize(
+            120,
+            170,
+        )
+
+        collection_icon.setAlignment(
+            Qt.AlignmentFlag.AlignCenter
+        )
+
+        collection_pixmap = QPixmap(
+            "assets/icons/collection_icon.png"
+        )
+
+        if not collection_pixmap.isNull():
+
+            collection_pixmap = collection_pixmap.scaled(
+                82,
+                82,
+                Qt.AspectRatioMode.KeepAspectRatio,
+                Qt.TransformationMode.SmoothTransformation,
+            )
+
+            collection_icon.setPixmap(
+                collection_pixmap
+            )
+
+        else:
+
+            collection_icon.setText(
+                "▦"
+            )
+
+        add_cards_layout.addWidget(
+            collection_icon
+        )
+
+        # -------------------------------------------------
+        # INFORMAÇÕES
+        # -------------------------------------------------
+
+        add_cards_info = QVBoxLayout()
+
+        add_cards_info.setSpacing(
+            6
+        )
+
+        # -------------------------------------------------
+        # TÍTULO
+        # -------------------------------------------------
+
+        add_cards_title = QLabel(
+            "Adicionar cartas"
+        )
+
+        add_cards_title.setObjectName(
+            "DeckAddCardsTitle"
+        )
+
+        add_cards_info.addWidget(
+            add_cards_title
+        )
+
+        # -------------------------------------------------
+        # DESCRIÇÃO
+        # -------------------------------------------------
+
+        add_cards_description = QLabel(
+            "Adicione cartas vindas da "
+            "sua coleção ao deck."
+        )
+
+        add_cards_description.setObjectName(
+            "DeckAddCardsDescription"
+        )
+
+        add_cards_description.setWordWrap(
+            True
+        )
+
+        add_cards_info.addWidget(
+            add_cards_description
+        )
+
+        add_cards_info.addSpacing(
+            4
+        )
+
+        # -------------------------------------------------
+        # BOTÃO
         # -------------------------------------------------
 
         self.add_cards_button = QPushButton(
@@ -3679,16 +3844,34 @@ class DecksPage(QWidget):
             self.toggle_collection_panel
         )
 
-        preview_layout.addWidget(
-            self.add_cards_button,
-            0,
-            Qt.AlignmentFlag.AlignVCenter,
+        add_cards_info.addWidget(
+            self.add_cards_button
         )
 
-        deck_layout.addWidget(
+        add_cards_info.addStretch()
+
+        add_cards_layout.addLayout(
+            add_cards_info,
+            1,
+        )
+
+        # =================================================
+        # ADICIONA OS DOIS CARDS
+        # =================================================
+
+        preview_row.addWidget(
             preview_section
         )
 
+        preview_row.addWidget(
+            add_cards_section
+        )
+
+        preview_row.addStretch()
+
+        deck_layout.addLayout(
+            preview_row
+        )
         # =================================================
         # CONTEÚDO
         # =================================================

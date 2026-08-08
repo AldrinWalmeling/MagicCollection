@@ -5,15 +5,7 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="14717f08-37a0-4c50-85ce-aa9bd2e175ab" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/decks_database.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/collection.db" beforeDir="false" afterPath="$PROJECT_DIR$/collection.db" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/database.py" beforeDir="false" afterPath="$PROJECT_DIR$/database.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/main.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pages/collection_page.py" beforeDir="false" afterPath="$PROJECT_DIR$/pages/collection_page.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pages/decks_page.py" beforeDir="false" afterPath="$PROJECT_DIR$/pages/decks_page.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ui/main_window.py" beforeDir="false" afterPath="$PROJECT_DIR$/ui/main_window.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ui/theme.py" beforeDir="false" afterPath="$PROJECT_DIR$/ui/theme.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -52,11 +44,17 @@
     "Python.main_window (1).executor": "Run",
     "Python.main_window.executor": "Run",
     "RunOnceActivity.ShowReadmeOnStart": "true",
-    "git-widget-placeholder": "main"
+    "git-widget-placeholder": "main",
+    "last_opened_file_path": "C:/Users/aldri/Desktop/MagicCollection/cards/images/icons"
   }
 }]]></component>
   <component name="RecentsManager">
+    <key name="CopyFile.RECENT_KEYS">
+      <recent name="C:\Users\aldri\Desktop\MagicCollection\cards\images\icons" />
+    </key>
     <key name="MoveFile.RECENT_KEYS">
+      <recent name="C:\Users\aldri\Desktop\MagicCollection\assets\icons" />
+      <recent name="C:\Users\aldri\Desktop\MagicCollection\assets" />
       <recent name="C:\Users\aldri\Desktop\MagicCollection" />
     </key>
   </component>

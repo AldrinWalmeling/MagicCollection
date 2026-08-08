@@ -1,8 +1,6 @@
-
 DARK_THEME = """
-
 /* =========================================================
-BASE
+   BASE
 ========================================================= */
 
 * {
@@ -19,8 +17,9 @@ QWidget {
     font-size: 14px;
 }
 
+
 /* =========================================================
-SIDEBAR
+   SIDEBAR
 ========================================================= */
 
 QFrame#Sidebar {
@@ -28,11 +27,23 @@ QFrame#Sidebar {
     border-right: 1px solid #25272B;
 }
 
+QWidget#AppHeader {
+    background-color: transparent;
+    border: none;
+}
+
+QLabel#AppIcon {
+    background-color: transparent;
+    border: none;
+}
+
 QLabel#AppTitle {
     background-color: transparent;
     color: #FFFFFF;
     font-size: 21px;
-    font-weight: bold;
+    font-weight: 700;
+    padding: 0;
+    margin: 0;
 }
 
 QLabel#SidebarStatus {
@@ -46,10 +57,13 @@ QPushButton#SidebarButton {
     background-color: transparent;
     border: none;
     border-radius: 8px;
-    color: #96999F;
+    color: #A7AAB0;
     text-align: left;
-    padding: 11px 14px;
-    font-size: 14px;
+    font-size: 16px;
+    font-weight: 600;
+    padding: 8px 14px;
+    min-height: 52px;
+    max-height: 52px;
 }
 
 QPushButton#SidebarButton:hover {
@@ -60,30 +74,19 @@ QPushButton#SidebarButton:hover {
 QPushButton#SidebarButton:checked {
     background-color: #292C31;
     color: #FFFFFF;
-    font-weight: bold;
+    font-weight: 700;
 }
 
 QPushButton#SidebarButton:pressed {
     background-color: #303339;
 }
 
+
 /* =========================================================
-TÍTULOS
+   TÍTULOS
 ========================================================= */
 
-QLabel#DecksTitle {
-    background-color: transparent;
-    color: #FFFFFF;
-    font-size: 26px;
-    font-weight: bold;
-}
-
-QLabel#DecksDescription {
-    background-color: transparent;
-    color: #777A80;
-    font-size: 13px;
-}
-
+QLabel#DecksTitle,
 QLabel#SectionTitle {
     background-color: transparent;
     color: #FFFFFF;
@@ -91,14 +94,16 @@ QLabel#SectionTitle {
     font-weight: bold;
 }
 
+QLabel#DecksDescription,
 QLabel#SectionDescription {
     background-color: transparent;
     color: #777A80;
     font-size: 13px;
 }
 
+
 /* =========================================================
-CAMPOS
+   CAMPOS
 ========================================================= */
 
 QLineEdit {
@@ -125,8 +130,9 @@ QLineEdit:disabled {
     border: 1px solid #25272B;
 }
 
+
 /* =========================================================
-TEXT EDIT
+   TEXT EDIT
 ========================================================= */
 
 QTextEdit,
@@ -150,8 +156,9 @@ QPlainTextEdit:focus {
     border: 1px solid #555961;
 }
 
+
 /* =========================================================
-PESQUISA / ADIÇÃO
+   PESQUISA / ADIÇÃO
 ========================================================= */
 
 QFrame#SearchFrame,
@@ -179,11 +186,14 @@ QLabel#SearchStatus {
     font-size: 14px;
 }
 
+
 /* =========================================================
-BOTÃO ADICIONAR
+   BOTÕES PRINCIPAIS
 ========================================================= */
 
-QPushButton#AddButton {
+QPushButton#AddButton,
+QPushButton#NewDeckButton,
+QPushButton#AddCardsButton {
     background-color: #E8E8EA;
     color: #111214;
     border: none;
@@ -192,21 +202,28 @@ QPushButton#AddButton {
     font-weight: bold;
 }
 
-QPushButton#AddButton:hover {
+QPushButton#AddButton:hover,
+QPushButton#NewDeckButton:hover,
+QPushButton#AddCardsButton:hover {
     background-color: #FFFFFF;
 }
 
-QPushButton#AddButton:pressed {
+QPushButton#AddButton:pressed,
+QPushButton#NewDeckButton:pressed,
+QPushButton#AddCardsButton:pressed {
     background-color: #C8C9CC;
 }
 
-QPushButton#AddButton:disabled {
+QPushButton#AddButton:disabled,
+QPushButton#NewDeckButton:disabled,
+QPushButton#AddCardsButton:disabled {
     background-color: #4A4C50;
     color: #85878B;
 }
 
+
 /* =========================================================
-BOTÃO EXPORTAR
+   BOTÃO EXPORTAR
 ========================================================= */
 
 QPushButton#ExportButton {
@@ -228,43 +245,51 @@ QPushButton#ExportButton:pressed {
     background-color: #181A1D;
 }
 
+
 /* =========================================================
-MENU DE LAYOUT
+   MENUS
 ========================================================= */
 
-QMenu#LayoutMenu {
+QMenu,
+QMenu#LayoutMenu,
+QMenu#ExportMenu {
     background-color: #181A1E;
-    color: #E8E8EA;
-    border: 1px solid #303339;
-    border-radius: 9px;
+    color: #EEEEF0;
+    border: 1px solid #363940;
     padding: 5px;
 }
 
-QMenu#LayoutMenu::item {
+QMenu::item,
+QMenu#LayoutMenu::item,
+QMenu#ExportMenu::item {
     background-color: transparent;
     color: #BFC1C5;
-    padding: 9px 22px 9px 10px;
+    padding: 9px 20px 9px 10px;
     margin: 1px;
-    border-radius: 6px;
+    border-radius: 5px;
 }
 
-QMenu#LayoutMenu::item:selected {
-    background-color: #272A2F;
+QMenu::item:selected,
+QMenu#LayoutMenu::item:selected,
+QMenu#ExportMenu::item:selected {
+    background-color: #2A2D33;
     color: #FFFFFF;
 }
 
-QMenu#LayoutMenu::item:checked {
-    color: #FFFFFF;
-    font-weight: 600;
+QMenu::item:disabled {
+    color: #55585E;
 }
 
-QMenu#LayoutMenu::item:checked:selected {
+QMenu::separator,
+QMenu#ExportMenu::separator {
+    height: 1px;
     background-color: #303339;
-    color: #FFFFFF;
+    margin: 5px 8px;
 }
+
 
 /* =========================================================
-CARTA — GRADE
+   GRADE DE CARTAS
 ========================================================= */
 
 QFrame#GridCardFrame {
@@ -278,10 +303,6 @@ QFrame#GridCardFrame:hover {
     border: 1px solid #3A3D43;
 }
 
-/* =========================================================
-IMAGEM DA CARTA — GRADE
-========================================================= */
-
 QLabel#GridCardImage {
     background-color: #101114;
     border: none;
@@ -290,9 +311,7 @@ QLabel#GridCardImage {
     font-size: 21px;
 }
 
-/* =========================================================
-OVERLAY DE QUANTIDADE — GRADE
-========================================================= */
+
 
 QFrame#GridQuantityOverlay {
     background-color: rgba(13, 14, 16, 235);
@@ -302,24 +321,16 @@ QFrame#GridQuantityOverlay {
     border-bottom-right-radius: 9px;
 }
 
-/* =========================================================
-BOTÕES DE QUANTIDADE — GRADE
-========================================================= */
-
 QPushButton#GridQuantityButton {
     background-color: #24272C;
     color: #D9DADF;
     border: 1px solid #34373D;
     border-radius: 7px;
-
     min-width: 34px;
     max-width: 34px;
-
     min-height: 34px;
     max-height: 34px;
-
     padding: 0;
-
     font-size: 18px;
     font-weight: 600;
 }
@@ -336,21 +347,17 @@ QPushButton#GridQuantityButton:pressed {
     color: #FFFFFF;
 }
 
-/* =========================================================
-QUANTIDADE — GRADE
-========================================================= */
-
 QLabel#GridQuantityLabel {
     background-color: transparent;
     color: #FFFFFF;
     border: none;
-
     font-size: 14px;
     font-weight: bold;
 }
 
+
 /* =========================================================
-BOTÃO DE LAYOUT
+   BOTÃO DE LAYOUT
 ========================================================= */
 
 QPushButton#LayoutButton {
@@ -373,8 +380,9 @@ QPushButton#LayoutButton:pressed {
     border: 1px solid #383B41;
 }
 
+
 /* =========================================================
-CARTAS
+   CARTAS
 ========================================================= */
 
 QFrame#CardFrame {
@@ -388,67 +396,10 @@ QFrame#CardFrame:hover {
     border: 1px solid #3A3D43;
 }
 
-QWidget#CardInfo {
-    background-color: transparent;
-}
-
-/* =========================================================
-MINIATURA
-========================================================= */
-
-QLabel#CardThumbnail {
-    background-color: #101114;
-    border: 1px solid #292C31;
-    border-radius: 7px;
-    color: #55585E;
-    font-size: 21px;
-}
-
-/* =========================================================
-NOME
-========================================================= */
-
-QLabel#CardName {
-    background-color: transparent;
-    color: #F2F2F3;
-    font-size: 15px;
-    font-weight: 600;
-}
-
-/* =========================================================
-TIPO
-========================================================= */
-
-QLabel#CardType {
-    background-color: transparent;
-    color: #B0B2B7;
-    font-size: 12px;
-}
-
-/* =========================================================
-EDIÇÃO
-========================================================= */
-
-QLabel#CardSet {
-    background-color: transparent;
-    color: #686B71;
-    font-size: 11px;
-}
-
-/* =========================================================
-MANA + POWER / TOUGHNESS
-========================================================= */
-
-QWidget#CardSideWidget {
-    background-color: transparent;
-    border: none;
-}
-
-/* =========================================================
-MANA
-========================================================= */
-
-QWidget#CardMana {
+QWidget#CardInfo,
+QWidget#CardSideWidget,
+QWidget#CardMana,
+QWidget#CardMeta {
     background-color: transparent;
     border: none;
 }
@@ -460,95 +411,79 @@ QWidget#CardMana QFrame {
     border: none;
 }
 
-/* =========================================================
-SEPARADORES
-========================================================= */
+QLabel#CardThumbnail {
+    background-color: #101114;
+    border: 1px solid #292C31;
+    border-radius: 7px;
+    color: #55585E;
+    font-size: 21px;
+}
+
+QLabel#CardName {
+    background-color: transparent;
+    color: #F2F2F3;
+    font-size: 15px;
+    font-weight: 600;
+}
+
+QLabel#CardType {
+    background-color: transparent;
+    color: #B0B2B7;
+    font-size: 12px;
+}
+
+QLabel#CardSet {
+    background-color: transparent;
+    color: #686B71;
+    font-size: 11px;
+}
 
 QFrame#CardMetaSeparator {
     background-color: #383B41;
     border: none;
-
     min-width: 1px;
     max-width: 1px;
-
-    min-height: 80px;
-    max-height: 64px;
+    min-height: 64px;
+    max-height: 80px;
 }
-
-/* =========================================================
-META DA CARTA
-========================================================= */
-
-QWidget#CardMeta {
-    background-color: transparent;
-    border: none;
-}
-
-/* =========================================================
-POWER / TOUGHNESS
-========================================================= */
 
 QLabel#CardPT {
     background-color: #202328;
     border: 1px solid #32353B;
     border-radius: 6px;
-
     color: #E8E9EB;
-
     font-size: 12px;
     font-weight: bold;
-
     padding: 3px 7px;
-
     min-width: 64px;
     max-width: 80px;
-
     min-height: 26px;
     max-height: 32px;
 }
-
-/* =========================================================
-ÁREA DE QUANTIDADE
-========================================================= */
 
 QFrame#QuantityFrame {
     background-color: transparent;
     border: none;
 }
 
-/* =========================================================
-QUANTIDADE
-========================================================= */
-
 QLabel#Quantity {
     background-color: transparent;
     border: none;
-
     color: #FFFFFF;
-
     font-size: 14px;
     font-weight: bold;
 }
-
-/* =========================================================
-BOTÕES DE QUANTIDADE
-========================================================= */
 
 QPushButton#QuantityButton {
     background-color: transparent;
     border: none;
     border-radius: 6px;
-
     min-width: 30px;
     max-width: 30px;
-
     min-height: 30px;
     max-height: 30px;
-
     padding: 0;
-
     color: #BFC1C5;
-
     font-size: 17px;
     font-weight: bold;
 }
@@ -563,48 +498,52 @@ QPushButton#QuantityButton:pressed {
     color: #FFFFFF;
 }
 
+
 /* =========================================================
-SCROLL
+   SCROLL AREA
 ========================================================= */
 
-QScrollArea#CardsScrollArea {
+QScrollArea {
+    background-color: transparent;
+    border: none;
+}
+
+QScrollArea#CardsScrollArea,
+QScrollArea#DecksScrollArea {
     background-color: transparent;
     border: none;
     padding: 0;
 }
 
-QScrollArea#CardsScrollArea > QWidget {
+QScrollArea#CardsScrollArea > QWidget,
+QScrollArea#DecksScrollArea > QWidget {
     background-color: transparent;
     border: none;
 }
 
-QScrollArea#CardsScrollArea > QWidget > QWidget {
+QScrollArea#CardsScrollArea > QWidget > QWidget,
+QScrollArea#DecksScrollArea > QWidget > QWidget {
     background-color: transparent;
     border: none;
 }
+
 
 /* =========================================================
-SCROLLBAR VERTICAL
+   SCROLLBAR VERTICAL
 ========================================================= */
 
 QScrollBar:vertical {
     background-color: transparent;
-
     width: 10px;
-
     border: none;
-
     margin: 2px 1px 2px 2px;
 }
 
 QScrollBar::handle:vertical {
     background-color: #303339;
-
     border: none;
     border-radius: 5px;
-
     min-height: 45px;
-
     margin: 0;
 }
 
@@ -620,7 +559,6 @@ QScrollBar::add-line:vertical,
 QScrollBar::sub-line:vertical {
     background: none;
     border: none;
-
     height: 0px;
     width: 0px;
 }
@@ -630,28 +568,23 @@ QScrollBar::sub-page:vertical {
     background: transparent;
 }
 
+
 /* =========================================================
-SCROLLBAR HORIZONTAL
+   SCROLLBAR HORIZONTAL
 ========================================================= */
 
 QScrollBar:horizontal {
     background-color: transparent;
-
     height: 10px;
-
     border: none;
-
-    margin: 1px 2px 1px 2px;
+    margin: 1px 2px;
 }
 
 QScrollBar::handle:horizontal {
     background-color: #303339;
-
     border: none;
     border-radius: 5px;
-
     min-width: 45px;
-
     margin: 0;
 }
 
@@ -667,7 +600,6 @@ QScrollBar::add-line:horizontal,
 QScrollBar::sub-line:horizontal {
     background: none;
     border: none;
-
     width: 0px;
     height: 0px;
 }
@@ -677,8 +609,9 @@ QScrollBar::sub-page:horizontal {
     background: transparent;
 }
 
+
 /* =========================================================
-AUTOCOMPLETE
+   AUTOCOMPLETE
 ========================================================= */
 
 QListWidget#SuggestionList {
@@ -705,36 +638,9 @@ QListWidget#SuggestionList::item:selected {
     color: #FFFFFF;
 }
 
-/* =========================================================
-MENU EXPORTAR
-========================================================= */
-
-QMenu#ExportMenu {
-    background-color: #181A1E;
-    color: #EEEEF0;
-    border: 1px solid #363940;
-    padding: 5px;
-}
-
-QMenu#ExportMenu::item {
-    background-color: transparent;
-    padding: 9px 20px;
-    border-radius: 5px;
-}
-
-QMenu#ExportMenu::item:selected {
-    background-color: #2A2D33;
-    color: #FFFFFF;
-}
-
-QMenu#ExportMenu::separator {
-    height: 1px;
-    background-color: #303339;
-    margin: 5px 8px;
-}
 
 /* =========================================================
-DETALHES DA CARTA
+   DETALHES DA CARTA
 ========================================================= */
 
 QLabel#CardDetailImage {
@@ -803,9 +709,20 @@ QFrame#CardDetailSeparator {
     max-height: 1px;
 }
 
+
 /* =========================================================
-DIALOG BUTTONS
+   DIALOG
 ========================================================= */
+
+QDialog {
+    background-color: #0D0E10;
+    color: #E8E8EA;
+}
+
+QDialog QLabel {
+    background-color: transparent;
+    color: #D9DADF;
+}
 
 QDialogButtonBox QPushButton {
     background-color: #202328;
@@ -825,49 +742,9 @@ QDialogButtonBox QPushButton:pressed {
     background-color: #191B1F;
 }
 
-/* =========================================================
-DECKS
-========================================================= */
 
 /* =========================================================
-TÍTULOS
-========================================================= */
-
-QLabel#DecksTitle {
-    background-color: transparent;
-    color: #FFFFFF;
-    font-size: 26px;
-    font-weight: bold;
-}
-
-QLabel#DecksDescription {
-    background-color: transparent;
-    color: #777A80;
-    font-size: 13px;
-}
-
-/* =========================================================
-ÁREA DOS DECKS
-========================================================= */
-
-QScrollArea#DecksScrollArea {
-    background-color: transparent;
-    border: none;
-    padding: 0;
-}
-
-QScrollArea#DecksScrollArea > QWidget {
-    background-color: transparent;
-    border: none;
-}
-
-QScrollArea#DecksScrollArea > QWidget > QWidget {
-    background-color: transparent;
-    border: none;
-}
-
-/* =========================================================
-CARD DO DECK
+   DECKS
 ========================================================= */
 
 QFrame#DeckCard {
@@ -881,10 +758,6 @@ QFrame#DeckCard:hover {
     border: 1px solid #41444A;
 }
 
-/* =========================================================
-CAPA DO DECK
-========================================================= */
-
 QFrame#DeckCover {
     background-color: #101114;
     border: 1px solid #292C31;
@@ -893,65 +766,69 @@ QFrame#DeckCover {
 
 QLabel#DeckCoverImage {
     background-color: #111318;
-    border: 1px solid #30343c;
+    border: 1px solid #30343C;
     border-radius: 9px;
     font-size: 32px;
 }
 
 QLabel#DeckCoverTitle {
-    color: #f0f2f5;
+    background-color: transparent;
+    color: #F0F2F5;
     font-size: 16px;
     font-weight: 600;
 }
 
 QLabel#DeckCoverDescription {
-    color: #858c98;
+    background-color: transparent;
+    color: #858C98;
     font-size: 12px;
 }
 
 QPushButton#DeckCoverButton {
-    background-color: #252a32;
-    color: #e5e8ed;
-    border: 1px solid #343a44;
+    background-color: #252A32;
+    color: #E5E8ED;
+    border: 1px solid #343A44;
     border-radius: 7px;
     padding: 7px 12px;
 }
 
 QPushButton#DeckCoverButton:hover {
     background-color: #303640;
-    border: 1px solid #555e6d;
+    border: 1px solid #555E6D;
 }
 
 QPushButton#DeckCoverResetButton {
     background-color: transparent;
-    color: #858c98;
+    color: #858C98;
     border: none;
     padding: 5px;
 }
 
 QPushButton#DeckCoverResetButton:hover {
-    color: #c5cad2;
+    color: #C5CAD2;
 }
 
 QLabel#DeckPreviewSelectorTitle {
-    color: #f0f2f5;
+    background-color: transparent;
+    color: #F0F2F5;
     font-size: 18px;
     font-weight: 600;
 }
 
 QPushButton#DeckPreviewSelectorCard {
-    background-color: #181a1f;
-    border: 1px solid #30343c;
+    background-color: #181A1F;
+    border: 1px solid #30343C;
     border-radius: 8px;
 }
 
 QPushButton#DeckPreviewSelectorCard:hover {
-    background-color: #252a32;
+    background-color: #252A32;
     border: 1px solid #687386;
 }
 
+
 /* =========================================================
-INFORMAÇÕES DO DECK
+   INFORMAÇÕES DO DECK
 ========================================================= */
 
 QLabel#DeckName {
@@ -961,10 +838,8 @@ QLabel#DeckName {
     font-weight: 600;
 }
 
-/* QUANTIDADE — reforçada para permanecer visível */
-
 QLabel#DeckQuantityBadge {
-    color: white;
+    color: #FFFFFF;
     background-color: rgba(0, 0, 0, 190);
     border: 1px solid rgba(255, 255, 255, 180);
     border-radius: 8px;
@@ -974,7 +849,7 @@ QLabel#DeckQuantityBadge {
 }
 
 QLabel#DeckControlQuantity {
-    color: white;
+    color: #FFFFFF;
     background-color: rgba(0, 0, 0, 210);
     border: 1px solid rgba(255, 255, 255, 180);
     border-radius: 6px;
@@ -991,8 +866,9 @@ QLabel#DeckCardCount {
     font-weight: bold;
 }
 
+
 /* =========================================================
-AÇÕES DO CARD DO DECK
+   AÇÕES DO DECK
 ========================================================= */
 
 QPushButton#DeckActionButton {
@@ -1014,10 +890,6 @@ QPushButton#DeckActionButton:pressed {
     background-color: #181A1D;
 }
 
-/* =========================================================
-EXCLUIR
-========================================================= */
-
 QPushButton#DeckDeleteButton {
     background-color: transparent;
     color: #85888E;
@@ -1037,101 +909,88 @@ QPushButton#DeckDeleteButton:pressed {
     background-color: #21191B;
 }
 
+
 /* =========================================================
-NOVO DECK — CARD
+   NOVO DECK
 ========================================================= */
 
-QFrame#NewDeckCard {
-    background-color: #15171A;
-    border: 1px dashed #3A3D43;
-    border-radius: 12px;
-}
-
-QFrame#NewDeckCard:hover {
-    background-color: #181A1E;
-    border: 1px dashed #5A5E66;
-}
-
-QLabel#NewDeckPlus {
-    background-color: transparent;
-    color: #8B8E94;
-    font-size: 36px;
-    font-weight: 300;
-}
-
-QLabel#NewDeckText {
-    background-color: transparent;
-    color: #C4C6CA;
-    font-size: 13px;
-    font-weight: 600;
-}
-
+QFrame#NewDeckCard,
 QFrame#NewDeckFrame {
-    border: 1px dashed #555b66;
-    border-radius: 14px;
     background-color: transparent;
+    border: 1px dashed #555B66;
+    border-radius: 14px;
 }
 
+QFrame#NewDeckCard:hover,
 QFrame#NewDeckFrame:hover {
-    border: 1px solid #7c8491;
     background-color: rgba(255, 255, 255, 0.04);
+    border: 1px solid #7C8491;
 }
 
 QLabel#NewDeckPlus {
-    color: #8f96a3;
+    background-color: transparent;
+    color: #8F96A3;
     font-size: 52px;
     font-weight: 300;
 }
 
 QLabel#NewDeckText {
-    color: #aeb4bf;
+    background-color: transparent;
+    color: #AEB4BF;
     font-size: 15px;
     font-weight: 500;
 }
 
 QFrame#NewDeckFrame:hover QLabel#NewDeckPlus {
-    color: #d5d9df;
+    color: #D5D9DF;
 }
 
 QFrame#NewDeckFrame:hover QLabel#NewDeckText {
-    color: #e1e4e8;
+    color: #E1E4E8;
 }
 
 
+/* =========================================================
+   PREVIEW DO DECK
+========================================================= */
+
 QFrame#DeckPreviewFrame {
-    border: 1px solid #3f444d;
-    border-radius: 14px;
     background-color: transparent;
+    border: 1px solid #3F444D;
+    border-radius: 14px;
 }
 
 QFrame#DeckPreviewFrame:hover {
-    border: 1px solid #707783;
     background-color: rgba(255, 255, 255, 0.04);
+    border: 1px solid #707783;
 }
 
 QLabel#DeckPreviewName {
-    color: #e1e4e8;
+    background-color: transparent;
+    color: #E1E4E8;
     font-size: 15px;
     font-weight: 600;
 }
 
 QLabel#DeckPreviewTotal {
-    color: #9299a5;
+    background-color: transparent;
+    color: #9299A5;
     font-size: 13px;
 }
 
-QFrame#DeckPreviewSection {
-    background-color: #181a1f;
-    border: 1px solid #292d34;
+QFrame#DeckPreviewSection,
+QFrame#DeckAddCardsSection {
+    background-color: #181A1F;
+    border: 1px solid #292D34;
     border-radius: 12px;
 }
 
 QFrame#DeckPreviewFrame:hover QLabel#DeckPreviewName {
-    color: #ffffff;
+    color: #FFFFFF;
 }
 
 QFrame#DeckPreviewFrame:hover QLabel#DeckPreviewTotal {
-    color: #b8bec8;
+    color: #B8BEC8;
 }
 
 QLabel#DeckPreviewCard {
@@ -1139,30 +998,15 @@ QLabel#DeckPreviewCard {
     border: none;
 }
 
-
 QFrame#DeckPreviewImageArea {
     background-color: #111318;
-    border: 1px solid #292d34;
+    border: 1px solid #292D34;
     border-radius: 10px;
 }
 
-QFrame#DeckCollectionPanel {
-    border: 1px solid #505050;
-    border-radius: 12px;
-}
 
-QFrame#CollectionDeckCard {
-    border: 1px solid #3f3f3f;
-    border-radius: 8px;
-}
-
-QPushButton#DeckAddCardsButton {
-    border: 1px solid #505050;
-    border-radius: 8px;
-    padding: 8px 14px;
-}
 /* =========================================================
-BOTÃO + NOVO DECK — CABEÇALHO
+   BOTÃO + NOVO DECK — CABEÇALHO
 ========================================================= */
 
 QPushButton#NewDeckButton {
@@ -1182,18 +1026,15 @@ QPushButton#NewDeckButton:pressed {
     background-color: #C8C9CC;
 }
 
+
 /* =========================================================
-EDITOR DO DECK
+   EDITOR DO DECK
 ========================================================= */
 
 QFrame#DeckEditor {
     background-color: transparent;
     border: none;
 }
-
-/* =========================================================
-CABEÇALHO DO EDITOR
-========================================================= */
 
 QFrame#DeckHeader {
     background-color: #15171A;
@@ -1214,29 +1055,9 @@ QLabel#DeckEditorCount {
     font-size: 13px;
 }
 
-/* =========================================================
-BOTÕES DO EDITOR
-========================================================= */
-
-QPushButton#AddCardsButton {
-    background-color: #E8E8EA;
-    color: #111214;
-    border: none;
-    border-radius: 8px;
-    padding: 9px 16px;
-    font-weight: bold;
-}
-
-QPushButton#AddCardsButton:hover {
-    background-color: #FFFFFF;
-}
-
-QPushButton#AddCardsButton:pressed {
-    background-color: #C8C9CC;
-}
 
 /* =========================================================
-GRADE DE CARTAS DO DECK
+   GRADE DE CARTAS DO DECK
 ========================================================= */
 
 QFrame#DeckCardItem {
@@ -1250,10 +1071,6 @@ QFrame#DeckCardItem:hover {
     border: 1px solid #3A3D43;
 }
 
-/* =========================================================
-CARTA PRINCIPAL / CAPA SELECIONADA
-========================================================= */
-
 QFrame#DeckCardItem[selected="true"] {
     border: 1px solid #777A80;
     background-color: #191B1F;
@@ -1264,10 +1081,6 @@ QFrame#DeckCardItem[isPrimary="true"] {
     background-color: #191B1F;
 }
 
-/* =========================================================
-IMAGEM DA CARTA
-========================================================= */
-
 QLabel#DeckCardImage {
     background-color: #101114;
     border: none;
@@ -1275,20 +1088,12 @@ QLabel#DeckCardImage {
     color: #55585E;
 }
 
-/* =========================================================
-NOME
-========================================================= */
-
 QLabel#DeckCardName {
     background-color: transparent;
     color: #E8E8EA;
     font-size: 13px;
     font-weight: 600;
 }
-
-/* =========================================================
-QUANTIDADE
-========================================================= */
 
 QLabel#DeckCardQuantity {
     background-color: #202328;
@@ -1300,24 +1105,16 @@ QLabel#DeckCardQuantity {
     font-weight: bold;
 }
 
-/* =========================================================
-BOTÕES + / -
-========================================================= */
-
 QPushButton#DeckQuantityButton {
     background-color: #24272C;
     color: #D9DADF;
     border: 1px solid #34373D;
     border-radius: 6px;
-
     min-width: 28px;
     max-width: 28px;
-
     min-height: 28px;
     max-height: 28px;
-
     padding: 0;
-
     font-size: 16px;
     font-weight: 600;
 }
@@ -1333,16 +1130,86 @@ QPushButton#DeckQuantityButton:pressed {
     border: 1px solid #383B41;
 }
 
+
 /* =========================================================
-PAINEL — ADICIONAR CARTAS
+   RENOMEAR DECK
 ========================================================= */
 
-QFrame#CardSelectionPanel {
-    background-color: #141518;
-    border-left: 1px solid #292C31;
+QLineEdit#DeckNameEdit {
+    background-color: #15171A;
+    border: 1px solid #34373D;
+    border-radius: 7px;
+    padding: 8px 10px;
+    color: #FFFFFF;
+    font-size: 16px;
+    font-weight: 600;
+    selection-background-color: #3B3E44;
 }
 
-QLabel#CardSelectionTitle {
+QLineEdit#DeckNameEdit:hover {
+    border: 1px solid #41444A;
+}
+
+QLineEdit#DeckNameEdit:focus {
+    border: 1px solid #666970;
+}
+
+
+/* =========================================================
+   CARTA PRINCIPAL
+========================================================= */
+
+QPushButton#SetPrimaryCardButton {
+    background-color: transparent;
+    color: #A7AAB0;
+    border: 1px solid #303339;
+    border-radius: 6px;
+    padding: 6px 10px;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+QPushButton#SetPrimaryCardButton:hover {
+    background-color: #25282D;
+    border: 1px solid #454850;
+    color: #FFFFFF;
+}
+
+QPushButton#SetPrimaryCardButton:checked {
+    background-color: #303339;
+    border: 1px solid #666970;
+    color: #FFFFFF;
+}
+
+QLabel#PrimaryCardLabel {
+    background-color: #202328;
+    color: #E8E8EA;
+    border: 1px solid #41444A;
+    border-radius: 5px;
+    padding: 3px 7px;
+    font-size: 10px;
+    font-weight: bold;
+}
+
+
+/* =========================================================
+   PAINEL LATERAL — ADICIONAR CARTAS
+========================================================= */
+
+QFrame#CardSelectionPanel,
+QFrame#DeckCollectionPanel {
+    background-color: #141518;
+    border: 1px solid #303339;
+    border-radius: 12px;
+}
+
+
+/* =========================================================
+   PAINEL DE COLEÇÃO
+========================================================= */
+
+QLabel#CardSelectionTitle,
+QLabel#DeckPanelTitle {
     background-color: transparent;
     color: #FFFFFF;
     font-size: 19px;
@@ -1355,9 +1222,57 @@ QLabel#CardSelectionCount {
     font-size: 12px;
 }
 
+QLabel#DeckPanelStatus {
+    background-color: transparent;
+    color: #A7AAB0;
+    font-size: 13px;
+}
+
+QPushButton#DeckPanelCloseButton {
+    background-color: #24272C;
+    color: #E8E8EA;
+    border: 1px solid #34373D;
+    border-radius: 7px;
+    padding: 0;
+    min-width: 32px;
+    max-width: 32px;
+    min-height: 32px;
+    max-height: 32px;
+    font-size: 18px;
+    font-weight: bold;
+}
+
+QPushButton#DeckPanelCloseButton:hover {
+    background-color: #303339;
+    border: 1px solid #454850;
+    color: #FFFFFF;
+}
+
+QPushButton#DeckPanelCloseButton:pressed {
+    background-color: #1C1E22;
+    border: 1px solid #383B41;
+}
+
+
 /* =========================================================
-BUSCA
+   BUSCA DO PAINEL
 ========================================================= */
+
+QFrame#DeckPanelSearchFrame {
+    background-color: #15171A;
+    border: 1px solid #292C31;
+    border-radius: 9px;
+}
+
+QFrame#DeckPanelSearchFrame:hover {
+    border: 1px solid #383B41;
+}
+
+QFrame#DeckPanelSearchFrame QLineEdit {
+    background-color: transparent;
+    border: none;
+    color: #FFFFFF;
+}
 
 QLineEdit#CardSelectionSearch {
     background-color: #15171A;
@@ -1376,8 +1291,9 @@ QLineEdit#CardSelectionSearch:focus {
     border: 1px solid #555961;
 }
 
+
 /* =========================================================
-CARTA DISPONÍVEL
+   CARTA DISPONÍVEL
 ========================================================= */
 
 QFrame#AvailableCard {
@@ -1404,24 +1320,16 @@ QLabel#AvailableCardQuantity {
     font-size: 11px;
 }
 
-/* =========================================================
-ADICIONAR CARTA
-========================================================= */
-
 QPushButton#AvailableCardAddButton {
     background-color: #24272C;
     color: #D9DADF;
     border: 1px solid #34373D;
     border-radius: 6px;
-
     min-width: 28px;
     max-width: 28px;
-
     min-height: 28px;
     max-height: 28px;
-
     padding: 0;
-
     font-size: 16px;
     font-weight: bold;
 }
@@ -1436,42 +1344,267 @@ QPushButton#AvailableCardAddButton:pressed {
     background-color: #1C1E22;
 }
 
-/* =========================================================
-RENOMEAR DECK
-========================================================= */
 
-QLineEdit#DeckNameEdit {
-    background-color: #15171A;
-    border: 1px solid #34373D;
-    border-radius: 7px;
-    padding: 8px 10px;
-    color: #FFFFFF;
-    font-size: 16px;
-    font-weight: 600;
-    selection-background-color: #3B3E44;
+/* =========================================================
+   CARTA DA COLEÇÃO — AJUSTE VISUAL
+   ========================================================= */
+
+QFrame#CollectionDeckCard {
+    background-color: #181A1E;
+    border: 1px solid #292C31;
+    border-radius: 8px;
+
+    min-height: 80px;
+    max-height: 80px;
 }
 
-QLineEdit#DeckNameEdit:hover {
+QFrame#CollectionDeckCard:hover {
+    background-color: #202328;
     border: 1px solid #41444A;
 }
 
-QLineEdit#DeckNameEdit:focus {
-    border: 1px solid #666970;
+
+/* =========================================================
+   ÁREA DE INFORMAÇÕES DA CARTA
+   Remove o fundo preto chapado dos widgets internos
+   ========================================================= */
+
+QFrame#CollectionDeckCard > QWidget {
+    background-color: transparent;
+    border: none;
+}
+
+QFrame#CollectionDeckCard QLabel {
+    background-color: transparent;
 }
 
 /* =========================================================
-ESTADO VAZIO
+   MINIATURA
+   ========================================================= */
+
+QLabel#CollectionDeckThumbnail {
+    background-color: #101114;
+    border: 1px solid #292C31;
+    border-radius: 6px;
+    color: #55585E;
+}
+
+/* =========================================================
+   QUANTIDADE — SEM CAIXA GIGANTE
+   ========================================================= */
+
+QLabel#CollectionDeckQuantity {
+    background-color: transparent;
+    color: #FFFFFF;
+    border: none;
+
+    font-size: 13px;
+    font-weight: bold;
+
+    padding: 0;
+    margin: 0;
+
+    min-width: 20px;
+    max-width: 30px;
+
+    min-height: 24px;
+    max-height: 30px;
+}
+
+/* =========================================================
+   CONTROLES DE QUANTIDADE
+   ========================================================= */
+
+QPushButton#CollectionDeckRemoveButton,
+QPushButton#CollectionDeckAddButton {
+    background-color: #24272C;
+    color: #D9DADF;
+
+    border: 1px solid #34373D;
+    border-radius: 6px;
+
+    padding: 0;
+
+    min-width: 30px;
+    max-width: 30px;
+
+    min-height: 30px;
+    max-height: 30px;
+
+    font-size: 18px;
+    font-weight: bold;
+}
+
+/* =========================================================
+   BOTÃO -
+   ========================================================= */
+
+QPushButton#CollectionDeckRemoveButton:hover {
+    background-color: #303339;
+    border: 1px solid #454850;
+    color: #FFFFFF;
+}
+
+QPushButton#CollectionDeckRemoveButton:pressed {
+    background-color: #1C1E22;
+    border: 1px solid #383B41;
+}
+
+QPushButton#CollectionDeckRemoveButton:disabled {
+    background-color: #181A1D;
+    color: #55585E;
+    border: 1px solid #25272B;
+}
+
+
+/* =========================================================
+   BOTÃO +
+   ========================================================= */
+
+QPushButton#CollectionDeckAddButton:hover {
+    background-color: #303339;
+    border: 1px solid #454850;
+    color: #FFFFFF;
+}
+
+QPushButton#CollectionDeckAddButton:pressed {
+    background-color: #1C1E22;
+    border: 1px solid #383B41;
+}
+
+QPushButton#CollectionDeckAddButton:disabled {
+    background-color: #181A1D;
+    color: #55585E;
+    border: 1px solid #25272B;
+}
+
+/* =========================================================
+   NOME DA CARTA
+   ========================================================= */
+
+QLabel#CollectionDeckCardName {
+    background-color: transparent;
+    color: #E8E8EA;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+/* =========================================================
+   STATUS DA CARTA
+   ========================================================= */
+
+QLabel#CollectionDeckCardStatus {
+    background-color: transparent;
+    color: #777A80;
+    font-size: 11px;
+}
+
+/* =========================================================
+   BOTÃO - DA COLEÇÃO
 ========================================================= */
 
-QLabel#EmptyDeck {
+QPushButton#CollectionDeckRemoveButton {
+    background-color: #24272C;
+    color: #D9DADF;
+    border: 1px solid #34373D;
+    border-radius: 6px;
+    min-width: 30px;
+    max-width: 30px;
+    min-height: 30px;
+    max-height: 30px;
+    padding: 0;
+    font-size: 18px;
+    font-weight: bold;
+}
+
+QPushButton#CollectionDeckRemoveButton:hover {
+    background-color: #303339;
+    border: 1px solid #454850;
+    color: #FFFFFF;
+}
+
+QPushButton#CollectionDeckRemoveButton:pressed {
+    background-color: #1C1E22;
+    border: 1px solid #383B41;
+}
+
+QPushButton#CollectionDeckRemoveButton:disabled {
+    background-color: #181A1D;
+    color: #55585E;
+    border: 1px solid #25272B;
+}
+
+
+/* =========================================================
+   BOTÃO + DA COLEÇÃO
+========================================================= */
+
+QPushButton#CollectionDeckAddButton {
+    background-color: #24272C;
+    color: #D9DADF;
+    border: 1px solid #34373D;
+    border-radius: 6px;
+    min-width: 30px;
+    max-width: 30px;
+    min-height: 30px;
+    max-height: 30px;
+    padding: 0;
+    font-size: 18px;
+    font-weight: bold;
+}
+
+QPushButton#CollectionDeckAddButton:hover {
+    background-color: #303339;
+    border: 1px solid #454850;
+    color: #FFFFFF;
+}
+
+QPushButton#CollectionDeckAddButton:pressed {
+    background-color: #1C1E22;
+    border: 1px solid #383B41;
+}
+
+QPushButton#CollectionDeckAddButton:disabled {
+    background-color: #181A1D;
+    color: #55585E;
+    border: 1px solid #25272B;
+}
+
+
+/* =========================================================
+   BOTÃO ADICIONAR CARTAS DO DECK
+========================================================= */
+
+QPushButton#DeckCoverButton,
+QPushButton#DeckAddCardsButton {
+    background-color: #252A32;
+    color: #E5E8ED;
+    border: 1px solid #343A44;
+    border-radius: 7px;
+}
+
+QPushButton#DeckCoverButton:hover,
+QPushButton#DeckAddCardsButton:hover {
+    background-color: #303640;
+    border: 1px solid #555E6D;
+    color: #FFFFFF;
+}
+
+QPushButton#DeckAddCardsButton:pressed {
+    background-color: #191B1F;
+}
+
+
+/* =========================================================
+   ESTADO VAZIO
+========================================================= */
+
+QLabel#EmptyDeck,
+QLabel#DeckPanelEmpty {
     background-color: transparent;
     color: #666970;
-    font-size: 15px;
+    font-size: 13px;
 }
-
-/* =========================================================
-SEPARADOR
-========================================================= */
 
 QFrame#DeckSeparator {
     background-color: #292C31;
@@ -1479,48 +1612,9 @@ QFrame#DeckSeparator {
     max-height: 1px;
 }
 
-/* =========================================================
-BOTÃO — ESCOLHER CARTA PRINCIPAL
-========================================================= */
-
-QPushButton#SetPrimaryCardButton {
-    background-color: transparent;
-    color: #A7AAB0;
-    border: 1px solid #303339;
-    border-radius: 6px;
-    padding: 6px 10px;
-    font-size: 11px;
-    font-weight: 600;
-}
-
-QPushButton#SetPrimaryCardButton:hover {
-    background-color: #25282D;
-    border: 1px solid #454850;
-    color: #FFFFFF;
-}
-
-QPushButton#SetPrimaryCardButton:checked {
-    background-color: #303339;
-    border: 1px solid #666970;
-    color: #FFFFFF;
-}
 
 /* =========================================================
-INDICADOR DE CARTA PRINCIPAL
-========================================================= */
-
-QLabel#PrimaryCardLabel {
-    background-color: #202328;
-    color: #E8E8EA;
-    border: 1px solid #41444A;
-    border-radius: 5px;
-    padding: 3px 7px;
-    font-size: 10px;
-    font-weight: bold;
-}
-
-/* =========================================================
-COMBOBOX
+   COMBOBOX
 ========================================================= */
 
 QComboBox {
@@ -1563,8 +1657,9 @@ QComboBox QAbstractItemView {
     padding: 4px;
 }
 
+
 /* =========================================================
-SPINBOX
+   SPINBOX
 ========================================================= */
 
 QSpinBox,
@@ -1602,8 +1697,9 @@ QDoubleSpinBox::down-button:hover {
     background-color: #303339;
 }
 
+
 /* =========================================================
-CHECKBOX
+   CHECKBOX
 ========================================================= */
 
 QCheckBox {
@@ -1639,8 +1735,9 @@ QCheckBox::indicator:disabled {
     border: 1px solid #303339;
 }
 
+
 /* =========================================================
-RADIO BUTTON
+   RADIO BUTTON
 ========================================================= */
 
 QRadioButton {
@@ -1670,8 +1767,9 @@ QRadioButton::indicator:checked {
     border: 4px solid #15171A;
 }
 
+
 /* =========================================================
-TOOL BUTTON
+   TOOL BUTTON
 ========================================================= */
 
 QToolButton {
@@ -1704,8 +1802,9 @@ QToolButton:disabled {
     color: #55585E;
 }
 
+
 /* =========================================================
-TABELAS
+   TABELAS
 ========================================================= */
 
 QTableWidget,
@@ -1750,8 +1849,9 @@ QHeaderView::section:hover {
     color: #FFFFFF;
 }
 
+
 /* =========================================================
-LISTAS GERAIS
+   LISTAS GERAIS
 ========================================================= */
 
 QListWidget,
@@ -1781,8 +1881,9 @@ QListView::item:selected {
     color: #FFFFFF;
 }
 
+
 /* =========================================================
-PROGRESS BAR
+   PROGRESS BAR
 ========================================================= */
 
 QProgressBar {
@@ -1799,8 +1900,9 @@ QProgressBar::chunk {
     border-radius: 5px;
 }
 
+
 /* =========================================================
-SLIDER
+   SLIDER
 ========================================================= */
 
 QSlider::groove:horizontal {
@@ -1827,8 +1929,9 @@ QSlider::sub-page:horizontal {
     border-radius: 3px;
 }
 
+
 /* =========================================================
-TOOLTIP
+   TOOLTIP
 ========================================================= */
 
 QToolTip {
@@ -1839,41 +1942,18 @@ QToolTip {
     padding: 6px 9px;
 }
 
-/* =========================================================
-DIALOG
-========================================================= */
-
-QDialog {
-    background-color: #0D0E10;
-    color: #E8E8EA;
-}
-
-QDialog QLabel {
-    background-color: transparent;
-    color: #D9DADF;
-}
 
 /* =========================================================
-LABELS DESABILITADOS
+   LABELS DESABILITADOS
 ========================================================= */
 
 QLabel:disabled {
     color: #55585E;
 }
 
-/* =========================================================
-BOTÕES GENÉRICOS DESABILITADOS
-========================================================= */
-
-QPushButton:disabled,
-QToolButton:disabled {
-    background-color: #181A1D;
-    color: #55585E;
-    border-color: #25272B;
-}
 
 /* =========================================================
-BOTÃO GENÉRICO
+   BOTÕES GENÉRICOS
 ========================================================= */
 
 QPushButton {
@@ -1895,48 +1975,16 @@ QPushButton:pressed {
     border: 1px solid #383B41;
 }
 
-QPushButton:disabled {
+QPushButton:disabled,
+QToolButton:disabled {
     background-color: #181A1D;
     color: #55585E;
     border: 1px solid #25272B;
 }
 
-/* =========================================================
-MENUS GERAIS
-========================================================= */
-
-QMenu {
-    background-color: #181A1E;
-    color: #EEEEF0;
-    border: 1px solid #363940;
-    padding: 5px;
-}
-
-QMenu::item {
-    background-color: transparent;
-    color: #BFC1C5;
-    padding: 9px 20px 9px 10px;
-    margin: 1px;
-    border-radius: 5px;
-}
-
-QMenu::item:selected {
-    background-color: #2A2D33;
-    color: #FFFFFF;
-}
-
-QMenu::item:disabled {
-    color: #55585E;
-}
-
-QMenu::separator {
-    height: 1px;
-    background-color: #303339;
-    margin: 5px 8px;
-}
 
 /* =========================================================
-GROUP BOX
+   GROUP BOX
 ========================================================= */
 
 QGroupBox {
@@ -1956,8 +2004,9 @@ QGroupBox::title {
     padding: 0 6px;
 }
 
+
 /* =========================================================
-TAB WIDGET
+   TAB WIDGET
 ========================================================= */
 
 QTabWidget::pane {
@@ -1985,16 +2034,18 @@ QTabBar::tab:selected {
     border-color: #41444A;
 }
 
+
 /* =========================================================
-FRAME GENÉRICO
+   FRAME GENÉRICO
 ========================================================= */
 
 QFrame {
     background-color: transparent;
 }
 
+
 /* =========================================================
-STATUS BAR
+   STATUS BAR
 ========================================================= */
 
 QStatusBar {
@@ -2007,8 +2058,9 @@ QStatusBar::item {
     border: none;
 }
 
+
 /* =========================================================
-TOOLBAR
+   TOOLBAR
 ========================================================= */
 
 QToolBar {
@@ -2023,5 +2075,104 @@ QToolBar::separator {
     width: 1px;
     margin: 5px 4px;
 }
+
+/* =========================================================
+   CARD — ADICIONAR CARTAS
+   ========================================================= */
+
+
+QLabel#DeckCollectionIcon {
+    background-color: #111318;
+    border: 1px solid #30343C;
+    border-radius: 9px;
+}
+
+QLabel#DeckAddCardsTitle {
+    color: #f1f3f5;
+    font-size: 15px;
+    font-weight: 600;
+}
+
+QLabel#DeckAddCardsDescription {
+    color: #8e949f;
+    font-size: 12px;
+}
+
+QPushButton#DeckAddCardsButton {
+    min-height: 34px;
+    padding: 0 14px;
+    border-radius: 7px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+QPushButton#DeckAddCardsButton:hover {
+    background-color: #2b303a;
+}
+
+
+/* =========================================================
+   QUANTIDADE DA CARTA NA GRADE
+   Mesmo padrão visual do contador dos DECKS
+   ========================================================= */
+
+QFrame#GridQuantityBadge {
+    background-color: rgba(0, 0, 0, 190);
+    border: 1px solid rgba(255, 255, 255, 180);
+    border-radius: 8px;
+    padding: 0;
+}
+
+/* Número da quantidade */
+QLabel#GridQuantityLabel {
+    background-color: transparent;
+    color: #FFFFFF;
+    border: none;
+    font-size: 14px;
+    font-weight: bold;
+    padding-left: 7px;
+    padding-right: 7px;
+    padding-top: 2px;
+    padding-bottom: 2px;
+}
+
+/* =========================================================
+   CONTROLES DE QUANTIDADE DA GRADE
+   ========================================================= */
+
+QPushButton#GridQuantityButton {
+    background-color: #24272C;
+    color: #D9DADF;
+    border: 1px solid #34373D;
+    border-radius: 7px;
+
+    min-width: 34px;
+    max-width: 34px;
+    min-height: 34px;
+    max-height: 34px;
+
+    padding: 0;
+    font-size: 18px;
+    font-weight: 600;
+}
+
+QPushButton#GridQuantityButton:hover {
+    background-color: #303339;
+    border: 1px solid #454850;
+    color: #FFFFFF;
+}
+
+QPushButton#GridQuantityButton:pressed {
+    background-color: #1C1E22;
+    border: 1px solid #383B41;
+    color: #FFFFFF;
+}
+
+QPushButton#GridQuantityButton:disabled {
+    background-color: #181A1D;
+    color: #55585E;
+    border: 1px solid #25272B;
+}
+
 
 """

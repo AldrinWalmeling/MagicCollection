@@ -1,15 +1,86 @@
+
 import csv
 import json
+
+
+# =========================================================
+# HELPERS
+# =========================================================
+
+def _value(card, key, default="—"):
+    """
+    Retorna um valor tratado para exportação.
+
+    Evita que campos inexistentes apareçam como None.
+    """
+    value = card.get(key)
+
+    if value is None or value == "":
+        return default
+
+    return value
+
+
+def _quantity(card):
+    """
+    Retorna a quantidade da carta como inteiro.
+    """
+    try:
+        return int(card.get("quantity", 0) or 0)
+    except (TypeError, ValueError):
+        return 0
+
+
+def _power_toughness(card):
+    """
+    Retorna Power/Toughness quando disponíveis.
+
+    Algumas cartas não possuem esses campos.
+    """
+    power = card.get("power")
+    toughness = card.get("toughness")
+
+    if power is None and toughness is None:
+        return "—"
+
+    power = power if power not in (None, "") else "?"
+    toughness = toughness if toughness not in (None, "") else "?"
+
+    return f"{power}/{toughness}"
+
+
+def _card_faces(card):
+    """
+    Preserva informações de faces de cartas transformáveis,
+    modais ou similares.
+    """
+    faces = card.get("card_faces")
+
+    if not faces:
+        return None
+
+    treated_faces = []
+
+    for face in faces:
+        treated_faces.append({
+            "nome": _value(face, "name"),
+            "mana": _value(face, "mana_cost"),
+            "tipo": _value(face, "type_line"),
+            "efeito": _value(face, "oracle_text"),
+            "power": _value(face, "power"),
+            "toughness": _value(face, "toughness"),
+            "lealdade": _value(face, "loyalty"),
+            "imagem": _value(face, "image_uris", None),
+        })
+
+    return treated_faces
 
 
 # =========================================================
 # BACKUP COMPLETO
 # =========================================================
 
-def export_collection_json(
-    filepath,
-    cards
-):
+def export_collection_json(filepath, cards):
 
     with open(
         filepath,
@@ -29,22 +100,43 @@ def export_collection_json(
 # TRATADO JSON
 # =========================================================
 
-def export_collection_treated_json(
-    filepath,
-    cards
-):
+def export_collection_treated_json(filepath, cards):
 
     treated_cards = []
 
     for card in cards:
 
-        treated_cards.append({
-            "nome": card.get("name"),
-            "mana": card.get("mana_cost"),
-            "tipo": card.get("type_line"),
-            "efeito": card.get("oracle_text"),
-            "quantidade": card.get("quantity")
-        })
+        treated_card = {
+            "nome": _value(card, "name"),
+            "nome_impresso": _value(card, "printed_name"),
+            "mana": _value(card, "mana_cost"),
+            "tipo": _value(card, "type_line"),
+            "efeito": _value(card, "oracle_text"),
+
+            "power": _value(card, "power"),
+            "toughness": _value(card, "toughness"),
+            "power_toughness": _power_toughness(card),
+
+            "lealdade": _value(card, "loyalty"),
+            "defesa": _value(card, "defense"),
+
+            "quantidade": _quantity(card),
+
+            "set": _value(card, "set_name"),
+            "set_code": _value(card, "set_code"),
+            "numero_coletor": _value(card, "collector_number"),
+            "idioma": _value(card, "lang"),
+
+            "scryfall_id": _value(card, "scryfall_id"),
+            "imagem": _value(card, "image_url"),
+        }
+
+        faces = _card_faces(card)
+
+        if faces:
+            treated_card["faces"] = faces
+
+        treated_cards.append(treated_card)
 
     with open(
         filepath,
@@ -58,6 +150,7 @@ def export_collection_treated_json(
             ensure_ascii=False,
             indent=4
         )
+
 
 
 # =========================================================
@@ -120,6 +213,14 @@ def export_collection_txt(
                 "oracle_text"
             ) or "—"
 
+            power = card.get(
+                "power"
+            )
+
+            toughness = card.get(
+                "toughness"
+            )
+
             quantity = card.get(
                 "quantity",
                 0
@@ -153,32 +254,53 @@ def export_collection_txt(
                 f"{oracle_text}\n\n"
             )
 
+            # =============================================
+            # PODER / RESISTÊNCIA
+            # =============================================
+
+            if power is not None or toughness is not None:
+
+                power_value = power or "—"
+                toughness_value = toughness or "—"
+
+                file.write(
+                    f"Poder/Resistência: {power_value}/{toughness_value}\n\n"
+                )
+
             file.write(
                 f"Quantidade: {quantity}\n\n"
             )
+
 
 
 # =========================================================
 # CSV
 # =========================================================
 
-def export_collection_csv(
-    filepath,
-    cards
-):
+def export_collection_csv(filepath, cards):
 
     fieldnames = [
         "scryfall_id",
         "name",
         "printed_name",
+
         "lang",
+
         "set_code",
         "set_name",
         "collector_number",
+
         "mana_cost",
         "type_line",
         "oracle_text",
+
+        "power",
+        "toughness",
+        "loyalty",
+        "defense",
+
         "image_url",
+
         "quantity"
     ]
 
@@ -191,11 +313,40 @@ def export_collection_csv(
 
         writer = csv.DictWriter(
             file,
-            fieldnames=fieldnames
+            fieldnames=fieldnames,
+            extrasaction="ignore"
         )
 
         writer.writeheader()
 
         for card in cards:
 
-            writer.writerow(card)
+            row = {
+                "scryfall_id": card.get("scryfall_id", ""),
+                "name": card.get("name", ""),
+                "printed_name": card.get("printed_name", ""),
+
+                "lang": card.get("lang", ""),
+
+                "set_code": card.get("set_code", ""),
+                "set_name": card.get("set_name", ""),
+                "collector_number": card.get(
+                    "collector_number",
+                    ""
+                ),
+
+                "mana_cost": card.get("mana_cost", ""),
+                "type_line": card.get("type_line", ""),
+                "oracle_text": card.get("oracle_text", ""),
+
+                "power": card.get("power", ""),
+                "toughness": card.get("toughness", ""),
+                "loyalty": card.get("loyalty", ""),
+                "defense": card.get("defense", ""),
+
+                "image_url": card.get("image_url", ""),
+
+                "quantity": _quantity(card)
+            }
+
+            writer.writerow(row)
