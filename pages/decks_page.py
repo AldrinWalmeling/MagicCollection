@@ -64,7 +64,14 @@ from ui.theme import DARK_THEME
 # =========================================================
 
 BASE_DIR = Path(__file__).resolve().parent.parent
-DATABASE_FILE = BASE_DIR / "collection.db"
+
+SAVE_DIR = BASE_DIR / "save"
+SAVE_DIR.mkdir(
+    parents=True,
+    exist_ok=True,
+)
+
+DATABASE_FILE = SAVE_DIR / "save.db"
 
 
 # =========================================================

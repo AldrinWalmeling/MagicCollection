@@ -8,7 +8,14 @@ from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent
 
-DATABASE_FILE = BASE_DIR / "collection.db"
+SAVE_DIR = BASE_DIR / "save"
+
+SAVE_DIR.mkdir(
+    parents=True,
+    exist_ok=True
+)
+
+DATABASE_FILE = SAVE_DIR / "save.db"
 
 CARDS_DIR = BASE_DIR / "cards"
 
@@ -16,7 +23,6 @@ CARDS_DIR.mkdir(
     parents=True,
     exist_ok=True
 )
-
 
 # =========================================================
 # CONEXÃO
@@ -35,7 +41,6 @@ def get_connection():
     )
 
     return connection
-
 
 # =========================================================
 # URL DA IMAGEM DO SCRYFALL

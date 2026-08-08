@@ -10,7 +10,9 @@ from PyInstaller.building.datastruct import Tree
 # CAMINHOS
 # =========================================================
 
-ASSETS_DIR = Path("assets")
+PROJECT_DIR = Path.cwd()
+
+ASSETS_DIR = PROJECT_DIR / "assets"
 
 
 # =========================================================
@@ -18,23 +20,38 @@ ASSETS_DIR = Path("assets")
 # =========================================================
 
 a = Analysis(
-    ['main.py'],
+    [
+        "main.py",
+    ],
 
-    pathex=[],
+    # Diretório principal do projeto
+    pathex=[
+        str(PROJECT_DIR),
+    ],
 
+    # Binários adicionais
     binaries=[],
 
+    # Arquivos adicionais
     datas=[],
 
+    # Imports que o PyInstaller não encontra automaticamente
     hiddenimports=[],
 
+    # Hooks personalizados
     hookspath=[],
+
     hooksconfig={},
+
     runtime_hooks=[],
 
+    # Módulos que queremos excluir
     excludes=[],
 
+    # Mantém o arquivo Python em archive
     noarchive=False,
+
+    # Otimização
     optimize=0,
 )
 
@@ -44,7 +61,7 @@ a = Analysis(
 # =========================================================
 
 pyz = PYZ(
-    a.pure
+    a.pure,
 )
 
 
@@ -54,46 +71,63 @@ pyz = PYZ(
 
 exe = EXE(
     pyz,
+
     a.scripts,
+
     [],
 
+    # Os binários serão colocados pelo COLLECT
     exclude_binaries=True,
 
-    name='MagicCollection',
+    # Nome do executável
+    name="MagicCollection",
 
-    debug=False,
-
-    bootloader_ignore_signals=False,
-
-    strip=False,
-
-    upx=True,
-
+    # Não mostrar console
     console=False,
 
+    # Debug
+    debug=False,
+
+    # Bootloader
+    bootloader_ignore_signals=False,
+
+    # Não remover símbolos
+    strip=False,
+
+    # UPX
+    upx=True,
+
+    # Traceback em aplicações windowed
     disable_windowed_traceback=False,
 
+    # Windows
     argv_emulation=False,
 
     target_arch=None,
 
+    # Assinatura
     codesign_identity=None,
 
     entitlements_file=None,
 
-    icon='assets/icons/icon_app.ico',
+    # Ícone
+    icon=str(
+        ASSETS_DIR
+        / "icons"
+        / "icon_app.ico"
+    ),
 )
 
 
 # =========================================================
-# COLETA
+# COLETA FINAL
 # =========================================================
 
 coll = COLLECT(
-
     exe,
 
     a.binaries,
+
     a.datas,
 
     # =====================================================
@@ -102,8 +136,12 @@ coll = COLLECT(
 
     Tree(
         str(ASSETS_DIR),
-        prefix='assets'
+        prefix="assets",
     ),
+
+    # =====================================================
+    # CONFIGURAÇÕES
+    # =====================================================
 
     strip=False,
 
@@ -111,5 +149,6 @@ coll = COLLECT(
 
     upx_exclude=[],
 
-    name='MagicCollection',
+    # Nome da pasta final
+    name="MagicCollection",
 )

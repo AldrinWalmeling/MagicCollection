@@ -8,6 +8,7 @@ from PySide6.QtCore import (
     QTimer,
     QRunnable,
     QThreadPool,
+    QSettings,
 )
 
 from PySide6.QtGui import QPixmap
@@ -29,6 +30,7 @@ from PySide6.QtWidgets import (
     QDialogButtonBox,
     QGridLayout,
     QMessageBox,
+    QComboBox,
 )
 
 from services.scryfall import (
@@ -39,6 +41,18 @@ from services.scryfall import (
 from services.scryfall_symbols import (
     ManaSymbolsWidget,
 )
+
+from services.collection_export import (
+    ExportConfig,
+    export_collection_custom,
+    get_all_export_presets,
+    config_from_preset,
+    save_export_preset,
+    delete_export_preset,
+    EXPORT_FIELDS,
+)
+
+from export_dialog import CollectionExportDialog
 
 from database import (
     add_card,
@@ -805,9 +819,32 @@ class CollectionPage(QWidget):
 
         self.pending_search = ""
 
-        self.current_layout = "list"
+        self.settings = QSettings(
+            "MagicCollection",
+            "MagicCollection"
+        )
+
+        self.current_layout = self.settings.value(
+            "collection/layout",
+            "grid",
+            type=str
+        )
+
+        if self.current_layout not in (
+                "list",
+                "grid",
+        ):
+            self.current_layout = "grid"
 
         self.current_cards = []
+
+        self.all_collection_cards = []
+        self.search_result_cards = []
+
+        self.active_color_filter = "all"
+        self.active_type_filter = "all"
+        self.active_set_filter = "all"
+        self.active_sort = "name_asc"
 
         self.card_rows = {}
 
@@ -903,7 +940,53 @@ class CollectionPage(QWidget):
     # =====================================================
     # SETUP
     # =====================================================
+    def update_card_quantity_in_list(
+            self,
+            cards,
+            card_id,
+            new_quantity,
+    ):
 
+        updated = []
+
+        for card in cards:
+
+            try:
+
+                current_id = int(
+                    card[0]
+                )
+
+            except (
+                    TypeError,
+                    ValueError,
+            ):
+
+                updated.append(
+                    card
+                )
+
+                continue
+
+            if current_id != card_id:
+                updated.append(
+                    card
+                )
+
+                continue
+
+            card = list(
+                card
+            )
+
+            if len(card) > 10:
+                card[10] = new_quantity
+
+            updated.append(
+                tuple(card)
+            )
+
+        return updated
     def setup_ui(self):
 
         self.main_layout = QVBoxLayout(
@@ -1057,6 +1140,230 @@ class CollectionPage(QWidget):
 
         self.main_layout.addWidget(
             search_frame
+        )
+
+        # =================================================
+        # FILTROS DA COLEÇÃO
+        # =================================================
+
+        self.filters_frame = QFrame()
+
+        self.filters_frame.setObjectName(
+            "CollectionFilters"
+        )
+
+        filters_layout = QHBoxLayout(
+            self.filters_frame
+        )
+
+        filters_layout.setContentsMargins(
+            0,
+            0,
+            0,
+            0,
+        )
+
+        filters_layout.setSpacing(8)
+
+        # -------------------------------------------------
+        # COR
+        # -------------------------------------------------
+
+        self.color_filter = QComboBox()
+
+        self.color_filter.addItem(
+            "Todas as cores",
+            "all",
+        )
+
+        self.color_filter.addItem(
+            "Branco",
+            "W",
+        )
+
+        self.color_filter.addItem(
+            "Azul",
+            "U",
+        )
+
+        self.color_filter.addItem(
+            "Preto",
+            "B",
+        )
+
+        self.color_filter.addItem(
+            "Vermelho",
+            "R",
+        )
+
+        self.color_filter.addItem(
+            "Verde",
+            "G",
+        )
+
+        self.color_filter.addItem(
+            "Incolor",
+            "C",
+        )
+
+        self.color_filter.addItem(
+            "Multicolor",
+            "M",
+        )
+
+        self.color_filter.currentIndexChanged.connect(
+            self.apply_collection_filters
+        )
+
+        filters_layout.addWidget(
+            self.color_filter
+        )
+
+        # -------------------------------------------------
+        # TIPO
+        # -------------------------------------------------
+
+        self.type_filter = QComboBox()
+
+        self.type_filter.addItem(
+            "Todos os tipos",
+            "all",
+        )
+
+        self.type_filter.addItem(
+            "Criatura",
+            "Criatura",
+        )
+
+        self.type_filter.addItem(
+            "Mágica Instantânea",
+            "Mágica Instantânea",
+        )
+
+        self.type_filter.addItem(
+            "Feitiço",
+            "Feitiço",
+        )
+
+        self.type_filter.addItem(
+            "Encantamento",
+            "Encantamento",
+        )
+
+        self.type_filter.addItem(
+            "Artefato",
+            "Artefato",
+        )
+
+        self.type_filter.addItem(
+            "Planeswalker",
+            "Planeswalker",
+        )
+
+        self.type_filter.addItem(
+            "Terreno",
+            "Terreno",
+        )
+
+        self.type_filter.currentIndexChanged.connect(
+            self.apply_collection_filters
+        )
+
+        filters_layout.addWidget(
+            self.type_filter
+        )
+
+        # -------------------------------------------------
+        # EDIÇÃO
+        # -------------------------------------------------
+
+        self.set_filter = QComboBox()
+
+        self.set_filter.addItem(
+            "Todas as edições",
+            "all",
+        )
+
+        self.set_filter.currentIndexChanged.connect(
+            self.apply_collection_filters
+        )
+
+        filters_layout.addWidget(
+            self.set_filter
+        )
+
+        # -------------------------------------------------
+        # ORDENAÇÃO
+        # -------------------------------------------------
+
+        self.sort_filter = QComboBox()
+
+        self.sort_filter.addItem(
+            "Nome: A → Z",
+            "name_asc",
+        )
+
+        self.sort_filter.addItem(
+            "Nome: Z → A",
+            "name_desc",
+        )
+
+        self.sort_filter.addItem(
+            "Quantidade: menor → maior",
+            "quantity_asc",
+        )
+
+        self.sort_filter.addItem(
+            "Quantidade: maior → menor",
+            "quantity_desc",
+        )
+
+        self.sort_filter.addItem(
+            "Edição: A → Z",
+            "set_asc",
+        )
+
+        self.sort_filter.addItem(
+            "Edição: Z → A",
+            "set_desc",
+        )
+
+        self.sort_filter.addItem(
+            "Mais recentes",
+            "newest",
+        )
+
+        self.sort_filter.addItem(
+            "Mais antigas",
+            "oldest",
+        )
+
+        self.sort_filter.currentIndexChanged.connect(
+            self.apply_collection_filters
+        )
+
+        filters_layout.addWidget(
+            self.sort_filter
+        )
+
+        # -------------------------------------------------
+        # LIMPAR
+        # -------------------------------------------------
+
+        clear_filters_button = QPushButton(
+            "Limpar filtros"
+        )
+
+        clear_filters_button.clicked.connect(
+            self.clear_collection_filters
+        )
+
+        filters_layout.addWidget(
+            clear_filters_button
+        )
+
+        self.main_layout.addWidget(
+            self.filters_frame
         )
 
         # =================================================
@@ -1214,8 +1521,12 @@ class CollectionPage(QWidget):
             True
         )
 
-        self.suggestion_list.setFixedHeight(
-            220
+        self.suggestion_list.setMinimumHeight(
+            0
+        )
+
+        self.suggestion_list.setMaximumHeight(
+            320
         )
 
         self.suggestion_list.itemClicked.connect(
@@ -1474,11 +1785,12 @@ class CollectionPage(QWidget):
             self.add_input,
             event,
         )
+
     def set_layout(self, layout_name):
 
         if layout_name not in (
-            "list",
-            "grid",
+                "list",
+                "grid",
         ):
             return
 
@@ -1486,6 +1798,11 @@ class CollectionPage(QWidget):
             return
 
         self.current_layout = layout_name
+
+        self.settings.setValue(
+            "collection/layout",
+            layout_name
+        )
 
         self._grid_columns = None
 
@@ -1608,6 +1925,52 @@ class CollectionPage(QWidget):
             task
         )
 
+    # =====================================================
+    # ALTURA DAS SUGESTÕES
+    # =====================================================
+
+    def update_suggestion_height(
+        self,
+    ):
+
+        count = (
+            self.suggestion_list.count()
+        )
+
+        if count <= 0:
+
+            self.suggestion_list.hide()
+
+            return
+
+        row_height = (
+            self.suggestion_list.sizeHintForRow(
+                0
+            )
+        )
+
+        if row_height <= 0:
+
+            row_height = 38
+
+        visible_rows = min(
+            count,
+            8,
+        )
+
+        height = (
+            row_height
+            * visible_rows
+        ) + 8
+
+        height = min(
+            height,
+            320,
+        )
+
+        self.suggestion_list.setFixedHeight(
+            height
+        )
     def receive_scryfall_results(
         self,
         query,
@@ -1634,14 +1997,18 @@ class CollectionPage(QWidget):
             return
 
         for name in suggestions[:8]:
+
             self.suggestion_list.addItem(
                 name
             )
 
         if self.suggestion_list.count() > 0:
+
             self.suggestion_list.setCurrentRow(
                 0
             )
+
+        self.update_suggestion_height()
 
         self.suggestion_list.show()
 
@@ -1806,7 +2173,9 @@ class CollectionPage(QWidget):
     # CARREGAR CARTAS
     # =====================================================
 
-    def load_cards(self):
+    def load_cards(
+            self,
+    ):
 
         try:
 
@@ -1821,32 +2190,69 @@ class CollectionPage(QWidget):
 
             cards = []
 
-        self.display_cards(
+        # =================================================
+        # FONTE PRINCIPAL DA COLEÇÃO
+        # =================================================
+
+        self.all_collection_cards = list(
             cards
         )
+
+        # =================================================
+        # RESULTADO ATUAL DA PESQUISA
+        # =================================================
+
+        self.search_result_cards = list(
+            cards
+        )
+
+        # =================================================
+        # ATUALIZAR EDIÇÕES
+        # =================================================
+
+        self.populate_set_filter()
+
+        # =================================================
+        # APLICAR FILTROS
+        # =================================================
+
+        self.apply_collection_filters()
 
     # =====================================================
     # PESQUISA DA COLEÇÃO
     # =====================================================
 
     def search_collection(
-        self,
-        text,
+            self,
+            text,
     ):
 
-        text = text.strip()
+        text = str(
+            text or ""
+        ).strip()
+
+        # =================================================
+        # PESQUISA VAZIA
+        # =================================================
+
+        if not text:
+            self.search_result_cards = list(
+                self.all_collection_cards
+            )
+
+            self.apply_collection_filters()
+
+            return
+
+        # =================================================
+        # PESQUISAR NO BANCO
+        # =================================================
 
         try:
 
-            if not text:
-
-                cards = get_all_cards()
-
-            else:
-
-                cards = search_cards(
-                    text
-                )
+            cards = search_cards(
+                text
+            )
 
         except Exception as error:
 
@@ -1857,9 +2263,776 @@ class CollectionPage(QWidget):
 
             cards = []
 
-        self.display_cards(
+        # =================================================
+        # GUARDAR RESULTADO DA PESQUISA
+        # =================================================
+
+        self.search_result_cards = list(
             cards
         )
+
+        # =================================================
+        # APLICAR FILTROS
+        # =================================================
+
+        self.apply_collection_filters()
+
+    # =====================================================
+    # IDENTIFICAR CORES DA CARTA
+    # =====================================================
+
+    def get_card_colors(
+            self,
+            card,
+    ):
+
+        if not card:
+            return set()
+
+        try:
+
+            mana_cost = card[6]
+
+        except (
+                IndexError,
+                TypeError,
+        ):
+
+            return set()
+
+        if not mana_cost:
+            return set()
+
+        mana = str(
+            mana_cost
+        ).upper()
+
+        colors = set()
+
+        if "{W}" in mana:
+            colors.add("W")
+
+        if "{U}" in mana:
+            colors.add("U")
+
+        if "{B}" in mana:
+            colors.add("B")
+
+        if "{R}" in mana:
+            colors.add("R")
+
+        if "{G}" in mana:
+            colors.add("G")
+
+        return colors
+
+    # =====================================================
+    # VERIFICAR FILTRO DE COR
+    # =====================================================
+
+    def card_matches_color(
+            self,
+            card,
+            color,
+    ):
+
+        if color == "all":
+            return True
+
+        colors = self.get_card_colors(
+            card
+        )
+
+        # -------------------------------------------------
+        # INCOLOR
+        # -------------------------------------------------
+
+        if color == "C":
+            return len(
+                colors
+            ) == 0
+
+        # -------------------------------------------------
+        # MULTICOLOR
+        # -------------------------------------------------
+
+        if color == "M":
+            return len(
+                colors
+            ) >= 2
+
+        # -------------------------------------------------
+        # COR ESPECÍFICA
+        # -------------------------------------------------
+
+        return color in colors
+
+    # =====================================================
+    # VERIFICAR FILTRO DE TIPO
+    # =====================================================
+
+    def card_matches_type(
+            self,
+            card,
+            type_filter,
+    ):
+
+        if type_filter == "all":
+            return True
+
+        try:
+
+            type_line = str(
+                card[7] or ""
+            ).lower()
+
+        except (
+                IndexError,
+                TypeError,
+        ):
+
+            return False
+
+        # -------------------------------------------------
+        # CRIATURA
+        # -------------------------------------------------
+
+        if type_filter == "Criatura":
+            return (
+                    "criatura" in type_line
+                    or
+                    "creature" in type_line
+            )
+
+        # -------------------------------------------------
+        # MÁGICA INSTANTÂNEA
+        # -------------------------------------------------
+
+        if type_filter == "Mágica Instantânea":
+            return (
+                    "mágica instantânea" in type_line
+                    or
+                    "instant" in type_line
+            )
+
+        # -------------------------------------------------
+        # FEITIÇO
+        # -------------------------------------------------
+
+        if type_filter == "Feitiço":
+            return (
+                    "feitiço" in type_line
+                    or
+                    "sorcery" in type_line
+            )
+
+        # -------------------------------------------------
+        # ENCANTAMENTO
+        # -------------------------------------------------
+
+        if type_filter == "Encantamento":
+            return (
+                    "encantamento" in type_line
+                    or
+                    "enchantment" in type_line
+            )
+
+        # -------------------------------------------------
+        # ARTEFATO
+        # -------------------------------------------------
+
+        if type_filter == "Artefato":
+            return (
+                    "artefato" in type_line
+                    or
+                    "artifact" in type_line
+            )
+
+        # -------------------------------------------------
+        # PLANESWALKER
+        # -------------------------------------------------
+
+        if type_filter == "Planeswalker":
+            return (
+                    "planeswalker" in type_line
+            )
+
+        # -------------------------------------------------
+        # TERRENO
+        # -------------------------------------------------
+
+        if type_filter == "Terreno":
+            return (
+                    "terreno" in type_line
+                    or
+                    "land" in type_line
+            )
+
+        return True
+
+    # =====================================================
+    # VERIFICAR FILTRO DE EDIÇÃO
+    # =====================================================
+
+    def card_matches_set(
+            self,
+            card,
+            set_filter,
+    ):
+
+        if set_filter == "all":
+            return True
+
+        try:
+
+            card_set = str(
+                card[4] or ""
+            )
+
+        except (
+                IndexError,
+                TypeError,
+        ):
+
+            return False
+
+        return (
+                card_set
+                == str(
+            set_filter
+        )
+        )
+
+    # =====================================================
+    # POPULAR FILTRO DE EDIÇÕES
+    # =====================================================
+
+    def populate_set_filter(
+            self,
+    ):
+
+        if not hasattr(
+                self,
+                "set_filter",
+        ):
+            return
+
+        current = (
+            self.set_filter.currentData()
+        )
+
+        if current is None:
+            current = "all"
+
+        sets = set()
+
+        for card in self.all_collection_cards:
+
+            try:
+
+                set_name = card[4]
+
+            except (
+                    IndexError,
+                    TypeError,
+            ):
+
+                continue
+
+            if set_name:
+                sets.add(
+                    str(
+                        set_name
+                    )
+                )
+
+        sets = sorted(
+            sets,
+            key=lambda value: value.lower(),
+        )
+
+        # =================================================
+        # RECRIAR COMBOBOX
+        # =================================================
+
+        self.set_filter.blockSignals(
+            True
+        )
+
+        try:
+
+            self.set_filter.clear()
+
+            self.set_filter.addItem(
+                "Todas as edições",
+                "all",
+            )
+
+            for set_name in sets:
+                self.set_filter.addItem(
+                    set_name,
+                    set_name,
+                )
+
+            index = (
+                self.set_filter.findData(
+                    current
+                )
+            )
+
+            if index >= 0:
+
+                self.set_filter.setCurrentIndex(
+                    index
+                )
+
+            else:
+
+                self.set_filter.setCurrentIndex(
+                    0
+                )
+
+        finally:
+
+            self.set_filter.blockSignals(
+                False
+            )
+
+    # =====================================================
+    # OBTER QUANTIDADE
+    # =====================================================
+
+    def get_card_quantity(
+            self,
+            card,
+    ):
+
+        try:
+
+            return int(
+                card[10] or 0
+            )
+
+        except (
+                IndexError,
+                TypeError,
+                ValueError,
+        ):
+
+            return 0
+
+    # =====================================================
+    # APLICAR TODOS OS FILTROS
+    # =====================================================
+
+    def apply_collection_filters(
+            self,
+    ):
+
+        # =================================================
+        # GARANTIR QUE OS FILTROS EXISTEM
+        # =================================================
+
+        if not hasattr(
+                self,
+                "color_filter",
+        ):
+            return
+
+        if not hasattr(
+                self,
+                "type_filter",
+        ):
+            return
+
+        if not hasattr(
+                self,
+                "set_filter",
+        ):
+            return
+
+        if not hasattr(
+                self,
+                "sort_filter",
+        ):
+            return
+
+        # =================================================
+        # LER VALORES
+        # =================================================
+
+        color = (
+            self.color_filter.currentData()
+        )
+
+        card_type = (
+            self.type_filter.currentData()
+        )
+
+        set_name = (
+            self.set_filter.currentData()
+        )
+
+        sort_mode = (
+            self.sort_filter.currentData()
+        )
+
+        if color is None:
+            color = "all"
+
+        if card_type is None:
+            card_type = "all"
+
+        if set_name is None:
+            set_name = "all"
+
+        if sort_mode is None:
+            sort_mode = "name_asc"
+
+        # =================================================
+        # SALVAR ESTADO
+        # =================================================
+
+        self.active_color_filter = color
+        self.active_type_filter = card_type
+        self.active_set_filter = set_name
+        self.active_sort = sort_mode
+
+        # =================================================
+        # ESCOLHER FONTE
+        # =================================================
+        #
+        # Se existe texto na pesquisa:
+        #     usa somente os resultados da pesquisa.
+        #
+        # Se não existe:
+        #     usa toda a coleção.
+        #
+        # =================================================
+
+        search_text = ""
+
+        if hasattr(
+                self,
+                "search_input",
+        ):
+            search_text = (
+                self.search_input.text()
+                .strip()
+            )
+
+        if search_text:
+
+            cards = list(
+                self.search_result_cards
+            )
+
+        else:
+
+            cards = list(
+                self.all_collection_cards
+            )
+
+        # =================================================
+        # FILTRAR
+        # =================================================
+
+        filtered = []
+
+        for card in cards:
+
+            # -------------------------------------------------
+            # COR
+            # -------------------------------------------------
+
+            if not self.card_matches_color(
+                    card,
+                    color,
+            ):
+                continue
+
+            # -------------------------------------------------
+            # TIPO
+            # -------------------------------------------------
+
+            if not self.card_matches_type(
+                    card,
+                    card_type,
+            ):
+                continue
+
+            # -------------------------------------------------
+            # EDIÇÃO
+            # -------------------------------------------------
+
+            if not self.card_matches_set(
+                    card,
+                    set_name,
+            ):
+                continue
+
+            filtered.append(
+                card
+            )
+
+        # =================================================
+        # ORDENAÇÃO
+        # =================================================
+
+        if sort_mode == "name_asc":
+
+            filtered.sort(
+                key=lambda card: str(
+                    card[1] or ""
+                ).lower()
+            )
+
+        elif sort_mode == "name_desc":
+
+            filtered.sort(
+                key=lambda card: str(
+                    card[1] or ""
+                ).lower(),
+                reverse=True,
+            )
+
+        elif sort_mode == "quantity_asc":
+
+            filtered.sort(
+                key=lambda card:
+                self.get_card_quantity(
+                    card
+                )
+            )
+
+        elif sort_mode == "quantity_desc":
+
+            filtered.sort(
+                key=lambda card:
+                self.get_card_quantity(
+                    card
+                ),
+                reverse=True,
+            )
+
+        elif sort_mode == "set_asc":
+
+            filtered.sort(
+                key=lambda card: str(
+                    card[4] or ""
+                ).lower()
+            )
+
+        elif sort_mode == "set_desc":
+
+            filtered.sort(
+                key=lambda card: str(
+                    card[4] or ""
+                ).lower(),
+                reverse=True,
+            )
+
+        elif sort_mode == "newest":
+
+            # Ainda não existe created_at
+            # dentro da tupla retornada pelo banco.
+            pass
+
+        elif sort_mode == "oldest":
+
+            # Ainda não existe created_at
+            # dentro da tupla retornada pelo banco.
+            pass
+
+        # =================================================
+        # MOSTRAR RESULTADO
+        # =================================================
+
+        self.display_cards(
+            filtered
+        )
+
+    # =====================================================
+    # LIMPAR FILTROS
+    # =====================================================
+
+    def clear_collection_filters(
+            self,
+    ):
+
+        # =================================================
+        # BLOQUEAR SINAIS
+        # =================================================
+
+        self.color_filter.blockSignals(
+            True
+        )
+
+        self.type_filter.blockSignals(
+            True
+        )
+
+        self.set_filter.blockSignals(
+            True
+        )
+
+        self.sort_filter.blockSignals(
+            True
+        )
+
+        try:
+
+            self.color_filter.setCurrentIndex(
+                0
+            )
+
+            self.type_filter.setCurrentIndex(
+                0
+            )
+
+            self.set_filter.setCurrentIndex(
+                0
+            )
+
+            self.sort_filter.setCurrentIndex(
+                0
+            )
+
+        finally:
+
+            self.color_filter.blockSignals(
+                False
+            )
+
+            self.type_filter.blockSignals(
+                False
+            )
+
+            self.set_filter.blockSignals(
+                False
+            )
+
+            self.sort_filter.blockSignals(
+                False
+            )
+
+        # =================================================
+        # ESTADO PADRÃO
+        # =================================================
+
+        self.active_color_filter = "all"
+        self.active_type_filter = "all"
+        self.active_set_filter = "all"
+        self.active_sort = "name_asc"
+
+        # =================================================
+        # ATUALIZAR
+        # =================================================
+
+        self.apply_collection_filters()
+
+    # =====================================================
+    # ATUALIZAR QUANTIDADE EM UMA LISTA
+    # =====================================================
+
+    def update_card_quantity_in_list(
+            self,
+            cards,
+            card_id,
+            new_quantity,
+    ):
+
+        updated = []
+
+        for card in cards:
+
+            try:
+
+                current_id = int(
+                    card[0]
+                )
+
+            except (
+                    TypeError,
+                    ValueError,
+                    IndexError,
+            ):
+
+                updated.append(
+                    card
+                )
+
+                continue
+
+            # -------------------------------------------------
+            # CARTA DIFERENTE
+            # -------------------------------------------------
+
+            if current_id != card_id:
+                updated.append(
+                    card
+                )
+
+                continue
+
+            # -------------------------------------------------
+            # CARTA ENCONTRADA
+            # -------------------------------------------------
+
+            card_data = list(
+                card
+            )
+
+            if len(card_data) > 10:
+                card_data[10] = (
+                    new_quantity
+                )
+
+            updated.append(
+                tuple(
+                    card_data
+                )
+            )
+
+        return updated
+
+    # =====================================================
+    # ATUALIZAR QUANTIDADE NAS FONTES
+    # =====================================================
+
+    def update_quantity_in_filter_sources(
+            self,
+            card_id,
+            new_quantity,
+    ):
+
+        self.all_collection_cards = (
+            self.update_card_quantity_in_list(
+                self.all_collection_cards,
+                card_id,
+                new_quantity,
+            )
+        )
+
+        self.search_result_cards = (
+            self.update_card_quantity_in_list(
+                self.search_result_cards,
+                card_id,
+                new_quantity,
+            )
+        )
+
+        self.current_cards = (
+            self.update_card_quantity_in_list(
+                self.current_cards,
+                card_id,
+                new_quantity,
+            )
+        )
+
+    # =====================================================
+    # LIMPAR LAYOUT
+    # =====================================================
 
     # =====================================================
     # LIMPAR LAYOUT
@@ -1996,57 +3169,538 @@ class CollectionPage(QWidget):
     # =====================================================
 
     def get_cached_mana_widget(
+            self,
+            mana_cost,
+            symbol_size=22,
+            parent=None,
+    ):
+        ...
+        return widget
+
+    # =====================================================
+    # FILTROS DA COLEÇÃO
+    # =====================================================
+
+    def get_card_colors(
         self,
         mana_cost,
-        symbol_size=22,
-        parent=None,
     ):
 
         if not mana_cost:
-            return None
+            return set()
 
-        mana_cost = str(
+        mana = str(
+            mana_cost
+        ).upper()
+
+        colors = set()
+
+        if "{W}" in mana:
+            colors.add("W")
+
+        if "{U}" in mana:
+            colors.add("U")
+
+        if "{B}" in mana:
+            colors.add("B")
+
+        if "{R}" in mana:
+            colors.add("R")
+
+        if "{G}" in mana:
+            colors.add("G")
+
+        return colors
+
+    def card_matches_color(
+        self,
+        card,
+        color,
+    ):
+
+        if color == "all":
+            return True
+
+        if not card or len(card) <= 6:
+            return False
+
+        mana_cost = card[6]
+
+        colors = self.get_card_colors(
             mana_cost
         )
 
-        cache_key = (
-            mana_cost,
-            int(symbol_size),
+        # INColor
+        if color == "C":
+            return len(colors) == 0
+
+        # MULTICOLOR
+        if color == "M":
+            return len(colors) >= 2
+
+        return color in colors
+
+    def card_matches_type(
+        self,
+        card,
+        type_filter,
+    ):
+
+        if type_filter == "all":
+            return True
+
+        if not card or len(card) <= 7:
+            return False
+
+        type_line = str(
+            card[7] or ""
         )
 
-        self.mana_widget_cache.setdefault(
-            cache_key,
-            True,
+        return (
+            type_filter.lower()
+            in type_line.lower()
         )
 
-        widget = ManaSymbolsWidget(
-            mana_cost,
-            symbol_size=symbol_size,
-            parent=parent,
+    def card_matches_set(
+        self,
+        card,
+        set_filter,
+    ):
+
+        if set_filter == "all":
+            return True
+
+        if not card or len(card) <= 4:
+            return False
+
+        return (
+            str(card[4] or "").lower()
+            == str(set_filter or "").lower()
         )
 
-        widget.setObjectName(
-            "CardMana"
+    def sort_collection_cards(
+        self,
+        cards,
+        sort_mode,
+    ):
+
+        cards = list(
+            cards
         )
 
-        widget.setSizePolicy(
-            QSizePolicy.Policy.Minimum,
-            QSizePolicy.Policy.Fixed,
+        if sort_mode == "name_asc":
+
+            cards.sort(
+                key=lambda card: str(
+                    card[1] or ""
+                ).lower()
+            )
+
+        elif sort_mode == "name_desc":
+
+            cards.sort(
+                key=lambda card: str(
+                    card[1] or ""
+                ).lower(),
+                reverse=True,
+            )
+
+        elif sort_mode == "quantity_asc":
+
+            cards.sort(
+                key=lambda card: int(
+                    card[10] or 0
+                )
+            )
+
+        elif sort_mode == "quantity_desc":
+
+            cards.sort(
+                key=lambda card: int(
+                    card[10] or 0
+                ),
+                reverse=True,
+            )
+
+        elif sort_mode == "set_asc":
+
+            cards.sort(
+                key=lambda card: str(
+                    card[4] or ""
+                ).lower()
+            )
+
+        elif sort_mode == "set_desc":
+
+            cards.sort(
+                key=lambda card: str(
+                    card[4] or ""
+                ).lower(),
+                reverse=True,
+            )
+
+        return cards
+
+    def apply_collection_filters(
+        self,
+    ):
+
+        if not hasattr(
+            self,
+            "color_filter",
+        ):
+            return
+
+        color = (
+            self.color_filter.currentData()
         )
 
-        widget.setFixedHeight(
-            symbol_size + 4
+        card_type = (
+            self.type_filter.currentData()
         )
 
-        return widget
+        set_name = (
+            self.set_filter.currentData()
+        )
+
+        sort_mode = (
+            self.sort_filter.currentData()
+        )
+
+        if color is None:
+            color = "all"
+
+        if card_type is None:
+            card_type = "all"
+
+        if set_name is None:
+            set_name = "all"
+
+        if sort_mode is None:
+            sort_mode = "name_asc"
+
+        self.active_color_filter = color
+        self.active_type_filter = card_type
+        self.active_set_filter = set_name
+        self.active_sort = sort_mode
+
+        cards = list(
+            self.search_result_cards
+        )
+
+        filtered = []
+
+        for card in cards:
+
+            if not self.card_matches_color(
+                card,
+                color,
+            ):
+                continue
+
+            if not self.card_matches_type(
+                card,
+                card_type,
+            ):
+                continue
+
+            if not self.card_matches_set(
+                card,
+                set_name,
+            ):
+                continue
+
+            filtered.append(
+                card
+            )
+
+        filtered = (
+            self.sort_collection_cards(
+                filtered,
+                sort_mode,
+            )
+        )
+
+        self.display_cards(
+            filtered
+        )
+
+        self.save_collection_filter_settings()
+
+    def clear_collection_filters(
+        self,
+    ):
+
+        self.color_filter.blockSignals(
+            True
+        )
+
+        self.type_filter.blockSignals(
+            True
+        )
+
+        self.set_filter.blockSignals(
+            True
+        )
+
+        self.sort_filter.blockSignals(
+            True
+        )
+
+        self.color_filter.setCurrentIndex(
+            0
+        )
+
+        self.type_filter.setCurrentIndex(
+            0
+        )
+
+        self.set_filter.setCurrentIndex(
+            0
+        )
+
+        self.sort_filter.setCurrentIndex(
+            0
+        )
+
+        self.color_filter.blockSignals(
+            False
+        )
+
+        self.type_filter.blockSignals(
+            False
+        )
+
+        self.set_filter.blockSignals(
+            False
+        )
+
+        self.sort_filter.blockSignals(
+            False
+        )
+
+        self.apply_collection_filters()
+
+    def populate_set_filter(
+        self,
+    ):
+
+        if not hasattr(
+            self,
+            "set_filter",
+        ):
+            return
+
+        current = (
+            self.set_filter.currentData()
+        )
+
+        sets = sorted(
+            {
+                str(card[4])
+                for card
+                in self.all_collection_cards
+                if (
+                    len(card) > 4
+                    and card[4]
+                )
+            },
+            key=str.lower,
+        )
+
+        self.set_filter.blockSignals(
+            True
+        )
+
+        self.set_filter.clear()
+
+        self.set_filter.addItem(
+            "Todas as edições",
+            "all",
+        )
+
+        for set_name in sets:
+
+            self.set_filter.addItem(
+                set_name,
+                set_name,
+            )
+
+        index = (
+            self.set_filter.findData(
+                current
+            )
+        )
+
+        if index >= 0:
+
+            self.set_filter.setCurrentIndex(
+                index
+            )
+
+        self.set_filter.blockSignals(
+            False
+        )
+
+    def save_collection_filter_settings(
+        self,
+    ):
+
+        self.settings.setValue(
+            "collection/color_filter",
+            self.active_color_filter,
+        )
+
+        self.settings.setValue(
+            "collection/type_filter",
+            self.active_type_filter,
+        )
+
+        self.settings.setValue(
+            "collection/set_filter",
+            self.active_set_filter,
+        )
+
+        self.settings.setValue(
+            "collection/sort_filter",
+            self.active_sort,
+        )
+
+    def restore_collection_filter_settings(
+        self,
+    ):
+
+        color = self.settings.value(
+            "collection/color_filter",
+            "all",
+            type=str,
+        )
+
+        card_type = self.settings.value(
+            "collection/type_filter",
+            "all",
+            type=str,
+        )
+
+        set_name = self.settings.value(
+            "collection/set_filter",
+            "all",
+            type=str,
+        )
+
+        sort_mode = self.settings.value(
+            "collection/sort_filter",
+            "name_asc",
+            type=str,
+        )
+
+        self.color_filter.blockSignals(
+            True
+        )
+
+        self.type_filter.blockSignals(
+            True
+        )
+
+        self.set_filter.blockSignals(
+            True
+        )
+
+        self.sort_filter.blockSignals(
+            True
+        )
+
+        color_index = (
+            self.color_filter.findData(
+                color
+            )
+        )
+
+        if color_index >= 0:
+
+            self.color_filter.setCurrentIndex(
+                color_index
+            )
+
+        type_index = (
+            self.type_filter.findData(
+                card_type
+            )
+        )
+
+        if type_index >= 0:
+
+            self.type_filter.setCurrentIndex(
+                type_index
+            )
+
+        set_index = (
+            self.set_filter.findData(
+                set_name
+            )
+        )
+
+        if set_index >= 0:
+
+            self.set_filter.setCurrentIndex(
+                set_index
+            )
+
+        sort_index = (
+            self.sort_filter.findData(
+                sort_mode
+            )
+        )
+
+        if sort_index >= 0:
+
+            self.sort_filter.setCurrentIndex(
+                sort_index
+            )
+
+        self.color_filter.blockSignals(
+            False
+        )
+
+        self.type_filter.blockSignals(
+            False
+        )
+
+        self.set_filter.blockSignals(
+            False
+        )
+
+        self.sort_filter.blockSignals(
+            False
+        )
+
+        self.active_color_filter = (
+            self.color_filter.currentData()
+            or "all"
+        )
+
+        self.active_type_filter = (
+            self.type_filter.currentData()
+            or "all"
+        )
+
+        self.active_set_filter = (
+            self.set_filter.currentData()
+            or "all"
+        )
+
+        self.active_sort = (
+            self.sort_filter.currentData()
+            or "name_asc"
+        )
 
     # =====================================================
     # DISPLAY — GRADE
     # =====================================================
 
     def display_cards_grid(
-        self,
-        cards,
+            self,
+            cards,
     ):
 
         grid_layout = QGridLayout()
@@ -3557,6 +5211,20 @@ class CollectionPage(QWidget):
                    != str(card_id)
             ]
 
+            self.all_collection_cards = [
+                card
+                for card in self.all_collection_cards
+                if str(card[0])
+                   != str(card_id)
+            ]
+
+            self.search_result_cards = [
+                card
+                for card in self.search_result_cards
+                if str(card[0])
+                   != str(card_id)
+            ]
+
             if frame:
                 frame.deleteLater()
 
@@ -3646,6 +5314,8 @@ class CollectionPage(QWidget):
 
         self.current_cards = updated_cards
 
+
+
     # =====================================================
     # EXPORTAÇÃO
     # =====================================================
@@ -3698,11 +5368,47 @@ class CollectionPage(QWidget):
             self.export_csv
         )
 
+        menu.addSeparator()
+
+        custom_action = menu.addAction(
+            "⚙️  Exportação personalizada..."
+        )
+
+        custom_action.triggered.connect(
+            self.export_custom
+        )
+
         menu.exec(
             self.export_button.mapToGlobal(
                 self.export_button.rect().bottomLeft()
             )
         )
+
+    def export_custom(
+        self,
+    ):
+        cards = get_collection_for_export()
+
+        if not cards:
+            QMessageBox.information(
+                self,
+                "Coleção vazia",
+                "Não há cartas na coleção para exportar.",
+            )
+            return
+
+        dialog = CollectionExportDialog(
+            cards,
+            self,
+        )
+
+        if (
+            dialog.exec()
+            != QDialog.DialogCode.Accepted
+        ):
+            return
+
+        dialog.export_cards()
 
     def export_backup_json(
         self,
