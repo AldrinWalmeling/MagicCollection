@@ -203,8 +203,9 @@ class ScryfallCardTask(QRunnable):
             )
 
             self.signals.failed.emit(
-                self.name,
+                self.url,
                 str(error),
+                self.label,
             )
 
 
@@ -213,33 +214,26 @@ class ScryfallCardTask(QRunnable):
 # =========================================================
 
 class ImageSignals(QObject):
-    finished = Signal(str, str, bytes)
-    failed = Signal(str, str)
+    finished = Signal(str, str, bytes, object)
+    failed = Signal(str, str, object)
+
 
 
 class ImageTask(QRunnable):
 
-    def __init__(self, url, local_path):
+    def __init__(
+        self,
+        url,
+        local_path,
+        label,
+    ):
         super().__init__()
 
         self.url = url
         self.local_path = str(local_path)
+        self.label = label
 
         self.signals = ImageSignals()
-
-    def set_thumbnail(self, label, pixmap):
-        if pixmap is None or pixmap.isNull():
-            pixmap = QPixmap(str(CARD_ICON_PATH))
-
-        scaled = pixmap.scaled(
-            label.size(),
-            Qt.AspectRatioMode.KeepAspectRatio,
-            Qt.TransformationMode.SmoothTransformation,
-        )
-
-        label.clear()
-        label.setPixmap(scaled)
-
 
     def run(self):
 
@@ -247,6 +241,7 @@ class ImageTask(QRunnable):
             return
 
         try:
+
             path = Path(
                 self.local_path
             )
@@ -265,6 +260,7 @@ class ImageTask(QRunnable):
                     self.url,
                     str(path),
                     data,
+                    self.label,
                 )
 
                 return
@@ -313,9 +309,11 @@ class ImageTask(QRunnable):
                 self.url,
                 str(path),
                 data,
+                self.label,
             )
 
         except Exception as error:
+
             print(
                 "[IMAGE] Erro ao carregar:",
                 self.url,
@@ -326,7 +324,10 @@ class ImageTask(QRunnable):
             self.signals.failed.emit(
                 self.url,
                 str(error),
+                self.label,
             )
+
+
 
 
 # =========================================================
@@ -2262,7 +2263,6 @@ class CollectionPage(QWidget):
             success = False
 
         if not success:
-
             self.search_status.setText(
                 "!"
             )
@@ -2273,10 +2273,13 @@ class CollectionPage(QWidget):
 
             return
 
+        # =================================================
+        # LIMPAR PESQUISA
+        # =================================================
+
         self.add_input.clear()
 
         self.suggestion_list.clear()
-
         self.suggestion_list.hide()
 
         self.search_status.clear()
@@ -2287,7 +2290,20 @@ class CollectionPage(QWidget):
 
         self.add_input.setFocus()
 
+        # =================================================
+        # RECARREGAR COLEÇÃO
+        # =================================================
+
         self.load_cards()
+
+        # Garante que o QScrollArea volte a atualizar.
+        self.scroll_area.setUpdatesEnabled(
+            True
+        )
+
+        # Força uma atualização visual imediata.
+        self.scroll_area.viewport().update()
+        self.cards_container.update()
 
     # =====================================================
     # CARREGAR CARTAS
@@ -2996,7 +3012,7 @@ class CollectionPage(QWidget):
             False
         )
         
-        self.scroll_area.setUpdatesEnabled(False)
+        self.scroll_area.setUpdatesEnabled(True)
 
         try:
 
@@ -3880,6 +3896,7 @@ class CollectionPage(QWidget):
                     task = ImageTask(
                         image_url,
                         local_path,
+                        frame.image_label,
                     )
 
                     task.signals.finished.connect(
@@ -3890,7 +3907,9 @@ class CollectionPage(QWidget):
                         self.receive_image_error
                     )
 
-                    self.image_pool.start(task)
+                    self.image_pool.start(
+                        task
+                    )
 
         for column in range(
             columns
@@ -4528,6 +4547,7 @@ class CollectionPage(QWidget):
                 task = ImageTask(
                     image_url,
                     local_path,
+                    image_label,
                 )
 
                 task.signals.finished.connect(
@@ -4538,11 +4558,10 @@ class CollectionPage(QWidget):
                     self.receive_image_error
                 )
 
-                self.image_pool.start(task)
-
                 self.image_pool.start(
                     task
                 )
+
 
     # =====================================================
     # ID PELO URL
@@ -4679,17 +4698,22 @@ class CollectionPage(QWidget):
     # DOWNLOAD RECEBIDO
     # =====================================================
 
+    # =====================================================
+    # DOWNLOAD RECEBIDO
+    # =====================================================
+
     def receive_image(
-        self,
-        url,
-        path,
-        data,
-        label,
-        generation,
+            self,
+            url,
+            path,
+            data,
+            label,
+            generation=None,
     ):
 
-        if generation != self._grid_generation:
-            return
+        # -------------------------------------------------
+        # VALIDAR LABEL
+        # -------------------------------------------------
 
         if (
                 label is None
@@ -4697,34 +4721,44 @@ class CollectionPage(QWidget):
         ):
             return
 
+        # -------------------------------------------------
+        # CRIAR PIXMAP
+        # -------------------------------------------------
+
         pixmap = QPixmap()
 
-        if not pixmap.loadFromData(
-            data
-        ):
-
+        if not pixmap.loadFromData(data):
+            print(
+                "[IMAGE] Não foi possível carregar "
+                "a imagem recebida."
+            )
             return
 
-        self.image_cache[
-            url
-        ] = pixmap
-        
-        # Limpar cache se necessário
-        _cleanup_image_cache()
+        # -------------------------------------------------
+        # CACHE POR URL
+        # -------------------------------------------------
+
+        if url:
+            self.image_cache[
+                str(url)
+            ] = pixmap
+
+        # -------------------------------------------------
+        # CACHE POR CAMINHO LOCAL
+        # -------------------------------------------------
 
         if path:
-
             self.image_cache[
                 str(path)
             ] = pixmap
-            
-            # Limpar cache se necessário
-            _cleanup_image_cache()
+
+        # -------------------------------------------------
+        # ATUALIZAR LABEL IMEDIATAMENTE
+        # -------------------------------------------------
 
         if (
-            label
-            and label.objectName()
-            == "GridCardImage"
+                label.objectName()
+                == "GridCardImage"
         ):
 
             self.set_grid_thumbnail(
@@ -4737,6 +4771,77 @@ class CollectionPage(QWidget):
             self.set_thumbnail(
                 label,
                 pixmap,
+            )
+
+        # -------------------------------------------------
+        # FORÇAR ATUALIZAÇÃO VISUAL
+        # -------------------------------------------------
+
+        label.clear()
+
+        if (
+                label.objectName()
+                == "GridCardImage"
+        ):
+
+            self.set_grid_thumbnail(
+                label,
+                pixmap,
+            )
+
+        else:
+
+            self.set_thumbnail(
+                label,
+                pixmap,
+            )
+
+        label.update()
+        label.repaint()
+
+        try:
+
+            self.scroll_area.viewport().update()
+
+            self.cards_container.update()
+
+        except Exception:
+            pass
+
+    # =====================================================
+    # ATUALIZAR CARTAS APÓS RECEBER IMAGEM
+    # =====================================================
+
+    def refresh_card_images(
+            self,
+    ):
+
+        try:
+
+            if not self.current_cards:
+                return
+
+            # Força a interface a reconstruir
+            # os cards usando o cache de imagens atualizado.
+            self.display_cards(
+                self.current_cards
+            )
+
+            # Garante que as atualizações visuais
+            # estejam habilitadas.
+            self.scroll_area.setUpdatesEnabled(
+                True
+            )
+
+            self.scroll_area.viewport().update()
+
+            self.cards_container.update()
+
+        except Exception as error:
+
+            print(
+                "[IMAGE] Erro ao atualizar cards:",
+                error,
             )
 
     def receive_image_error(
@@ -4934,9 +5039,7 @@ class CollectionPage(QWidget):
 
         dialog.exec()
 
-    # =====================================================
-    # QUANTIDADE
-    # =====================================================
+
 
     # =====================================================
     # QUANTIDADE

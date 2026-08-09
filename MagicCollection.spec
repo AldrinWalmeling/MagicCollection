@@ -80,7 +80,7 @@ exe = EXE(
     exclude_binaries=True,
 
     # Nome do executável
-    name="MagicCollection",
+    name="Magic Collection",
 
     # Não mostrar console
     console=False,
@@ -150,5 +150,5 @@ coll = COLLECT(
     upx_exclude=[],
 
     # Nome da pasta final
-    name="MagicCollection",
+    name="Magic Collection",
 )

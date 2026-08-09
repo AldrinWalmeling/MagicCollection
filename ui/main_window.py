@@ -71,8 +71,8 @@ class MainWindow(QMainWindow):
         )
 
         self.resize(
-            1100,
-            720
+            1400,
+            920
         )
 
         self.setMinimumSize(
