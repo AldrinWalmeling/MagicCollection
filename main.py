@@ -1,4 +1,3 @@
-
 import sys
 from pathlib import Path
 
@@ -7,8 +6,11 @@ from PySide6.QtWidgets import QApplication
 
 from database import (
     initialize_database,
-    initialize_decks_database,
     rebuild_missing_image_paths,
+)
+
+from services.decks_database import (
+    initialize_decks_database,
 )
 
 from ui.main_window import MainWindow
@@ -46,14 +48,19 @@ APP_ICON_PATH = resource_path(
 def main():
 
     # =====================================================
-    # BANCO
+    # BANCO PRINCIPAL — COLEÇÃO
     # =====================================================
 
     initialize_database()
 
-    initialize_decks_database()
-
     rebuild_missing_image_paths()
+
+
+    # =====================================================
+    # BANCO DOS DECKS
+    # =====================================================
+
+    initialize_decks_database()
 
 
     # =====================================================
@@ -87,7 +94,7 @@ def main():
 
 
     # =====================================================
-    # JANELA
+    # JANELA PRINCIPAL
     # =====================================================
 
     window = MainWindow()
@@ -103,6 +110,10 @@ def main():
         app.exec()
     )
 
+
+# =========================================================
+# ENTRY POINT
+# =========================================================
 
 if __name__ == "__main__":
 

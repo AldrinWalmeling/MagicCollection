@@ -188,6 +188,165 @@ QLabel#SearchStatus {
 
 
 /* =========================================================
+   FILTROS DA COLEÇÃO
+========================================================= */
+
+QFrame#CollectionFilters {
+    background-color: #15171A;
+    border: 1px solid #292C31;
+    border-radius: 10px;
+}
+
+QComboBox {
+    background-color: #15171A;
+    color: #E8E8EA;
+    border: 1px solid #292C31;
+    border-radius: 8px;
+    padding: 8px 12px;
+    min-height: 20px;
+}
+
+QComboBox:hover {
+    border: 1px solid #383B41;
+}
+
+QComboBox:focus {
+    border: 1px solid #555961;
+}
+
+QComboBox::drop-down {
+    border: none;
+    width: 20px;
+}
+
+QComboBox::down-arrow {
+    image: none;
+    border: none;
+    width: 8px;
+    height: 8px;
+    background-color: #777A80;
+    border-radius: 2px;
+}
+
+QComboBox QAbstractItemView {
+    background-color: #181A1E;
+    color: #E8E8EA;
+    border: 1px solid #303339;
+    selection-background-color: #2A2D33;
+    selection-color: #FFFFFF;
+    padding: 4px;
+}
+
+
+QPushButton#DeckPanelFiltersButton {
+    background-color: #2A2D33;
+    color: #E8E8EA;
+    border: 1px solid #34373D;
+    border-radius: 6px;
+    padding: 6px 12px;
+    font-size: 13px;
+}
+
+QPushButton#DeckPanelFiltersButton:hover {
+    background-color: #383B41;
+    border: 1px solid #454850;
+}
+
+QPushButton#DeckPanelFiltersButton:pressed {
+    background-color: #24272C;
+}
+
+QMenu {
+    background-color: #1D1F23;
+    color: #E8E8EA;
+    border: 1px solid #34373D;
+    border-radius: 6px;
+    padding: 4px;
+}
+
+QMenu::item {
+    padding: 6px 20px;
+    border-radius: 4px;
+}
+
+QMenu::item:selected {
+    background-color: #2A2D33;
+    color: #FFFFFF;
+}
+
+QMenu::separator {
+    height: 1px;
+    background-color: #303339;
+    margin: 4px 8px;
+}
+
+
+/* =========================================================
+   DECK PANEL FILTERS
+========================================================= */
+
+QFrame#DeckPanelFiltersFrame {
+    background-color: #15171A;
+    border: 1px solid #292C31;
+    border-radius: 8px;
+}
+
+QFrame#DeckPanelFiltersFrame QComboBox {
+    background-color: #1D1F23;
+    color: #E8E8EA;
+    border: 1px solid #34373D;
+    border-radius: 6px;
+    padding: 4px 8px;
+    min-height: 16px;
+}
+
+QFrame#DeckPanelFiltersFrame QComboBox:hover {
+    border: 1px solid #454850;
+}
+
+QFrame#DeckPanelFiltersFrame QComboBox:focus {
+    border: 1px solid #555961;
+}
+
+QFrame#DeckPanelFiltersFrame QPushButton {
+    background-color: #2A2D33;
+    color: #E8E8EA;
+    border: 1px solid #34373D;
+    border-radius: 6px;
+    min-width: 24px;
+    max-width: 24px;
+    min-height: 24px;
+    max-height: 24px;
+}
+
+QFrame#DeckPanelFiltersFrame QPushButton:hover {
+    background-color: #383B41;
+    border: 1px solid #454850;
+}
+
+QListWidget#DeckPanelResultsList {
+    background-color: #15171A;
+    border: 1px solid #292C31;
+    border-radius: 8px;
+    color: #E8E8EA;
+}
+
+QListWidget#DeckPanelResultsList::item {
+    padding: 8px 12px;
+    border-radius: 4px;
+}
+
+QListWidget#DeckPanelResultsList::item:hover {
+    background-color: #202226;
+}
+
+QListWidget#DeckPanelResultsList::item:selected {
+    background-color: #2A2D33;
+    color: #FFFFFF;
+}
+
+
+/* =========================================================
    BOTÕES PRINCIPAIS
 ========================================================= */
 
@@ -298,7 +457,7 @@ QFrame#GridCardFrame {
     border-radius: 10px;
 }
 
-QFrame#GridCardFrame:hover {
+QFrame#GridCardFrame[hover="true"] {
     background-color: #191B1F;
     border: 1px solid #3A3D43;
 }
@@ -391,7 +550,7 @@ QFrame#CardFrame {
     border-radius: 12px;
 }
 
-QFrame#CardFrame:hover {
+QFrame#CardFrame[hover="true"] {
     background-color: #191B1F;
     border: 1px solid #3A3D43;
 }
@@ -681,6 +840,26 @@ QLabel#CardDetailPT {
     padding: 5px 9px;
 }
 
+QLabel#CardDetailField {
+    background-color: transparent;
+    color: #BFC1C5;
+    font-size: 13px;
+    padding: 2px 0;
+}
+
+QLabel#CardDetailOracle {
+    background-color: transparent;
+    color: #E8E8EA;
+    font-size: 14px;
+    line-height: 1.4;
+}
+
+QFrame#CardDetailSeparator {
+    background-color: #303339;
+    border: none;
+    margin: 8px 0;
+}
+
 QLabel#CardDetailSet {
     background-color: transparent;
     color: #85888E;
@@ -849,11 +1028,14 @@ QLabel#DeckQuantityBadge {
 }
 
 QLabel#DeckControlQuantity {
+    background-color: #2A2D33;
     color: #FFFFFF;
-    background-color: rgba(0, 0, 0, 210);
-    border: 1px solid rgba(255, 255, 255, 180);
+    border: 1px solid #454850;
     border-radius: 6px;
+    padding: 4px 9px;
+    font-size: 12px;
     font-weight: bold;
+    qproperty-alignment: 'AlignCenter';
 }
 
 QLabel#DeckCardCount {
@@ -1110,13 +1292,20 @@ QPushButton#DeckQuantityButton {
     color: #D9DADF;
     border: 1px solid #34373D;
     border-radius: 6px;
-    min-width: 28px;
-    max-width: 28px;
-    min-height: 28px;
-    max-height: 28px;
+
+    min-width: 32px;
+    max-width: 32px;
+
+    min-height: 32px;
+    max-height: 32px;
+
     padding: 0;
+    margin: 0;
+
     font-size: 16px;
     font-weight: 600;
+
+    text-align: center;
 }
 
 QPushButton#DeckQuantityButton:hover {

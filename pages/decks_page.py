@@ -14,15 +14,25 @@ from PySide6.QtCore import (
     QEvent,
 )
 
-from services.scryfall import (
-    autocomplete_card_names,
-    get_card_by_name,
-)
-
 from PySide6.QtGui import (
     QPixmap,
     QIcon,
 )
+
+
+# =========================================================
+# CAMINHOS DOS ASSETS
+# =========================================================
+
+BASE_DIR = Path(__file__).resolve().parent.parent
+
+ASSETS_DIR = BASE_DIR / "assets"
+
+ICONS_DIR = ASSETS_DIR / "icons"
+
+COLLECTION_ICON_PATH = ICONS_DIR / "collection_icon.png"
+
+CARD_ICON_PATH = ICONS_DIR / "card_icon.png"
 
 from PySide6.QtWidgets import (
     QWidget,
@@ -30,6 +40,8 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QLineEdit,
+    QListWidget,
+    QListWidgetItem,
     QPushButton,
     QFrame,
     QScrollArea,
@@ -40,6 +52,13 @@ from PySide6.QtWidgets import (
     QMessageBox,
     QStackedWidget,
     QFileDialog,
+    QComboBox,
+    QMenu,
+)
+
+from services.scryfall import (
+    autocomplete_card_names,
+    get_card_by_name,
 )
 
 from database import (
@@ -48,15 +67,23 @@ from database import (
     get_card_by_id,
     get_card_image_path,
     get_card_id_by_scryfall_id,
+    ensure_card_exists,
     add_card as database_add_card,
+    get_collection_stats,
+)
+
+from services.decks_database import (
     add_card_to_deck,
+    change_deck_card_quantity,
 )
 
 from services.scryfall_symbols import (
     ManaSymbolsWidget,
 )
 
-from ui.theme import DARK_THEME
+from ui.theme import (
+    DARK_THEME,
+)
 
 
 # =========================================================
@@ -911,175 +938,6 @@ def get_deck_total_cards(deck_id):
 # BANCO — ALTERAR CARTA
 # =========================================================
 
-def change_deck_card_quantity(
-    deck_id,
-    card_id,
-    amount,
-):
-    try:
-        deck_id = int(deck_id)
-        card_id = int(card_id)
-        amount = int(amount)
-    except (TypeError, ValueError):
-        return False
-
-    if (
-        deck_id <= 0
-        or card_id <= 0
-        or amount == 0
-    ):
-        return False
-
-    connection = get_connection()
-
-    try:
-        connection.row_factory = sqlite3.Row
-
-        cursor = connection.cursor()
-
-        cursor.execute(
-            """
-            SELECT quantity
-            FROM cards
-            WHERE id = ?
-            """,
-            (card_id,),
-        )
-
-        collection_row = cursor.fetchone()
-
-        if not collection_row:
-            return False
-
-        collection_quantity = max(
-            0,
-            int(collection_row["quantity"] or 0),
-        )
-
-        cursor.execute(
-            """
-            SELECT quantity
-            FROM deck_cards
-            WHERE
-                deck_id = ?
-                AND card_id = ?
-            """,
-            (
-                deck_id,
-                card_id,
-            ),
-        )
-
-        deck_row = cursor.fetchone()
-
-        current_quantity = (
-            int(deck_row["quantity"] or 0)
-            if deck_row
-            else 0
-        )
-
-        new_quantity = current_quantity + amount
-
-        new_quantity = max(
-            0,
-            min(
-                new_quantity,
-                collection_quantity,
-            ),
-        )
-
-        if new_quantity <= 0:
-
-            cursor.execute(
-                """
-                DELETE FROM deck_cards
-                WHERE
-                    deck_id = ?
-                    AND card_id = ?
-                """,
-                (
-                    deck_id,
-                    card_id,
-                ),
-            )
-
-            cursor.execute(
-                """
-                UPDATE decks
-                SET
-                    preview_card_id = NULL,
-                    updated_at = CURRENT_TIMESTAMP
-                WHERE
-                    id = ?
-                    AND preview_card_id = ?
-                """,
-                (
-                    deck_id,
-                    card_id,
-                ),
-            )
-
-        elif not deck_row:
-
-            cursor.execute(
-                """
-                INSERT INTO deck_cards (
-                    deck_id,
-                    card_id,
-                    quantity
-                )
-                VALUES (?, ?, ?)
-                """,
-                (
-                    deck_id,
-                    card_id,
-                    new_quantity,
-                ),
-            )
-
-        else:
-
-            cursor.execute(
-                """
-                UPDATE deck_cards
-                SET quantity = ?
-                WHERE
-                    deck_id = ?
-                    AND card_id = ?
-                """,
-                (
-                    new_quantity,
-                    deck_id,
-                    card_id,
-                ),
-            )
-
-        cursor.execute(
-            """
-            UPDATE decks
-            SET updated_at = CURRENT_TIMESTAMP
-            WHERE id = ?
-            """,
-            (deck_id,),
-        )
-
-        connection.commit()
-
-        return True
-
-    except Exception as error:
-
-        connection.rollback()
-
-        print(
-            "[DECK] Erro ao alterar carta:",
-            error,
-        )
-
-        return False
-
-    finally:
-        connection.close()
 
 
 def remove_card_from_deck(deck_id, card_id):
@@ -1130,12 +988,31 @@ def remove_card_from_deck(deck_id, card_id):
 
         return True
 
-    except Exception as error:
-
+    except sqlite3.IntegrityError as error:
         connection.rollback()
 
         print(
-            "[DECK] Erro ao remover carta:",
+            "[DECK] Erro de integridade ao remover carta:",
+            error,
+        )
+
+        return False
+
+    except sqlite3.OperationalError as error:
+        connection.rollback()
+
+        print(
+            "[DECK] Erro operacional ao remover carta:",
+            error,
+        )
+
+        return False
+
+    except Exception as error:
+        connection.rollback()
+
+        print(
+            "[DECK] Erro inesperado ao remover carta:",
             error,
         )
 
@@ -1184,9 +1061,11 @@ def deck_exists(deck_id):
 class ImageSignals(QObject):
 
     finished = Signal(
+        int,
         str,
         str,
         bytes,
+        int,
     )
 
     failed = Signal(
@@ -1201,11 +1080,14 @@ class ImageTask(QRunnable):
         self,
         url,
         local_path,
+        generation,
     ):
         super().__init__()
 
         self.url = str(url or "")
         self.local_path = str(local_path)
+        self.generation = int(generation)
+
         self.signals = ImageSignals()
 
     def run(self):
@@ -1225,9 +1107,11 @@ class ImageTask(QRunnable):
                 data = path.read_bytes()
 
                 self.signals.finished.emit(
+                    self.card_id,
                     self.url,
                     str(path),
                     data,
+                    self.generation,
                 )
 
                 return
@@ -1271,7 +1155,9 @@ class ImageTask(QRunnable):
                 self.url,
                 str(path),
                 data,
+                self.generation,
             )
+
 
         except Exception as error:
 
@@ -1369,7 +1255,19 @@ class DeckCardFrame(QFrame):
             230,
         )
 
-        self.image_label.setText("🃏")
+        self.image_label.setText("")
+        
+        # Usar card.png como placeholder
+        if CARD_ICON_PATH.exists():
+            pixmap = QPixmap(str(CARD_ICON_PATH))
+            if not pixmap.isNull():
+                scaled = pixmap.scaled(
+                    160,
+                    230,
+                    Qt.AspectRatioMode.KeepAspectRatio,
+                    Qt.TransformationMode.SmoothTransformation,
+                )
+                self.image_label.setPixmap(scaled)
 
         self.quantity_badge = QLabel(
             "×0",
@@ -1402,13 +1300,19 @@ class DeckCardFrame(QFrame):
         )
 
         controls_layout.setContentsMargins(
-            5,
-            5,
-            5,
-            5,
+            14,
+            14,
+            14,
+            14,
         )
 
-        controls_layout.setSpacing(5)
+        controls_layout.setSpacing(
+            14
+        )
+
+        controls_layout.setAlignment(
+            Qt.AlignmentFlag.AlignCenter
+        )
 
         self.minus_button = QPushButton(
             "−",
@@ -1420,12 +1324,22 @@ class DeckCardFrame(QFrame):
         )
 
         self.minus_button.setFixedSize(
-            34,
-            34,
+            32,
+            32,
+        )
+
+        self.minus_button.setCursor(
+            Qt.CursorShape.PointingHandCursor
+        )
+
+        self.minus_button.setFocusPolicy(
+            Qt.FocusPolicy.NoFocus
         )
 
         controls_layout.addWidget(
-            self.minus_button
+            self.minus_button,
+            0,
+            Qt.AlignmentFlag.AlignCenter,
         )
 
         self.control_quantity = QLabel(
@@ -1441,10 +1355,15 @@ class DeckCardFrame(QFrame):
             Qt.AlignmentFlag.AlignCenter
         )
 
-        self.control_quantity.setFixedWidth(36)
+        self.control_quantity.setFixedSize(
+            34,
+            32,
+        )
 
         controls_layout.addWidget(
-            self.control_quantity
+            self.control_quantity,
+            0,
+            Qt.AlignmentFlag.AlignCenter,
         )
 
         self.plus_button = QPushButton(
@@ -1457,22 +1376,23 @@ class DeckCardFrame(QFrame):
         )
 
         self.plus_button.setFixedSize(
-            34,
-            34,
+            32,
+            32,
+        )
+
+        self.plus_button.setCursor(
+            Qt.CursorShape.PointingHandCursor
+        )
+
+        self.plus_button.setFocusPolicy(
+            Qt.FocusPolicy.NoFocus
         )
 
         controls_layout.addWidget(
-            self.plus_button
+            self.plus_button,
+            0,
+            Qt.AlignmentFlag.AlignCenter,
         )
-
-        self.controls.adjustSize()
-
-        self.controls.move(
-            160 - self.controls.width() - 6,
-            230 - self.controls.height() - 6,
-        )
-
-        self.controls.hide()
 
     def set_quantity(
         self,
@@ -1488,16 +1408,19 @@ class DeckCardFrame(QFrame):
             f"×{quantity}"
         )
 
+
         self.control_quantity.setText(
             str(quantity)
         )
 
     def resizeEvent(
-        self,
-        event,
+            self,
+            event,
     ):
 
-        super().resizeEvent(event)
+        super().resizeEvent(
+            event
+        )
 
         self.image_label.setGeometry(
             0,
@@ -1506,16 +1429,45 @@ class DeckCardFrame(QFrame):
             self.height(),
         )
 
+        # -------------------------------------------------
+        # CONTROLES DE QUANTIDADE / HOVER
+        # -------------------------------------------------
+
         self.controls.adjustSize()
+
+        control_margin = 4
 
         self.controls.move(
             self.width()
             - self.controls.width()
-            - 6,
+            - control_margin,
             self.height()
             - self.controls.height()
-            - 6,
+            - control_margin,
         )
+
+        # -------------------------------------------------
+        # BADGE SUPERIOR DIREITO
+        # -------------------------------------------------
+
+        badge_width = 38
+        badge_height = 27
+
+        margin_right = 8
+        margin_top = 8
+
+        self.quantity_badge.setGeometry(
+            self.width()
+            - badge_width
+            - margin_right,
+            margin_top,
+            badge_width,
+            badge_height,
+        )
+
+        self.quantity_badge.raise_()
+
+        self.controls.hide()
 
     def enterEvent(
         self,
@@ -1791,7 +1743,7 @@ class DeckPreviewFrame(QFrame):
         )
 
         self.preview_frame.setFixedHeight(
-            235
+            260
         )
 
         preview_layout = QVBoxLayout(
@@ -1807,6 +1759,13 @@ class DeckPreviewFrame(QFrame):
 
         self.image_label = QLabel()
 
+        self.image_label.setFixedSize(
+            180,
+            252,
+        )
+
+        self.image_label.setScaledContents(False)
+
         self.image_label.setObjectName(
             "DeckPreviewCard"
         )
@@ -1816,11 +1775,24 @@ class DeckPreviewFrame(QFrame):
         )
 
         self.image_label.setSizePolicy(
-            QSizePolicy.Policy.Expanding,
-            QSizePolicy.Policy.Expanding,
+            QSizePolicy.Policy.Fixed,
+            QSizePolicy.Policy.Fixed,
         )
 
-        self.image_label.setText("🃏")
+        self.image_label.setText("")
+        
+        # Usar card.png como placeholder
+        if CARD_ICON_PATH.exists():
+            pixmap = QPixmap(str(CARD_ICON_PATH))
+            if not pixmap.isNull():
+                # Usar mesma proporção que DeckCardFrame (156x226 ajustado para 180x252)
+                scaled = pixmap.scaled(
+                    180,
+                    252,
+                    Qt.AspectRatioMode.KeepAspectRatio,
+                    Qt.TransformationMode.SmoothTransformation,
+                )
+                self.image_label.setPixmap(scaled)
 
         preview_layout.addWidget(
             self.image_label
@@ -1883,9 +1855,10 @@ class DeckPreviewFrame(QFrame):
         ):
             return
 
+        # Usar o tamanho do label (180x252) para escala consistente
         scaled = pixmap.scaled(
-            150,
-            220,
+            180,
+            252,
             Qt.AspectRatioMode.KeepAspectRatio,
             Qt.TransformationMode.SmoothTransformation,
         )
@@ -2104,7 +2077,19 @@ class CollectionCardItem(QFrame):
             Qt.AlignmentFlag.AlignCenter
         )
 
-        self.image_label.setText("🃏")
+        self.image_label.setText("")
+        
+        # Usar card.png como placeholder
+        if CARD_ICON_PATH.exists():
+            pixmap = QPixmap(str(CARD_ICON_PATH))
+            if not pixmap.isNull():
+                scaled = pixmap.scaled(
+                    48,
+                    68,
+                    Qt.AspectRatioMode.KeepAspectRatio,
+                    Qt.TransformationMode.SmoothTransformation,
+                )
+                self.image_label.setPixmap(scaled)
 
         layout.addWidget(
             self.image_label
@@ -2798,12 +2783,103 @@ class DeckCollectionPanel(QFrame):
                 widget.deleteLater()
 
     def add_card(
-        self,
-        card_id,
+            self,
+            card_id,
     ):
-
         if not self.deck_id:
             return
+
+        try:
+
+            card_id = int(
+                card_id
+            )
+
+        except (
+                TypeError,
+                ValueError,
+        ):
+
+            return
+
+        # =================================================
+        # QUANTIDADE ATUAL NO DECK
+        # =================================================
+
+        current_quantity = max(
+            0,
+            int(
+                self.deck_quantities.get(
+                    card_id,
+                    0,
+                )
+                or 0
+            ),
+        )
+
+        # =================================================
+        # QUANTIDADE DISPONÍVEL NA COLEÇÃO
+        # =================================================
+
+        collection_quantity = 0
+
+        for card in self.filtered_cards:
+
+            try:
+
+                current_id = int(
+                    _get_card_value(
+                        card,
+                        "id",
+                        0,
+                        0,
+                    )
+                    or 0
+                )
+
+            except (
+                    TypeError,
+                    ValueError,
+            ):
+
+                continue
+
+            if current_id != card_id:
+                continue
+
+            collection_quantity = max(
+                0,
+                int(
+                    _get_card_value(
+                        card,
+                        "quantity",
+                        10,
+                        0,
+                    )
+                    or 0
+                ),
+            )
+
+            break
+
+        # =================================================
+        # LIMITE DA COLEÇÃO
+        # =================================================
+
+        if (
+                collection_quantity > 0
+                and current_quantity
+                >= collection_quantity
+        ):
+            self.status_label.setText(
+                "Limite da coleção atingido."
+            )
+
+            return
+
+        # =================================================
+        # ALTERAR NO BANCO
+        # =================================================
 
         success = change_deck_card_quantity(
             self.deck_id,
@@ -2814,12 +2890,12 @@ class DeckCollectionPanel(QFrame):
         if not success:
             return
 
+        # =================================================
+        # ATUALIZAR CONTADOR LOCAL
+        # =================================================
+
         self.deck_quantities[card_id] = (
-            self.deck_quantities.get(
-                card_id,
-                0,
-            )
-            + 1
+                current_quantity + 1
         )
 
         self.status_label.setText(
@@ -3108,7 +3184,7 @@ def __init__(
     )
 
     self.search_pool.setMaxThreadCount(
-        2
+        4
     )
 
     self.current_search_id = 0
@@ -3131,6 +3207,7 @@ def __init__(
     self.search_timer.timeout.connect(
         self.search_scryfall
     )
+
 
     self.setup_ui()
 
@@ -3159,7 +3236,7 @@ def search_scryfall(
         self.current_search_id
     )
 
-    self.clear_list()
+    self.results_list.clear()
 
     self.status_label.setText(
         "Pesquisando no Scryfall..."
@@ -3231,7 +3308,7 @@ def _on_scryfall_finished(
 
         self.status_label.setText(
             f"{len(cards)} "
-            (
+            + (
                 "resultado encontrado."
                 if len(cards) == 1
                 else "resultados encontrados."
@@ -3266,7 +3343,7 @@ def _on_scryfall_error(
 
         return
 
-    self.clear_list()
+    self.results_list.clear()
 
     self.status_label.setText(
         "Erro ao pesquisar no Scryfall."
@@ -3304,13 +3381,18 @@ class DeckScryfallPanel(QFrame):
 
         self.all_cards = []
         self.filtered_cards = []
+        
+        # Filtros
+        self.filter_color = "all"
+        self.filter_type = "all"
+        self.filter_rarity = "all"
 
         self.search_pool = QThreadPool(
             self
         )
 
         self.search_pool.setMaxThreadCount(
-            2
+            4
         )
 
         self.current_search_id = 0
@@ -3375,7 +3457,7 @@ class DeckScryfallPanel(QFrame):
         header.addStretch()
 
         self.close_button = QPushButton(
-            "×"
+            "X"
         )
 
         self.close_button.setObjectName(
@@ -3429,7 +3511,7 @@ class DeckScryfallPanel(QFrame):
         )
 
         # =================================================
-        # BUSCA
+        # BUSCA E FILTROS
         # =================================================
 
         search_frame = QFrame()
@@ -3483,6 +3565,13 @@ class DeckScryfallPanel(QFrame):
             self.search_input,
             1,
         )
+        
+        # Botão de filtros dropdown
+        self.filters_button = QPushButton("Filtros")
+        self.filters_button.setObjectName("DeckPanelFiltersButton")
+        self.filters_button.setFixedWidth(70)
+        self.filters_button.clicked.connect(self.show_filters_menu)
+        search_layout.addWidget(self.filters_button)
 
         layout.addWidget(
             search_frame
@@ -3509,48 +3598,185 @@ class DeckScryfallPanel(QFrame):
         )
 
         # =================================================
-        # LISTA
+        # LISTA DE RESULTADOS
         # =================================================
 
-        self.scroll_area = QScrollArea()
+        self.results_list = QListWidget()
+        self.results_list.setObjectName("DeckPanelResultsList")
 
-        self.scroll_area.setWidgetResizable(
-            True
+        self.results_list.itemClicked.connect(
+            self.add_selected_card
         )
-
-        self.scroll_area.setFrameShape(
-            QFrame.Shape.NoFrame
-        )
-
-        self.list_container = QWidget()
-
-        self.list_layout = QVBoxLayout(
-            self.list_container
-        )
-
-        self.list_layout.setContentsMargins(
-            0,
-            0,
-            0,
-            0,
-        )
-
-        self.list_layout.setSpacing(
-            7
-        )
-
-        self.list_layout.setAlignment(
-            Qt.AlignmentFlag.AlignTop
-        )
-
-        self.scroll_area.setWidget(
-            self.list_container
-        )
-
+        
         layout.addWidget(
-            self.scroll_area,
-            1,
+            self.results_list,
+            1
         )
+
+    # =====================================================
+    # ADICIONAR CARTA SELECIONADA
+    # =====================================================
+
+    def add_selected_card(
+            self,
+            item,
+    ):
+        """
+        Adiciona ao deck a carta selecionada no resultado do Scryfall.
+        """
+
+        if item is None:
+            return
+
+        card = item.data(
+            Qt.ItemDataRole.UserRole
+        )
+
+        if not isinstance(
+                card,
+                dict,
+        ):
+            self.status_label.setText(
+                "Dados da carta inválidos."
+            )
+            return
+
+        self.add_card(
+            card
+        )
+
+    # =====================================================
+    # FILTROS
+    # =====================================================
+
+    def apply_filters(self):
+        """Aplica os filtros selecionados (método compatível)"""
+        self.apply_filters_with_ui()
+
+    def display_results(self):
+        """Exibe os resultados filtrados na lista"""
+        try:
+            self.results_list.clear()
+        except RuntimeError:
+            # Widget foi deletado, ignorar
+            return
+        
+        for card in self.filtered_cards:
+            item = QListWidgetItem(card.get("name", ""))
+            item.setData(Qt.ItemDataRole.UserRole, card)
+            self.results_list.addItem(item)
+        
+        self.status_label.setText(
+            f"{len(self.filtered_cards)} resultado(s) encontrado(s)."
+        )
+
+    def clear_filters(self):
+        """Limpa todos os filtros"""
+        self.search_input.clear()
+        self.apply_filters()
+    
+    def show_filters_menu(self):
+        """Mostra o menu dropdown de filtros"""
+        menu = QMenu(self)
+        
+        # Filtro de Cor
+        color_menu = menu.addMenu("Cor")
+        color_menu.addAction("Todas", lambda: self.set_filter_color("all"))
+        color_menu.addSeparator()
+        color_menu.addAction("Branco (W)", lambda: self.set_filter_color("W"))
+        color_menu.addAction("Azul (U)", lambda: self.set_filter_color("U"))
+        color_menu.addAction("Preto (B)", lambda: self.set_filter_color("B"))
+        color_menu.addAction("Vermelho (R)", lambda: self.set_filter_color("R"))
+        color_menu.addAction("Verde (G)", lambda: self.set_filter_color("G"))
+        
+        # Filtro de Tipo
+        type_menu = menu.addMenu("Tipo")
+        type_menu.addAction("Todos", lambda: self.set_filter_type("all"))
+        type_menu.addSeparator()
+        type_menu.addAction("Criatura", lambda: self.set_filter_type("Creature"))
+        type_menu.addAction("Instantânea", lambda: self.set_filter_type("Instant"))
+        type_menu.addAction("Feitiço", lambda: self.set_filter_type("Sorcery"))
+        type_menu.addAction("Encantamento", lambda: self.set_filter_type("Enchantment"))
+        type_menu.addAction("Artefato", lambda: self.set_filter_type("Artifact"))
+        type_menu.addAction("Planeswalker", lambda: self.set_filter_type("Planeswalker"))
+        type_menu.addAction("Terreno", lambda: self.set_filter_type("Land"))
+        
+        # Filtro de Raridade
+        rarity_menu = menu.addMenu("Raridade")
+        rarity_menu.addAction("Todas", lambda: self.set_filter_rarity("all"))
+        rarity_menu.addSeparator()
+        rarity_menu.addAction("Comum", lambda: self.set_filter_rarity("common"))
+        rarity_menu.addAction("Incomum", lambda: self.set_filter_rarity("uncommon"))
+        rarity_menu.addAction("Rara", lambda: self.set_filter_rarity("rare"))
+        rarity_menu.addAction("Mítica", lambda: self.set_filter_rarity("mythic"))
+        
+        menu.addSeparator()
+        
+        # Limpar filtros
+        menu.addAction("Limpar filtros", self.clear_filters_menu)
+        
+        # Posicionar menu abaixo do botão
+        button_pos = self.filters_button.mapToGlobal(self.filters_button.rect().bottomLeft())
+        menu.exec(button_pos)
+    
+    def set_filter_color(self, color):
+        """Define o filtro de cor"""
+        self.filter_color = color
+        self.apply_filters_with_ui()
+    
+    def set_filter_type(self, card_type):
+        """Define o filtro de tipo"""
+        self.filter_type = card_type
+        self.apply_filters_with_ui()
+    
+    def set_filter_rarity(self, rarity):
+        """Define o filtro de raridade"""
+        self.filter_rarity = rarity
+        self.apply_filters_with_ui()
+    
+    def clear_filters_menu(self):
+        """Limpa todos os filtros do menu"""
+        self.filter_color = "all"
+        self.filter_type = "all"
+        self.filter_rarity = "all"
+        self.apply_filters_with_ui()
+    
+    def apply_filters_with_ui(self):
+        """Aplica filtros com atualização da UI"""
+        if not self.all_cards:
+            return
+        
+        search_text = self.search_input.text().strip().lower()
+        
+        filtered = []
+        
+        for card in self.all_cards:
+            # Filtro de texto
+            if search_text and search_text not in card.get("name", "").lower():
+                continue
+            
+            # Filtro de cor
+            if self.filter_color != "all":
+                mana_cost = card.get("mana_cost", "")
+                if self.filter_color not in mana_cost:
+                    continue
+            
+            # Filtro de tipo
+            if self.filter_type != "all":
+                type_line = card.get("type_line", "")
+                if self.filter_type not in type_line:
+                    continue
+            
+            # Filtro de raridade
+            if self.filter_rarity != "all":
+                card_rarity = card.get("rarity", "")
+                if self.filter_rarity not in card_rarity:
+                    continue
+            
+            filtered.append(card)
+        
+        self.filtered_cards = filtered
+        self.display_results()
 
     # =====================================================
     # ABRIR
@@ -3594,7 +3820,11 @@ class DeckScryfallPanel(QFrame):
         self.all_cards = []
         self.filtered_cards = []
 
-        self.clear_list()
+        try:
+            self.results_list.clear()
+        except RuntimeError:
+            # Widget foi deletado, ignorar
+            pass
 
         self.status_label.setText(
             "Digite o nome de uma carta."
@@ -3625,7 +3855,7 @@ class DeckScryfallPanel(QFrame):
 
         if not text:
 
-            self.clear_list()
+            self.results_list.clear()
 
             self.status_label.setText(
                 "Digite o nome de uma carta."
@@ -3662,7 +3892,7 @@ class DeckScryfallPanel(QFrame):
             self.current_search_id
         )
 
-        self.clear_list()
+        self.results_list.clear()
 
         self.status_label.setText(
             "Pesquisando no Scryfall..."
@@ -3719,24 +3949,8 @@ class DeckScryfallPanel(QFrame):
 
         self.all_cards = cards
 
-        self.filtered_cards = cards
-
-        if not cards:
-
-            self.status_label.setText(
-                "Nenhuma carta encontrada."
-            )
-
-        else:
-
-            self.status_label.setText(
-                f"{len(cards)} "
-                f"{'resultado encontrado' if len(cards) == 1 else 'resultados encontrados'}."
-            )
-
-        self.render_cards(
-            cards
-        )
+        # Aplicar filtros aos resultados
+        self.apply_filters()
 
     # =====================================================
     # SCRYFALL — ERRO
@@ -3754,7 +3968,7 @@ class DeckScryfallPanel(QFrame):
         ):
             return
 
-        self.clear_list()
+        self.results_list.clear()
 
         self.status_label.setText(
             "Erro ao pesquisar no Scryfall."
@@ -3773,49 +3987,11 @@ class DeckScryfallPanel(QFrame):
         cards,
     ):
 
-        self.clear_list()
-
         self.filtered_cards = list(
             cards or []
         )
-
-        if not self.filtered_cards:
-
-            empty = QLabel(
-                "Nenhuma carta encontrada."
-            )
-
-            empty.setObjectName(
-                "DeckPanelEmpty"
-            )
-
-            empty.setAlignment(
-                Qt.AlignmentFlag.AlignCenter
-            )
-
-            empty.setWordWrap(
-                True
-            )
-
-            self.list_layout.addWidget(
-                empty
-            )
-
-            return
-
-        for card in self.filtered_cards:
-
-            item = self.create_card_item(
-                card
-            )
-
-            if item:
-
-                self.list_layout.addWidget(
-                    item
-                )
-
-        self.list_layout.addStretch()
+        
+        self.display_results()
 
     # =====================================================
     # ITEM DA CARTA
@@ -3963,41 +4139,23 @@ class DeckScryfallPanel(QFrame):
         )
 
         # =================================================
-        # CADASTRAR / ATUALIZAR CARTA NA COLEÇÃO
+        # GARANTIR CARTA NO CATÁLOGO
         # =================================================
 
-        collection_success = database_add_card(
-            card,
-            1,
-        )
-
-        if not collection_success:
-            self.status_label.setText(
-                f"Não foi possível cadastrar "
-                f"{name} na coleção."
-            )
-
-            return
-
-        # =================================================
-        # OBTER ID LOCAL DA CARTA
-        # =================================================
-
-        card_id = get_card_id_by_scryfall_id(
-            scryfall_id
+        card_id = ensure_card_exists(
+            card
         )
 
         if not card_id:
             self.status_label.setText(
-                f"{name} foi cadastrada, "
-                "mas não foi possível obter "
-                "o ID local da carta."
+                f"Não foi possível preparar "
+                f"{name} para o deck."
             )
 
             return
 
         # =================================================
-        # ADICIONAR AO DECK
+        # DECK
         # =================================================
 
         deck_success = add_card_to_deck(
@@ -4008,8 +4166,8 @@ class DeckScryfallPanel(QFrame):
 
         if not deck_success:
             self.status_label.setText(
-                f"{name} foi cadastrada na coleção, "
-                "mas não pôde ser adicionada ao deck."
+                f"Não foi possível adicionar "
+                f"{name} ao deck."
             )
 
             return
@@ -4031,34 +4189,14 @@ class DeckScryfallPanel(QFrame):
             self.deck_id,
         )
 
-        # =================================================
-        # AVISAR A PÁGINA DO DECK
-        # =================================================
-
         self.cardAdded.emit(
             int(card_id)
         )
 
+
+
     # =====================================================
     # LIMPAR LISTA
-    # =====================================================
-
-    def clear_list(
-        self,
-    ):
-
-        while self.list_layout.count():
-
-            item = self.list_layout.takeAt(
-                0
-            )
-
-            widget = item.widget()
-
-            if widget:
-
-                widget.deleteLater()
-
     # =====================================================
     # TECLADO
     # =====================================================
@@ -4621,6 +4759,8 @@ class DecksPage(QWidget):
             DARK_THEME
         )
 
+        print("[DECKS PAGE] Inicializando DecksPage...")
+
         initialize_decks_database()
 
         self.current_deck_id = None
@@ -4630,18 +4770,51 @@ class DecksPage(QWidget):
         self.image_pool = QThreadPool()
 
         self.image_pool.setMaxThreadCount(
-            4
+            8
         )
 
         self.image_cache = {}
+        self._max_image_cache_size = 300
 
         self.panel_open = False
 
         self._rendering_cards = False
 
+        # =====================================================
+        # REFRESH AGRUPADO DO DECK
+        # =====================================================
+
+        self._render_generation = 0
+
+        self._refresh_timer = QTimer(
+            self
+        )
+
+        self._refresh_timer.setSingleShot(
+            True
+        )
+
+        self._refresh_timer.setInterval(
+            80
+        )
+
+        self._refresh_timer.timeout.connect(
+            self._flush_deck_refresh
+        )
+
+        self._pending_preview_refresh = False
+
         self.setup_ui()
 
         self.show_decks()
+
+    def _cleanup_image_cache(self):
+        """Remove entradas mais antigas do cache se exceder o limite."""
+        if len(self.image_cache) > self._max_image_cache_size:
+            # Remove 20% das entradas mais antigas
+            keys_to_remove = list(self.image_cache.keys())[:int(self._max_image_cache_size * 0.2)]
+            for key in keys_to_remove:
+                del self.image_cache[key]
 
     # =====================================================
     # SETUP
@@ -4941,10 +5114,6 @@ class DecksPage(QWidget):
             "DeckPreviewSection"
         )
 
-        preview_section.setMaximumWidth(
-            430
-        )
-
         preview_layout = QHBoxLayout(
             preview_section
         )
@@ -4959,6 +5128,9 @@ class DecksPage(QWidget):
         preview_layout.setSpacing(
             14
         )
+        
+        # Centralizar o preview_section no container
+        preview_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         # -------------------------------------------------
         # IMAGEM DA CAPA
@@ -4979,9 +5151,19 @@ class DecksPage(QWidget):
             Qt.AlignmentFlag.AlignCenter
         )
 
-        self.deck_cover_label.setText(
-            "🃏"
-        )
+        self.deck_cover_label.setText("")
+        
+        # Usar card.png como placeholder
+        if CARD_ICON_PATH.exists():
+            pixmap = QPixmap(str(CARD_ICON_PATH))
+            if not pixmap.isNull():
+                scaled = pixmap.scaled(
+                    120,
+                    170,
+                    Qt.AspectRatioMode.KeepAspectRatio,
+                    Qt.TransformationMode.SmoothTransformation,
+                )
+                self.deck_cover_label.setPixmap(scaled)
 
         preview_layout.addWidget(
             self.deck_cover_label
@@ -5099,10 +5281,6 @@ class DecksPage(QWidget):
             "DeckAddCardsSection"
         )
 
-        add_cards_section.setMaximumWidth(
-            430
-        )
-
         add_cards_layout = QHBoxLayout(
             add_cards_section
         )
@@ -5117,6 +5295,9 @@ class DecksPage(QWidget):
         add_cards_layout.setSpacing(
             14
         )
+        
+        # Centralizar o add_cards_section no container
+        add_cards_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         # =================================================
         # ÍCONE
@@ -5138,7 +5319,7 @@ class DecksPage(QWidget):
         )
 
         collection_pixmap = QPixmap(
-            "assets/icons/collection_icon.png"
+            str(COLLECTION_ICON_PATH)
         )
 
         if not collection_pixmap.isNull():
@@ -5423,6 +5604,33 @@ class DecksPage(QWidget):
         )
 
     # =====================================================
+    # REFRESH AGRUPADO
+    # =====================================================
+    def schedule_deck_refresh(
+        self,
+        load_preview=False,
+    ):
+
+        if load_preview:
+
+            self._pending_preview_refresh = True
+
+        self._refresh_timer.start()
+
+    def _flush_deck_refresh(
+        self,
+    ):
+
+        load_preview = (
+            self._pending_preview_refresh
+        )
+
+        self._pending_preview_refresh = False
+
+        self.refresh_current_deck(
+            load_preview=load_preview
+        )
+    # =====================================================
     # CALLBACK PAINEL
     # =====================================================
 
@@ -5431,7 +5639,7 @@ class DecksPage(QWidget):
         _card_id,
     ):
 
-        self.refresh_current_deck(
+        self.schedule_deck_refresh(
             load_preview=False
         )
 
@@ -5443,7 +5651,6 @@ class DecksPage(QWidget):
         self,
         grid,
     ):
-
         while grid.count():
 
             item = grid.takeAt(
@@ -5465,75 +5672,80 @@ class DecksPage(QWidget):
     def show_decks(
         self,
     ):
+        try:
+            self.clear_grid(
+                self.decks_grid
+            )
 
-        self.clear_grid(
-            self.decks_grid
-        )
+            decks = get_all_decks()
 
-        decks = get_all_decks()
+            columns = 4
 
-        columns = 4
+            for index, deck in enumerate(
+                decks
+            ):
 
-        for index, deck in enumerate(
-            decks
-        ):
-
-            preview_pixmap = (
-                self.get_deck_preview_pixmap(
-                    deck["id"]
+                preview_pixmap = (
+                    self.get_deck_preview_pixmap(
+                        deck["id"]
+                    )
                 )
-            )
 
-            frame = DeckPreviewFrame(
-                deck,
-                preview_pixmap,
-                self,
-            )
-
-            frame.set_total(
-                get_deck_total_cards(
-                    deck["id"]
+                frame = DeckPreviewFrame(
+                    deck,
+                    preview_pixmap,
+                    self,
                 )
+
+                frame.set_total(
+                    get_deck_total_cards(
+                        deck["id"]
+                    )
+                )
+
+                frame.clicked.connect(
+                    lambda did=deck["id"]:
+                    self.open_deck(did)
+                )
+
+                row = index // columns
+
+                column = index % columns
+
+                self.decks_grid.addWidget(
+                    frame,
+                    row,
+                    column,
+                )
+
+            new_frame = NewDeckFrame(
+                self
             )
 
-            frame.clicked.connect(
-                lambda did=deck["id"]:
-                self.open_deck(did)
+            new_frame.clicked.connect(
+                self.create_new_deck
             )
+
+            index = len(decks)
 
             row = index // columns
 
             column = index % columns
 
             self.decks_grid.addWidget(
-                frame,
+                new_frame,
                 row,
                 column,
             )
 
-        new_frame = NewDeckFrame(
-            self
-        )
-
-        new_frame.clicked.connect(
-            self.create_new_deck
-        )
-
-        index = len(decks)
-
-        row = index // columns
-
-        column = index % columns
-
-        self.decks_grid.addWidget(
-            new_frame,
-            row,
-            column,
-        )
-
-        self.stack.setCurrentWidget(
-            self.decks_page
-        )
+            self.stack.setCurrentWidget(
+                self.decks_page
+            )
+            
+        except Exception as error:
+            print(f"[DECKS] Erro ao mostrar decks: {error}")
+            import traceback
+            traceback.print_exc()
 
     # =====================================================
     # PREVIEW DECK
@@ -5746,6 +5958,12 @@ class DecksPage(QWidget):
 
         self._rendering_cards = True
 
+        self._render_generation += 1
+
+        generation = (
+            self._render_generation
+        )
+
         try:
 
             if cards is None:
@@ -5879,6 +6097,7 @@ class DecksPage(QWidget):
                 self.load_deck_card_image(
                     frame.image_label,
                     card,
+                    generation,
                 )
 
         finally:
@@ -5893,6 +6112,7 @@ class DecksPage(QWidget):
         self,
         label,
         card,
+        generation,
     ):
 
         image_path = _get_card_value(
@@ -5977,17 +6197,11 @@ class DecksPage(QWidget):
         task = ImageTask(
             image_url,
             local_path,
+            generation,
         )
 
         task.signals.finished.connect(
-            lambda url, path, data,
-            lbl=label:
-            self._image_download_finished(
-                url,
-                path,
-                data,
-                lbl,
-            )
+            self._image_download_finished,
         )
 
         task.signals.failed.connect(
@@ -6013,7 +6227,17 @@ class DecksPage(QWidget):
         path,
         data,
         label,
+        generation,
     ):
+
+        if generation != self._render_generation:
+            return
+
+        if not self.isVisible():
+            return
+
+        if not label:
+            return
 
         try:
 
@@ -6036,6 +6260,9 @@ class DecksPage(QWidget):
             self.image_cache[
                 str(path)
             ] = pixmap
+            
+            # Limpar cache se necessário
+            self._cleanup_image_cache()
 
             scaled = pixmap.scaled(
                 156,
@@ -6081,7 +6308,7 @@ class DecksPage(QWidget):
         if not success:
             return
 
-        self.refresh_current_deck()
+        self.schedule_deck_refresh()
 
         if self.collection_panel.isVisible():
 
@@ -6194,6 +6421,9 @@ class DecksPage(QWidget):
             self.scryfall_panel.search_timer.stop()
 
             self.scryfall_panel.hide()
+            
+            # Não deletar o painel, apenas esconder
+            # Isso evita o erro "Internal C++ object already deleted"
 
     # =====================================================
     # FECHAR DECK
@@ -6435,9 +6665,19 @@ class DecksPage(QWidget):
 
         self.deck_cover_label.clear()
 
-        self.deck_cover_label.setText(
-            "🃏"
-        )
+        self.deck_cover_label.setText("")
+        
+        # Usar card.png como placeholder
+        if CARD_ICON_PATH.exists():
+            pixmap = QPixmap(str(CARD_ICON_PATH))
+            if not pixmap.isNull():
+                scaled = pixmap.scaled(
+                    120,
+                    170,
+                    Qt.AspectRatioMode.KeepAspectRatio,
+                    Qt.TransformationMode.SmoothTransformation,
+                )
+                self.deck_cover_label.setPixmap(scaled)
 
         if not self.current_deck_id:
             return

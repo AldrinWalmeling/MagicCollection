@@ -5,12 +5,16 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="14717f08-37a0-4c50-85ce-aa9bd2e175ab" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/services/collection_export.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/services/decks_database.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/MagicCollection.spec" beforeDir="false" afterPath="$PROJECT_DIR$/MagicCollection.spec" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/database.py" beforeDir="false" afterPath="$PROJECT_DIR$/database.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/decks_database.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/main.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/pages/collection_page.py" beforeDir="false" afterPath="$PROJECT_DIR$/pages/collection_page.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/pages/decks_page.py" beforeDir="false" afterPath="$PROJECT_DIR$/pages/decks_page.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/save/database.db" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/save/save.db" beforeDir="false" afterPath="$PROJECT_DIR$/save/save.db" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ui/theme.py" beforeDir="false" afterPath="$PROJECT_DIR$/ui/theme.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -32,9 +36,9 @@
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
-  <component name="ProjectColorInfo"><![CDATA[{
-  "associatedIndex": 6
-}]]></component>
+  <component name="ProjectColorInfo">{
+  &quot;associatedIndex&quot;: 6
+}</component>
   <component name="ProjectId" id="3HbsgNTKCI902QcnvCwJLhC87KI" />
   <component name="ProjectLevelVcsManager" settingsEditedManually="true">
     <ConfirmationsSetting value="2" id="Add" />
@@ -43,21 +47,22 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "Python.main.executor": "Run",
-    "Python.main_window (1).executor": "Run",
-    "Python.main_window.executor": "Run",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "git-widget-placeholder": "main",
-    "last_opened_file_path": "C:/Users/aldri/Desktop/MagicCollection/cards/images/icons"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;Python.main.executor&quot;: &quot;Run&quot;,
+    &quot;Python.main_window (1).executor&quot;: &quot;Run&quot;,
+    &quot;Python.main_window.executor&quot;: &quot;Run&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;main&quot;,
+    &quot;last_opened_file_path&quot;: &quot;C:/Users/aldri/Desktop/MagicCollection/cards/images/icons&quot;
   }
-}]]></component>
+}</component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
       <recent name="C:\Users\aldri\Desktop\MagicCollection\cards\images\icons" />
     </key>
     <key name="MoveFile.RECENT_KEYS">
+      <recent name="C:\Users\aldri\Desktop\MagicCollection\services" />
       <recent name="C:\Users\aldri\Desktop\MagicCollection" />
       <recent name="C:\Users\aldri\Desktop\MagicCollection\assets\icons" />
       <recent name="C:\Users\aldri\Desktop\MagicCollection\assets" />
