@@ -30,6 +30,20 @@ CARD_ICON_PATH = ICONS_DIR / "card_icon.png"
 
 COLLECTION_ICON_PATH = ICONS_DIR / "collection_icon.png"
 
+SCRYFALL_LANGUAGES = {
+    "Inglês": "en",
+    "Português": "pt",
+    "Espanhol": "es",
+    "Francês": "fr",
+    "Alemão": "de",
+    "Italiano": "it",
+    "Japonês": "ja",
+    "Coreano": "ko",
+    "Chinês Simplificado": "zhs",
+    "Chinês Tradicional": "zht",
+    "Russo": "ru",
+}
+
 from PySide6.QtWidgets import (
     QWidget,
     QVBoxLayout,
@@ -138,34 +152,57 @@ class ScryfallSignals(QObject):
     finished = Signal(str, list)
 
 
+
 class ScryfallTask(QRunnable):
 
-    def __init__(self, query):
+    def __init__(
+        self,
+        query,
+        language="en",
+    ):
+
         super().__init__()
 
         self.query = query
+
+        self.language = (
+            language
+            or "en"
+        )
+
         self.signals = ScryfallSignals()
 
     def run(self):
+
         try:
-            suggestions = autocomplete_card_names(
-                self.query
+
+            suggestions = (
+                autocomplete_card_names(
+                    self.query,
+                    language=self.language,
+                )
             )
 
             suggestions = suggestions[:8]
 
+            self.signals.finished.emit(
+                self.query,
+                suggestions,
+            )
+
         except Exception as error:
+
             print(
                 "[SCRYFALL] Erro no autocomplete:",
                 error,
             )
 
-            suggestions = []
+            self.signals.finished.emit(
+                self.query,
+                [],
+            )
 
-        self.signals.finished.emit(
-            self.query,
-            suggestions,
-        )
+
 
 # =========================================================
 # TAREFA SCRYFALL — CARTA COMPLETA
@@ -188,7 +225,8 @@ class ScryfallCardTask(QRunnable):
     def run(self):
         try:
             card_data = get_card_by_name(
-                self.name
+                name,
+                language=self.selected_language,
             )
 
             self.signals.finished.emit(
@@ -1024,6 +1062,10 @@ class CollectionPage(QWidget):
             self.load_cards
         )
 
+
+
+
+
     # =====================================================
     # SETUP
     # =====================================================
@@ -1530,6 +1572,64 @@ class CollectionPage(QWidget):
             "Adicionar carta à coleção..."
         )
 
+        # =========================================================
+        # SELETOR DE IDIOMA
+        # =========================================================
+
+        self.language_combo = QComboBox()
+
+        self.language_combo.addItem(
+            "🇺🇸 Inglês",
+            "en",
+        )
+
+        self.language_combo.addItem(
+            "🇧🇷 Português",
+            "pt",
+        )
+
+        self.language_combo.addItem(
+            "🇪🇸 Espanhol",
+            "es",
+        )
+
+        self.language_combo.addItem(
+            "🇩🇪 Alemão",
+            "de",
+        )
+
+        self.language_combo.addItem(
+            "🇫🇷 Francês",
+            "fr",
+        )
+
+        self.language_combo.addItem(
+            "🇮🇹 Italiano",
+            "it",
+        )
+
+        self.language_combo.addItem(
+            "🇯🇵 Japonês",
+            "ja",
+        )
+
+        self.language_combo.addItem(
+            "🇨🇳 Chinês",
+            "zhs",
+        )
+
+        self.selected_language = (
+            self.language_combo.currentData()
+        )
+
+        self.language_combo.currentIndexChanged.connect(
+            self.on_language_changed
+        )
+
+        add_layout.addWidget(
+            self.language_combo
+        )
+
         self.add_input.setFrame(
             False
         )
@@ -1751,6 +1851,19 @@ class CollectionPage(QWidget):
             )
         )
 
+
+
+        # =====================================================
+        # SETUP
+        # =====================================================
+
+        def setup_ui(
+                self,
+        ):
+            self.main_layout = QVBoxLayout(
+                self
+            )
+
     # =====================================================
     # ALTERAR LAYOUT
     # =====================================================
@@ -1966,6 +2079,64 @@ class CollectionPage(QWidget):
             self.current_cards
         )
 
+    # =========================================================
+    # ALTERAR IDIOMA
+    # =========================================================
+
+    def on_language_changed(
+            self,
+            index,
+    ):
+
+        self.selected_language = (
+            self.language_combo.itemData(
+                index
+            )
+        )
+
+        print(
+            "[SCRYFALL] Idioma selecionado:",
+            self.selected_language,
+        )
+
+        # =====================================================
+        # CANCELA PESQUISA ANTERIOR
+        # =====================================================
+
+        self.search_timer.stop()
+
+        self.pending_search = ""
+
+        # =====================================================
+        # LIMPA SUGESTÕES ANTIGAS
+        # =====================================================
+
+        self.suggestion_list.clear()
+
+        self.suggestion_list.hide()
+
+        self.search_status.clear()
+
+        # =====================================================
+        # REFAZ A PESQUISA NO NOVO IDIOMA
+        # =====================================================
+
+        current_text = (
+            self.add_input
+            .text()
+            .strip()
+        )
+
+        if len(current_text) < 2:
+            return
+
+        self.pending_search = current_text
+
+        self.search_status.setText(
+            "🔄"
+        )
+
+        self.search_timer.start()
     # =====================================================
     # AUTOCOMPLETE
     # =====================================================
@@ -1996,6 +2167,8 @@ class CollectionPage(QWidget):
 
         self.search_timer.start()
 
+
+
     def perform_scryfall_search(self):
 
         query = self.pending_search
@@ -2003,8 +2176,29 @@ class CollectionPage(QWidget):
         if not query:
             return
 
+        # =================================================
+        # IDIOMA ATUAL
+        # =================================================
+
+        language = (
+                self.selected_language
+                or "en"
+        )
+
+        print(
+            "[SCRYFALL] Pesquisando autocomplete:",
+            query,
+            "| Idioma:",
+            language,
+        )
+
+        # =================================================
+        # WORKER
+        # =================================================
+
         task = ScryfallTask(
-            query
+            query,
+            language,
         )
 
         task.signals.finished.connect(
@@ -2014,6 +2208,8 @@ class CollectionPage(QWidget):
         self.scryfall_pool.start(
             task
         )
+
+
 
     # =====================================================
     # ALTURA DAS SUGESTÕES
@@ -2165,7 +2361,6 @@ class CollectionPage(QWidget):
             return
 
         if len(name) > 200:
-
             self.search_status.setText(
                 "!"
             )
@@ -2183,8 +2378,11 @@ class CollectionPage(QWidget):
         try:
 
             card_data = get_card_by_name(
-                name
+                name,
+                language=self.selected_language,
             )
+
+
 
         except requests.RequestException as error:
             print(

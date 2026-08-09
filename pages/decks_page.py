@@ -2108,14 +2108,36 @@ class CollectionCardItem(QFrame):
 
         info_layout.setSpacing(2)
 
-        name = QLabel(
-            str(
+        # -------------------------------------------------
+        # NOME DA CARTA
+        # -------------------------------------------------
+
+        display_name = (
                 _get_card_value(
                     card,
-                    "name",
-                    1,
-                    "Carta",
+                    "printed_name",
+                    2,
+                    "",
                 )
+                or ""
+        )
+
+        if not str(
+                display_name
+        ).strip():
+            display_name = (
+                    _get_card_value(
+                        card,
+                        "name",
+                        1,
+                        "Carta",
+                    )
+                    or "Carta"
+            )
+
+        name = QLabel(
+            str(
+                display_name
             )
         )
 
@@ -2125,7 +2147,9 @@ class CollectionCardItem(QFrame):
 
         name.setWordWrap(True)
 
-        info_layout.addWidget(name)
+        info_layout.addWidget(
+            name
+        )
 
         collection_quantity = max(
             0,

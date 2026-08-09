@@ -1,0 +1,112 @@
+══════════════════════════════════════════════════════════════
+MINHA COLEÇÃO — MAGIC
+══════════════════════════════════════════════════════════════
+
+Nome: Abraded Bluffs
+Custo de mana: —
+Tipo: Land — Desert
+Texto / efeito: This land enters tapped.
+When this land enters, it deals 1 damage to target opponent.
+{T}: Add {R} or {W}.
+Poder / Resistência: —
+Quantidade: 1
+──────────────────────────────────────────────────────────────
+Nome: Assquatch
+Custo de mana: {4}{R}
+Tipo: Creature — Donkey
+Texto / efeito: Each other Donkey gets +1½/+1½.
+Whenever another Donkey enters, untap target creature and gain control of it until end of turn. That creature gains haste until end of turn.
+Poder / Resistência: 3.5/3.5
+Quantidade: 4
+──────────────────────────────────────────────────────────────
+Nome: Astral Drift
+Custo de mana: {2}{W}
+Tipo: Enchantment
+Texto / efeito: Whenever you cycle this card or cycle another card while this enchantment is on the battlefield, you may exile target creature. If you do, return that card to the battlefield under its owner's control at the beginning of the next end step.
+Cycling {2}{W} ({2}{W}, Discard this card: Draw a card.)
+Poder / Resistência: —
+Quantidade: 1
+──────────────────────────────────────────────────────────────
+Nome: Camera Launcher
+Custo de mana: {3}
+Tipo: Artifact Creature — Construct
+Texto / efeito: Exhaust — {3}: Put a +1/+1 counter on this creature. Create a 1/1 colorless Thopter artifact creature token with flying. (Activate each exhaust ability only once.)
+Poder / Resistência: 2/2
+Quantidade: 1
+──────────────────────────────────────────────────────────────
+Nome: Eureka Moment
+Custo de mana: {2}{G}{U}
+Tipo: Instant
+Texto / efeito: Draw two cards. You may put a land card from your hand onto the battlefield.
+Poder / Resistência: —
+Quantidade: 1
+──────────────────────────────────────────────────────────────
+Nome: Kitchen
+Custo de mana: —
+Tipo: Land
+Texto / efeito: This land enters tapped.
+{T}: Add {G} or {U}.
+{4}, {T}: Investigate. (Create a Clue token. It's an artifact with "{2}, Sacrifice this token: Draw a card.")
+Poder / Resistência: —
+Quantidade: 1
+──────────────────────────────────────────────────────────────
+Nome: Lady Evangela
+Custo de mana: {W}{U}{B}
+Tipo: Legendary Creature — Human Cleric
+Texto / efeito: {W}{B}, {T}: Prevent all combat damage that would be dealt by target creature this turn.
+Poder / Resistência: 1/2
+Quantidade: 2
+──────────────────────────────────────────────────────────────
+Nome: Mirrex
+Custo de mana: —
+Tipo: Land — Sphere
+Texto / efeito: {T}: Add {C}.
+{T}: Add one mana of any color. Activate only if this land entered this turn.
+{3}, {T}: Create a 1/1 colorless Phyrexian Mite artifact creature token with toxic 1 and "This token can't block." (Players dealt combat damage by it also get a poison counter.)
+Poder / Resistência: —
+Quantidade: 1
+──────────────────────────────────────────────────────────────
+Nome: Moonlace
+Custo de mana: {U}
+Tipo: Instant
+Texto / efeito: Target spell or permanent becomes colorless.
+Poder / Resistência: —
+Quantidade: 1
+──────────────────────────────────────────────────────────────
+Nome: Moopsy
+Custo de mana: {G}
+Tipo: Creature — Beast
+Texto / efeito: Deathtouch
+{2}: This creature gains reach until end of turn.
+Poder / Resistência: 1/1
+Quantidade: 1
+──────────────────────────────────────────────────────────────
+Nome: Opaline Sliver
+Custo de mana: {1}{W}{U}
+Tipo: Creature — Sliver
+Texto / efeito: All Slivers have "Whenever this permanent becomes the target of a spell an opponent controls, you may draw a card."
+Poder / Resistência: 2/2
+Quantidade: 1
+──────────────────────────────────────────────────────────────
+Nome: Patchwork Gnomes
+Custo de mana: {3}
+Tipo: Artifact Creature — Gnome
+Texto / efeito: Discard a card: Regenerate this creature. (The next time this creature would be destroyed this turn, instead tap it, remove it from combat, and heal all damage on it.)
+Poder / Resistência: 2/1
+Quantidade: 1
+──────────────────────────────────────────────────────────────
+Nome: Patriar's Seal
+Custo de mana: {3}
+Tipo: Artifact
+Texto / efeito: {T}: Add one mana of any color.
+{1}, {T}: Untap target legendary creature you control.
+Poder / Resistência: —
+Quantidade: 1
+──────────────────────────────────────────────────────────────
+Nome: Sandskin
+Custo de mana: {2}{W}
+Tipo: Enchantment — Aura
+Texto / efeito: Enchant creature
+Prevent all combat damage that would be dealt to and dealt by enchanted creature.
+Poder / Resistência: —
+Quantidade: 1

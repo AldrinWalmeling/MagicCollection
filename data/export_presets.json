@@ -1,5 +1,24 @@
 {
     "Nome": [
         "name"
+    ],
+    "tESTE": [
+        "name",
+        "mana_cost",
+        "type_line",
+        "oracle_text",
+        "power_toughness",
+        "quantity"
+    ],
+    "AA": [
+        "name",
+        "mana_cost",
+        "type_line",
+        "oracle_text",
+        "power_toughness",
+        "quantity",
+        "set_name",
+        "collector_number",
+        "lang"
     ]
 }
