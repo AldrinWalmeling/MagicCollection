@@ -12,6 +12,7 @@ from PySide6.QtCore import (
     QThreadPool,
     QSize,
     QEvent,
+    QPropertyAnimation,
 )
 
 from PySide6.QtGui import (
@@ -55,6 +56,12 @@ from PySide6.QtWidgets import (
     QComboBox,
     QMenu,
 )
+
+from components.card_details_dialog import (
+    CardDetailsDialog,
+)
+
+from pages.collection_page import CollectionExportDialog
 
 from services.scryfall import (
     autocomplete_card_names,
@@ -782,7 +789,7 @@ def get_deck_cards(deck_id):
         rows = cursor.fetchall()
 
         return [
-            tuple(row)
+            dict(row)
             for row in rows
         ]
 
@@ -1211,18 +1218,30 @@ class DeckCardFrame(QFrame):
         self,
         parent=None,
     ):
+
         super().__init__(parent)
 
         self.setObjectName(
             "DeckCardFrame"
         )
 
+        # =================================================
+        # TAMANHO NORMAL
+        # =================================================
+
+        self._base_width = 160
+        self._base_height = 230
+
+        self._hover_scale = 1.08
+
         self.setFixedSize(
-            160,
-            230,
+            self._base_width,
+            self._base_height,
         )
 
-        self.setMouseTracking(True)
+        self.setMouseTracking(
+            True
+        )
 
         self.setAttribute(
             Qt.WidgetAttribute.WA_Hover,
@@ -1233,7 +1252,13 @@ class DeckCardFrame(QFrame):
             Qt.CursorShape.PointingHandCursor
         )
 
-        self.image_label = DeckCardImage(self)
+        # =================================================
+        # IMAGEM
+        # =================================================
+
+        self.image_label = DeckCardImage(
+            self
+        )
 
         self.image_label.setObjectName(
             "DeckCardImage"
@@ -1251,23 +1276,37 @@ class DeckCardFrame(QFrame):
         self.image_label.setGeometry(
             0,
             0,
-            160,
-            230,
+            self._base_width,
+            self._base_height,
         )
 
-        self.image_label.setText("")
-        
-        # Usar card.png como placeholder
+        self.image_label.setText(
+            ""
+        )
+
+        # Placeholder
         if CARD_ICON_PATH.exists():
-            pixmap = QPixmap(str(CARD_ICON_PATH))
+
+            pixmap = QPixmap(
+                str(CARD_ICON_PATH)
+            )
+
             if not pixmap.isNull():
+
                 scaled = pixmap.scaled(
-                    160,
-                    230,
+                    self._base_width,
+                    self._base_height,
                     Qt.AspectRatioMode.KeepAspectRatio,
                     Qt.TransformationMode.SmoothTransformation,
                 )
-                self.image_label.setPixmap(scaled)
+
+                self.image_label.setPixmap(
+                    scaled
+                )
+
+        # =================================================
+        # BADGE
+        # =================================================
 
         self.quantity_badge = QLabel(
             "×0",
@@ -1282,14 +1321,22 @@ class DeckCardFrame(QFrame):
             Qt.AlignmentFlag.AlignCenter
         )
 
-        self.quantity_badge.setFixedHeight(27)
-
-        self.quantity_badge.move(
-            8,
-            8,
+        self.quantity_badge.setFixedHeight(
+            27
         )
 
-        self.controls = QFrame(self)
+        self.quantity_badge.setAttribute(
+            Qt.WidgetAttribute.WA_TransparentForMouseEvents,
+            True,
+        )
+
+        # =================================================
+        # CONTROLES
+        # =================================================
+
+        self.controls = QFrame(
+            self
+        )
 
         self.controls.setObjectName(
             "DeckQuantityControls"
@@ -1313,6 +1360,10 @@ class DeckCardFrame(QFrame):
         controls_layout.setAlignment(
             Qt.AlignmentFlag.AlignCenter
         )
+
+        # -------------------------------------------------
+        # -
+        # -------------------------------------------------
 
         self.minus_button = QPushButton(
             "−",
@@ -1342,6 +1393,10 @@ class DeckCardFrame(QFrame):
             Qt.AlignmentFlag.AlignCenter,
         )
 
+        # -------------------------------------------------
+        # QUANTIDADE
+        # -------------------------------------------------
+
         self.control_quantity = QLabel(
             "0",
             self.controls,
@@ -1365,6 +1420,10 @@ class DeckCardFrame(QFrame):
             0,
             Qt.AlignmentFlag.AlignCenter,
         )
+
+        # -------------------------------------------------
+        # +
+        # -------------------------------------------------
 
         self.plus_button = QPushButton(
             "+",
@@ -1394,6 +1453,16 @@ class DeckCardFrame(QFrame):
             Qt.AlignmentFlag.AlignCenter,
         )
 
+        self.controls.adjustSize()
+
+        self.controls.hide()
+
+        self._hovering = False
+
+    # =====================================================
+    # QUANTIDADE
+    # =====================================================
+
     def set_quantity(
         self,
         quantity,
@@ -1408,29 +1477,34 @@ class DeckCardFrame(QFrame):
             f"×{quantity}"
         )
 
-
         self.control_quantity.setText(
             str(quantity)
         )
 
-    def resizeEvent(
-            self,
-            event,
+    # =====================================================
+    # ATUALIZAR ELEMENTOS
+    # =====================================================
+
+    def _update_overlays(
+        self,
     ):
 
-        super().resizeEvent(
-            event
-        )
+        width = self.width()
+        height = self.height()
+
+        # -------------------------------------------------
+        # IMAGEM
+        # -------------------------------------------------
 
         self.image_label.setGeometry(
             0,
             0,
-            self.width(),
-            self.height(),
+            width,
+            height,
         )
 
         # -------------------------------------------------
-        # CONTROLES DE QUANTIDADE / HOVER
+        # CONTROLES
         # -------------------------------------------------
 
         self.controls.adjustSize()
@@ -1438,26 +1512,35 @@ class DeckCardFrame(QFrame):
         control_margin = 4
 
         self.controls.move(
-            self.width()
+            width
             - self.controls.width()
             - control_margin,
-            self.height()
+            height
             - self.controls.height()
             - control_margin,
         )
 
         # -------------------------------------------------
-        # BADGE SUPERIOR DIREITO
+        # BADGE
         # -------------------------------------------------
 
-        badge_width = 38
-        badge_height = 27
+        self.quantity_badge.adjustSize()
+
+        badge_width = max(
+            38,
+            self.quantity_badge.width(),
+        )
+
+        badge_height = max(
+            27,
+            self.quantity_badge.height(),
+        )
 
         margin_right = 8
         margin_top = 8
 
         self.quantity_badge.setGeometry(
-            self.width()
+            width
             - badge_width
             - margin_right,
             margin_top,
@@ -1466,28 +1549,92 @@ class DeckCardFrame(QFrame):
         )
 
         self.quantity_badge.raise_()
+        self.controls.raise_()
 
-        self.controls.hide()
+    # =====================================================
+    # RESIZE
+    # =====================================================
+
+    def resizeEvent(
+        self,
+        event,
+    ):
+
+        super().resizeEvent(
+            event
+        )
+
+        self._update_overlays()
+
+    # =====================================================
+    # HOVER / ZOOM
+    # =====================================================
+
+    def _animate_hover(
+        self,
+        hovering,
+    ):
+
+        self._hovering = hovering
+
+        # -------------------------------------------------
+        # Controles e Badge
+        # -------------------------------------------------
+
+        if hovering:
+
+            self.controls.show()
+
+            # Fica acima das cartas vizinhas
+            self.raise_()
+
+            self.quantity_badge.raise_()
+            self.controls.raise_()
+
+        else:
+
+            self.controls.hide()
+
+        # Removida animação de zoom que causava reposicionamento
+        # O hover agora é puramente visual via CSS
+
+    # =====================================================
+    # ENTER
+    # =====================================================
 
     def enterEvent(
         self,
         event,
     ):
 
-        self.controls.show()
-        self.controls.raise_()
-        self.quantity_badge.raise_()
+        self._animate_hover(
+            True
+        )
 
-        super().enterEvent(event)
+        super().enterEvent(
+            event
+        )
+
+    # =====================================================
+    # LEAVE
+    # =====================================================
 
     def leaveEvent(
         self,
         event,
     ):
 
-        self.controls.hide()
+        self._animate_hover(
+            False
+        )
 
-        super().leaveEvent(event)
+        super().leaveEvent(
+            event
+        )
+
+    # =====================================================
+    # DOUBLE CLICK
+    # =====================================================
 
     def mouseDoubleClickEvent(
         self,
@@ -1505,8 +1652,9 @@ class DeckCardFrame(QFrame):
 
             return
 
-        super().mouseDoubleClickEvent(event)
-
+        super().mouseDoubleClickEvent(
+            event
+        )
 
 # =========================================================
 # DIALOG — ESCOLHER CAPA
@@ -2398,6 +2546,11 @@ class DeckCollectionPanel(QFrame):
         self.deck_quantities = {}
         self.deck_id = None
 
+        self.filter_color = "all"
+        self.filter_type = "all"
+        self.filter_set = "all"
+        self.filter_language = "all"
+
         self.search_timer = QTimer(self)
 
         self.search_timer.setSingleShot(True)
@@ -2471,7 +2624,7 @@ class DeckCollectionPanel(QFrame):
         layout.addLayout(header)
 
         # -------------------------------------------------
-        # BUSCA
+        # BUSCA + FILTROS
         # -------------------------------------------------
 
         search_frame = QFrame()
@@ -2491,7 +2644,13 @@ class DeckCollectionPanel(QFrame):
             0,
         )
 
-        search_icon = QLabel("🔎")
+        search_layout.setSpacing(
+            8
+        )
+
+        search_icon = QLabel(
+            "🔎"
+        )
 
         search_layout.addWidget(
             search_icon
@@ -2503,14 +2662,37 @@ class DeckCollectionPanel(QFrame):
             "Pesquisar na coleção..."
         )
 
-        self.search_input.setFrame(False)
+        self.search_input.setFrame(
+            False
+        )
 
         self.search_input.textChanged.connect(
             self.schedule_search
         )
 
         search_layout.addWidget(
-            self.search_input
+            self.search_input,
+            1,
+        )
+
+        self.filters_button = QPushButton(
+            "Filtros"
+        )
+
+        self.filters_button.setObjectName(
+            "DeckPanelFiltersButton"
+        )
+
+        self.filters_button.setFixedWidth(
+            70
+        )
+
+        self.filters_button.clicked.connect(
+            self.show_filters_menu
+        )
+
+        search_layout.addWidget(
+            self.filters_button
         )
 
         layout.addWidget(
@@ -2628,8 +2810,277 @@ class DeckCollectionPanel(QFrame):
 
         self.search_timer.start()
 
-    def apply_search(self):
+    def show_filters_menu(
+            self,
+    ):
+        menu = QMenu(
+            self
+        )
 
+        # =================================================
+        # COR
+        # =================================================
+
+        color_menu = menu.addMenu(
+            "Cor"
+        )
+
+        color_menu.addAction(
+            "Todas",
+            lambda:
+            self.set_filter_color("all"),
+        )
+
+        color_menu.addSeparator()
+
+        color_menu.addAction(
+            "Branco",
+            lambda:
+            self.set_filter_color("W"),
+        )
+
+        color_menu.addAction(
+            "Azul",
+            lambda:
+            self.set_filter_color("U"),
+        )
+
+        color_menu.addAction(
+            "Preto",
+            lambda:
+            self.set_filter_color("B"),
+        )
+
+        color_menu.addAction(
+            "Vermelho",
+            lambda:
+            self.set_filter_color("R"),
+        )
+
+        color_menu.addAction(
+            "Verde",
+            lambda:
+            self.set_filter_color("G"),
+        )
+
+        color_menu.addAction(
+            "Incolor",
+            lambda:
+            self.set_filter_color("C"),
+        )
+
+        color_menu.addAction(
+            "Multicolorido",
+            lambda:
+            self.set_filter_color("M"),
+        )
+
+        # =================================================
+        # TIPO
+        # =================================================
+
+        type_menu = menu.addMenu(
+            "Tipo"
+        )
+
+        type_menu.addAction(
+            "Todos",
+            lambda:
+            self.set_filter_type("all"),
+        )
+
+        type_menu.addSeparator()
+
+        type_menu.addAction(
+            "Criatura",
+            lambda:
+            self.set_filter_type("creature"),
+        )
+
+        type_menu.addAction(
+            "Instantânea",
+            lambda:
+            self.set_filter_type("instant"),
+        )
+
+        type_menu.addAction(
+            "Feitiço",
+            lambda:
+            self.set_filter_type("sorcery"),
+        )
+
+        type_menu.addAction(
+            "Encantamento",
+            lambda:
+            self.set_filter_type("enchantment"),
+        )
+
+        type_menu.addAction(
+            "Artefato",
+            lambda:
+            self.set_filter_type("artifact"),
+        )
+
+        type_menu.addAction(
+            "Planeswalker",
+            lambda:
+            self.set_filter_type("planeswalker"),
+        )
+
+        type_menu.addAction(
+            "Terreno",
+            lambda:
+            self.set_filter_type("land"),
+        )
+
+        # =================================================
+        # IDIOMA
+        # =================================================
+
+        language_menu = menu.addMenu(
+            "Idioma"
+        )
+
+        language_menu.addAction(
+            "Todos",
+            lambda:
+            self.set_filter_language("all"),
+        )
+
+        language_menu.addSeparator()
+
+        languages = {
+            "Inglês": "en",
+            "Português": "pt",
+            "Espanhol": "es",
+            "Francês": "fr",
+            "Alemão": "de",
+            "Italiano": "it",
+            "Japonês": "ja",
+            "Coreano": "ko",
+            "Chinês Simplificado": "zhs",
+            "Chinês Tradicional": "zht",
+            "Russo": "ru",
+        }
+
+        for label, code in languages.items():
+            language_menu.addAction(
+                label,
+                lambda
+                    checked=False,
+                    value=code:
+                self.set_filter_language(
+                    value
+                ),
+            )
+
+        # =================================================
+        # EDIÇÃO
+        # =================================================
+
+        set_menu = menu.addMenu(
+            "Edição"
+        )
+
+        set_menu.addAction(
+            "Todas",
+            lambda:
+            self.set_filter_set("all"),
+        )
+
+        set_menu.addSeparator()
+
+        sets = sorted(
+            {
+                str(
+                    _get_card_value(
+                        card,
+                        "set_name",
+                        4,
+                        "",
+                    )
+                    or ""
+                )
+                for card in self.all_cards
+                if _get_card_value(
+                card,
+                "set_name",
+                4,
+                "",
+            )
+            },
+            key=str.casefold,
+        )
+
+        for set_name in sets:
+            set_menu.addAction(
+                set_name,
+                lambda
+                    checked=False,
+                    value=set_name:
+                self.set_filter_set(
+                    value
+                ),
+            )
+
+        menu.addSeparator()
+
+        menu.addAction(
+            "Limpar filtros",
+            self.clear_filters,
+        )
+
+        button_pos = (
+            self.filters_button.mapToGlobal(
+                self.filters_button.rect().bottomLeft()
+            )
+        )
+
+        menu.exec(
+            button_pos
+        )
+
+    def set_filter_color(
+            self,
+            color,
+    ):
+        self.filter_color = color
+        self.apply_search()
+
+    def set_filter_type(
+            self,
+            card_type,
+    ):
+        self.filter_type = card_type
+        self.apply_search()
+
+    def set_filter_set(
+            self,
+            set_name,
+    ):
+        self.filter_set = set_name
+        self.apply_search()
+
+    def set_filter_language(
+            self,
+            language,
+    ):
+        self.filter_language = language
+        self.apply_search()
+
+    def clear_filters(
+            self,
+    ):
+        self.filter_color = "all"
+        self.filter_type = "all"
+        self.filter_set = "all"
+        self.filter_language = "all"
+
+        self.apply_search()
+
+    def apply_search(
+            self,
+    ):
         text = (
             self.search_input
             .text()
@@ -2637,17 +3088,15 @@ class DeckCollectionPanel(QFrame):
             .casefold()
         )
 
-        if not text:
+        filtered = []
 
-            filtered = list(
-                self.all_cards
-            )
+        for card in self.all_cards:
 
-        else:
+            # =================================================
+            # PESQUISA
+            # =================================================
 
-            filtered = []
-
-            for card in self.all_cards:
+            if text:
 
                 searchable = " ".join(
                     (
@@ -2699,15 +3148,133 @@ class DeckCollectionPanel(QFrame):
                     )
                 ).casefold()
 
-                if text in searchable:
-                    filtered.append(card)
+                if text not in searchable:
+                    continue
 
-        self.filtered_cards = filtered
+            # =================================================
+            # COR
+            # =================================================
+
+            if self.filter_color != "all":
+
+                mana_cost = str(
+                    _get_card_value(
+                        card,
+                        "mana_cost",
+                        6,
+                        "",
+                    )
+                    or ""
+                ).upper()
+
+                colors = set()
+
+                if "{W}" in mana_cost:
+                    colors.add("W")
+
+                if "{U}" in mana_cost:
+                    colors.add("U")
+
+                if "{B}" in mana_cost:
+                    colors.add("B")
+
+                if "{R}" in mana_cost:
+                    colors.add("R")
+
+                if "{G}" in mana_cost:
+                    colors.add("G")
+
+                if self.filter_color == "C":
+
+                    if colors:
+                        continue
+
+                elif self.filter_color == "M":
+
+                    if len(colors) < 2:
+                        continue
+
+                elif self.filter_color not in colors:
+
+                    continue
+
+            # =================================================
+            # TIPO
+            # =================================================
+
+            if self.filter_type != "all":
+
+                type_line = str(
+                    _get_card_value(
+                        card,
+                        "type_line",
+                        7,
+                        "",
+                    )
+                    or ""
+                ).casefold()
+
+                if (
+                        self.filter_type.casefold()
+                        not in type_line
+                ):
+                    continue
+
+            # =================================================
+            # EDIÇÃO
+            # =================================================
+
+            if self.filter_set != "all":
+
+                set_name = str(
+                    _get_card_value(
+                        card,
+                        "set_name",
+                        4,
+                        "",
+                    )
+                    or ""
+                )
+
+                if (
+                        set_name.casefold()
+                        != self.filter_set.casefold()
+                ):
+                    continue
+
+            # =================================================
+            # IDIOMA
+            # =================================================
+
+            if self.filter_language != "all":
+
+                language = str(
+                    _get_card_value(
+                        card,
+                        "lang",
+                        3,
+                        "",
+                    )
+                    or ""
+                ).casefold()
+
+                if (
+                        language
+                        != self.filter_language.casefold()
+                ):
+                    continue
+
+            filtered.append(
+                card
+            )
+
+        self.filtered_cards = (
+            filtered
+        )
 
         self.render_cards(
             filtered
         )
-
     def render_cards(
         self,
         cards,
@@ -3021,74 +3588,210 @@ class ScryfallWorkerSignals(QObject):
     error = Signal(str)
 
 
-class ScryfallWorker(QRunnable):
+class ScryfallWorker(
+    QRunnable
+):
 
     def __init__(
         self,
         text,
+        filters=None,
     ):
-
         super().__init__()
 
         self.text = str(
             text or ""
         ).strip()
 
-        self.signals = ScryfallWorkerSignals()
+        self.filters = dict(
+            filters or {}
+        )
+
+        self.signals = (
+            ScryfallWorkerSignals()
+        )
 
     def run(
         self,
     ):
-
         try:
 
-            if not self.text:
+            query_parts = []
 
-                self.signals.finished.emit(
-                    []
+            # =================================================
+            # TEXTO
+            # =================================================
+
+            if self.text:
+
+                query_parts.append(
+                    self.text
                 )
 
-                return
+            # =================================================
+            # COR
+            # =================================================
 
-            response = requests.get(
-                "https://api.scryfall.com/cards/search",
-                params={
-                    "q": self.text,
-                    "unique": "prints",
-                    "order": "name",
-                },
-                headers={
-                    "User-Agent":
-                        "MagicCollection/1.0"
-                },
-                timeout=10,
+            color = self.filters.get(
+                "color"
             )
 
-            response.raise_for_status()
+            if color and color != "all":
 
-            payload = response.json()
+                if color == "M":
 
-            cards = payload.get(
-                "data",
-                []
+                    query_parts.append(
+                        "c:m"
+                    )
+
+                elif color == "C":
+
+                    query_parts.append(
+                        "c:c"
+                    )
+
+                else:
+
+                    query_parts.append(
+                        f"c:{color.lower()}"
+                    )
+
+            # =================================================
+            # TIPO
+            # =================================================
+
+            card_type = self.filters.get(
+                "type"
             )
 
-            if not isinstance(
-                cards,
-                list,
+            if (
+                card_type
+                and card_type != "all"
             ):
 
-                cards = []
+                query_parts.append(
+                    f"t:{card_type}"
+                )
+
+            # =================================================
+            # SUBTIPO
+            # =================================================
+
+            subtype = self.filters.get(
+                "subtype"
+            )
+
+            if subtype:
+
+                query_parts.append(
+                    f"t:{subtype}"
+                )
+
+            # =================================================
+            # RARIDADE
+            # =================================================
+
+            rarity = self.filters.get(
+                "rarity"
+            )
+
+            if (
+                rarity
+                and rarity != "all"
+            ):
+
+                query_parts.append(
+                    f"r:{rarity}"
+                )
+
+            # =================================================
+            # SET
+            # =================================================
+
+            set_code = self.filters.get(
+                "set"
+            )
+
+            if set_code:
+
+                query_parts.append(
+                    f"set:{set_code}"
+                )
+
+            # =================================================
+            # CMC
+            # =================================================
+
+            cmc = self.filters.get(
+                "cmc"
+            )
+
+            if cmc not in (
+                None,
+                "",
+                "all",
+            ):
+
+                query_parts.append(
+                    f"cmc={cmc}"
+                )
+
+            # =================================================
+            # IDENTIDADE DE COR
+            # =================================================
+
+            color_identity = (
+                self.filters.get(
+                    "color_identity"
+                )
+            )
+
+            if (
+                color_identity
+                and color_identity != "all"
+            ):
+
+                query_parts.append(
+                    f"id:{color_identity.lower()}"
+                )
+
+            # =================================================
+            # IDIOMA
+            # =================================================
+
+            language = self.filters.get(
+                "language"
+            )
+
+            if (
+                language
+                and language != "all"
+            ):
+
+                query_parts.append(
+                    f"lang:{language}"
+                )
+
+            query = " ".join(
+                part
+                for part in query_parts
+                if part
+            )
+
+            from services.scryfall import (
+                search_cards,
+            )
+
+            cards = search_cards(
+                query,
+                language="all",
+                unique="prints",
+                order="name",
+            )
 
             results = []
 
-            for card in cards[:20]:
-
-                if not isinstance(
-                    card,
-                    dict,
-                ):
-                    continue
+            for card in cards[:30]:
 
                 image_uris = (
                     card.get(
@@ -3105,9 +3808,21 @@ class ScryfallWorker(QRunnable):
                             )
                             or "Carta",
 
+                        "printed_name":
+                            card.get(
+                                "printed_name"
+                            )
+                            or "",
+
                         "set_name":
                             card.get(
                                 "set_name"
+                            )
+                            or "",
+
+                        "set":
+                            card.get(
+                                "set"
                             )
                             or "",
 
@@ -3123,6 +3838,11 @@ class ScryfallWorker(QRunnable):
                             )
                             or "",
 
+                        "cmc":
+                            card.get(
+                                "cmc"
+                            ),
+
                         "type_line":
                             card.get(
                                 "type_line"
@@ -3132,6 +3852,40 @@ class ScryfallWorker(QRunnable):
                         "oracle_text":
                             card.get(
                                 "oracle_text"
+                            )
+                            or "",
+
+                        "power":
+                            card.get(
+                                "power"
+                            ),
+
+                        "toughness":
+                            card.get(
+                                "toughness"
+                            ),
+
+                        "rarity":
+                            card.get(
+                                "rarity"
+                            )
+                            or "",
+
+                        "colors":
+                            card.get(
+                                "colors"
+                            )
+                            or [],
+
+                        "color_identity":
+                            card.get(
+                                "color_identity"
+                            )
+                            or [],
+
+                        "lang":
+                            card.get(
+                                "lang"
                             )
                             or "",
 
@@ -3146,18 +3900,6 @@ class ScryfallWorker(QRunnable):
                                 "id"
                             )
                             or "",
-
-                        "set":
-                            card.get(
-                                "set"
-                            )
-                            or "",
-
-                        "lang":
-                            card.get(
-                                "lang"
-                            )
-                            or "",
                     }
                 )
 
@@ -3165,18 +3907,15 @@ class ScryfallWorker(QRunnable):
                 results
             )
 
-        except requests.RequestException as error:
-
-            self.signals.error.emit(
-                f"Falha de conexão com o Scryfall: {error}"
-            )
-
         except Exception as error:
 
             self.signals.error.emit(
-                f"Erro no worker do Scryfall: {error}"
+                str(error)
             )
 
+# =========================================================
+# DENTRO DE DeckScryfallPanel
+# =========================================================
 
 # =========================================================
 # DENTRO DE DeckScryfallPanel
@@ -3187,10 +3926,12 @@ def __init__(
     parent=None,
 ):
 
-    super().__init__(parent)
+    super().__init__(
+        parent
+    )
 
     self.setObjectName(
-        "DeckScryfallPanell"
+        "DeckScryfallPanel"
     )
 
     self.setFixedWidth(
@@ -3213,7 +3954,6 @@ def __init__(
 
     self.current_search_id = 0
 
-    # Mantém referências aos workers ativos.
     self._active_workers = {}
 
     self.search_timer = QTimer(
@@ -3231,7 +3971,6 @@ def __init__(
     self.search_timer.timeout.connect(
         self.search_scryfall
     )
-
 
     self.setup_ui()
 
@@ -3409,7 +4148,12 @@ class DeckScryfallPanel(QFrame):
         # Filtros
         self.filter_color = "all"
         self.filter_type = "all"
+        self.filter_subtype = ""
         self.filter_rarity = "all"
+        self.filter_set = ""
+        self.filter_cmc = "all"
+        self.filter_color_identity = "all"
+        self.filter_language = "all"
 
         self.search_pool = QThreadPool(
             self
@@ -3420,6 +4164,8 @@ class DeckScryfallPanel(QFrame):
         )
 
         self.current_search_id = 0
+
+        self._active_workers = {}
 
         self.search_timer = QTimer(
             self
@@ -3698,51 +4444,284 @@ class DeckScryfallPanel(QFrame):
         """Limpa todos os filtros"""
         self.search_input.clear()
         self.apply_filters()
-    
-    def show_filters_menu(self):
-        """Mostra o menu dropdown de filtros"""
-        menu = QMenu(self)
-        
-        # Filtro de Cor
-        color_menu = menu.addMenu("Cor")
-        color_menu.addAction("Todas", lambda: self.set_filter_color("all"))
-        color_menu.addSeparator()
-        color_menu.addAction("Branco (W)", lambda: self.set_filter_color("W"))
-        color_menu.addAction("Azul (U)", lambda: self.set_filter_color("U"))
-        color_menu.addAction("Preto (B)", lambda: self.set_filter_color("B"))
-        color_menu.addAction("Vermelho (R)", lambda: self.set_filter_color("R"))
-        color_menu.addAction("Verde (G)", lambda: self.set_filter_color("G"))
-        
-        # Filtro de Tipo
-        type_menu = menu.addMenu("Tipo")
-        type_menu.addAction("Todos", lambda: self.set_filter_type("all"))
-        type_menu.addSeparator()
-        type_menu.addAction("Criatura", lambda: self.set_filter_type("Creature"))
-        type_menu.addAction("Instantânea", lambda: self.set_filter_type("Instant"))
-        type_menu.addAction("Feitiço", lambda: self.set_filter_type("Sorcery"))
-        type_menu.addAction("Encantamento", lambda: self.set_filter_type("Enchantment"))
-        type_menu.addAction("Artefato", lambda: self.set_filter_type("Artifact"))
-        type_menu.addAction("Planeswalker", lambda: self.set_filter_type("Planeswalker"))
-        type_menu.addAction("Terreno", lambda: self.set_filter_type("Land"))
-        
-        # Filtro de Raridade
-        rarity_menu = menu.addMenu("Raridade")
-        rarity_menu.addAction("Todas", lambda: self.set_filter_rarity("all"))
-        rarity_menu.addSeparator()
-        rarity_menu.addAction("Comum", lambda: self.set_filter_rarity("common"))
-        rarity_menu.addAction("Incomum", lambda: self.set_filter_rarity("uncommon"))
-        rarity_menu.addAction("Rara", lambda: self.set_filter_rarity("rare"))
-        rarity_menu.addAction("Mítica", lambda: self.set_filter_rarity("mythic"))
-        
+
+    def show_filters_menu(
+            self,
+    ):
+        menu = QMenu(
+            self
+        )
+
+        # =================================================
+        # COR
+        # =================================================
+
+        color_menu = menu.addMenu(
+            "Cor"
+        )
+
+        color_menu.addAction(
+            "Todas",
+            lambda:
+            self.set_filter_color("all"),
+        )
+
+        color_menu.addAction(
+            "Branco",
+            lambda:
+            self.set_filter_color("W"),
+        )
+
+        color_menu.addAction(
+            "Azul",
+            lambda:
+            self.set_filter_color("U"),
+        )
+
+        color_menu.addAction(
+            "Preto",
+            lambda:
+            self.set_filter_color("B"),
+        )
+
+        color_menu.addAction(
+            "Vermelho",
+            lambda:
+            self.set_filter_color("R"),
+        )
+
+        color_menu.addAction(
+            "Verde",
+            lambda:
+            self.set_filter_color("G"),
+        )
+
+        color_menu.addAction(
+            "Incolor",
+            lambda:
+            self.set_filter_color("C"),
+        )
+
+        color_menu.addAction(
+            "Multicolorido",
+            lambda:
+            self.set_filter_color("M"),
+        )
+
+        # =================================================
+        # TIPO
+        # =================================================
+
+        type_menu = menu.addMenu(
+            "Tipo"
+        )
+
+        type_menu.addAction(
+            "Todos",
+            lambda:
+            self.set_filter_type("all"),
+        )
+
+        for label, value in (
+                ("Criatura", "creature"),
+                ("Instantânea", "instant"),
+                ("Feitiço", "sorcery"),
+                ("Encantamento", "enchantment"),
+                ("Artefato", "artifact"),
+                ("Planeswalker", "planeswalker"),
+                ("Terreno", "land"),
+        ):
+            type_menu.addAction(
+                label,
+                lambda
+                    checked=False,
+                    value=value:
+                self.set_filter_type(
+                    value
+                ),
+            )
+
+        # =================================================
+        # SUBTIPO
+        # =================================================
+
+        menu.addAction(
+            "Subtipo...",
+            self.set_filter_subtype,
+        )
+
+        # =================================================
+        # RARIDADE
+        # =================================================
+
+        rarity_menu = menu.addMenu(
+            "Raridade"
+        )
+
+        rarity_menu.addAction(
+            "Todas",
+            lambda:
+            self.set_filter_rarity("all"),
+        )
+
+        for label, value in (
+                ("Comum", "common"),
+                ("Incomum", "uncommon"),
+                ("Rara", "rare"),
+                ("Mítica", "mythic"),
+        ):
+            rarity_menu.addAction(
+                label,
+                lambda
+                    checked=False,
+                    value=value:
+                self.set_filter_rarity(
+                    value
+                ),
+            )
+
+        # =================================================
+        # EDIÇÃO
+        # =================================================
+
+        menu.addAction(
+            "Edição / Set...",
+            self.set_filter_set,
+        )
+
+        # =================================================
+        # CMC
+        # =================================================
+
+        cmc_menu = menu.addMenu(
+            "Valor de Mana"
+
+        )
+
+        cmc_menu.addAction(
+            "Qualquer",
+            lambda:
+            self.set_filter_cmc("all"),
+        )
+
+        for value in range(
+                0,
+                11,
+        ):
+            cmc_menu.addAction(
+                str(value),
+                lambda
+                    checked=False,
+                    value=value:
+                self.set_filter_cmc(
+                    value
+                ),
+            )
+
+        # =================================================
+        # IDENTIDADE
+        # =================================================
+
+        identity_menu = menu.addMenu(
+            "Identidade de cor"
+        )
+
+        identity_menu.addAction(
+            "Todas",
+            lambda:
+            self.set_filter_identity("all"),
+        )
+
+        for value in (
+                "W",
+                "U",
+                "B",
+                "R",
+                "G",
+                "WU",
+                "UB",
+                "BR",
+                "RG",
+                "GW",
+                "WUB",
+                "UBR",
+                "BRG",
+                "RGW",
+                "GWU",
+                "WUBR",
+                "UBRG",
+                "BRGW",
+                "RGWU",
+                "GWUB",
+                "WUBRG",
+        ):
+            identity_menu.addAction(
+                value,
+                lambda
+                    checked=False,
+                    value=value:
+                self.set_filter_identity(
+                    value
+                ),
+            )
+
+        # =================================================
+        # IDIOMA
+        # =================================================
+
+        language_menu = menu.addMenu(
+            "Idioma"
+        )
+
+        language_menu.addAction(
+            "Todos",
+            lambda:
+            self.set_filter_language("all"),
+        )
+
+        languages = {
+            "Inglês": "en",
+            "Português": "pt",
+            "Espanhol": "es",
+            "Francês": "fr",
+            "Alemão": "de",
+            "Italiano": "it",
+            "Japonês": "ja",
+            "Coreano": "ko",
+            "Chinês Simplificado": "zhs",
+            "Chinês Tradicional": "zht",
+            "Russo": "ru",
+        }
+
+        language_menu.addSeparator()
+
+        for label, code in languages.items():
+            language_menu.addAction(
+                label,
+                lambda
+                    checked=False,
+                    value=code:
+                self.set_filter_language(
+                    value
+                ),
+            )
+
         menu.addSeparator()
-        
-        # Limpar filtros
-        menu.addAction("Limpar filtros", self.clear_filters_menu)
-        
-        # Posicionar menu abaixo do botão
-        button_pos = self.filters_button.mapToGlobal(self.filters_button.rect().bottomLeft())
-        menu.exec(button_pos)
-    
+
+        menu.addAction(
+            "Limpar filtros",
+            self.clear_filters_menu,
+        )
+
+        button_pos = (
+            self.filters_button.mapToGlobal(
+                self.filters_button.rect().bottomLeft()
+            )
+        )
+
+        menu.exec(
+            button_pos
+        )
     def set_filter_color(self, color):
         """Define o filtro de cor"""
         self.filter_color = color
@@ -3757,13 +4736,162 @@ class DeckScryfallPanel(QFrame):
         """Define o filtro de raridade"""
         self.filter_rarity = rarity
         self.apply_filters_with_ui()
-    
-    def clear_filters_menu(self):
-        """Limpa todos os filtros do menu"""
+
+    def set_filter_subtype(
+            self,
+    ):
+        from PySide6.QtWidgets import (
+            QInputDialog,
+        )
+
+        value, accepted = (
+            QInputDialog.getText(
+                self,
+                "Subtipo",
+                "Digite o subtipo da carta:",
+            )
+        )
+
+        if not accepted:
+            return
+
+        self.filter_subtype = (
+            value.strip()
+        )
+
+        self.perform_search_again()
+
+    def set_filter_set(
+            self,
+    ):
+        from PySide6.QtWidgets import (
+            QInputDialog,
+        )
+
+        value, accepted = (
+            QInputDialog.getText(
+                self,
+                "Edição",
+                "Digite o código da edição:",
+            )
+        )
+
+        if not accepted:
+            return
+
+        self.filter_set = (
+            value.strip()
+        )
+
+        self.perform_search_again()
+
+    def set_filter_cmc(
+            self,
+            value,
+    ):
+        self.filter_cmc = value
+        self.perform_search_again()
+
+    def set_filter_identity(
+            self,
+            value,
+    ):
+        self.filter_color_identity = value
+        self.perform_search_again()
+
+    def set_filter_language(
+            self,
+            value,
+    ):
+        self.filter_language = value
+        self.perform_search_again()
+
+    def perform_search_again(
+            self,
+    ):
+        text = (
+            self.search_input
+            .text()
+            .strip()
+        )
+
+        if not text:
+            return
+
+        self.current_search_id += 1
+
+        search_id = (
+            self.current_search_id
+        )
+
+        filters = {
+            "color":
+                self.filter_color,
+
+            "type":
+                self.filter_type,
+
+            "subtype":
+                self.filter_subtype,
+
+            "rarity":
+                self.filter_rarity,
+
+            "set":
+                self.filter_set,
+
+            "cmc":
+                self.filter_cmc,
+
+            "color_identity":
+                self.filter_color_identity,
+
+            "language":
+                self.filter_language,
+        }
+
+        worker = ScryfallWorker(
+            text,
+            filters,
+        )
+
+        worker.signals.finished.connect(
+            lambda
+                cards,
+                sid=search_id:
+            self._scryfall_search_finished(
+                sid,
+                cards,
+            )
+        )
+
+        worker.signals.error.connect(
+            lambda
+                error,
+                sid=search_id:
+            self._scryfall_search_error(
+                sid,
+                error,
+            )
+        )
+
+        self.search_pool.start(
+            worker
+        )
+
+    def clear_filters_menu(
+            self,
+    ):
         self.filter_color = "all"
         self.filter_type = "all"
+        self.filter_subtype = ""
         self.filter_rarity = "all"
-        self.apply_filters_with_ui()
+        self.filter_set = ""
+        self.filter_cmc = "all"
+        self.filter_color_identity = "all"
+        self.filter_language = "all"
+
+        self.perform_search_again()
     
     def apply_filters_with_ui(self):
         """Aplica filtros com atualização da UI"""
@@ -3900,7 +5028,6 @@ class DeckScryfallPanel(QFrame):
     def search_scryfall(
             self,
     ):
-
         text = (
             self.search_input
             .text()
@@ -3908,6 +5035,12 @@ class DeckScryfallPanel(QFrame):
         )
 
         if not text:
+            self.results_list.clear()
+
+            self.status_label.setText(
+                "Digite o nome de uma carta."
+            )
+
             return
 
         self.current_search_id += 1
@@ -3922,9 +5055,46 @@ class DeckScryfallPanel(QFrame):
             "Pesquisando no Scryfall..."
         )
 
+        filters = {
+            "color":
+                self.filter_color,
+
+            "type":
+                self.filter_type,
+
+            "subtype":
+                self.filter_subtype,
+
+            "rarity":
+                self.filter_rarity,
+
+            "set":
+                self.filter_set,
+
+            "cmc":
+                self.filter_cmc,
+
+            "color_identity":
+                self.filter_color_identity,
+
+            "language":
+                self.filter_language,
+        }
+
         worker = ScryfallWorker(
-            text
+            text,
+            filters,
         )
+
+        # IMPORTANTE:
+        # impede que o QThreadPool destrua
+        # o worker antes dos sinais serem
+        # processados pela thread principal.
+
+
+        self._active_workers[
+            search_id
+        ] = worker
 
         worker.signals.finished.connect(
             lambda cards,
@@ -3947,6 +5117,9 @@ class DeckScryfallPanel(QFrame):
         self.search_pool.start(
             worker
         )
+    # =====================================================
+    # SCRYFALL — RESULTADO
+    # =====================================================
 
     # =====================================================
     # SCRYFALL — RESULTADO
@@ -3957,6 +5130,10 @@ class DeckScryfallPanel(QFrame):
             search_id,
             cards,
     ):
+        self._active_workers.pop(
+            search_id,
+            None,
+        )
 
         if (
                 search_id
@@ -3973,9 +5150,9 @@ class DeckScryfallPanel(QFrame):
 
         self.all_cards = cards
 
-        # Aplicar filtros aos resultados
-        self.apply_filters()
+        self.filtered_cards = cards
 
+        self.apply_filters()
     # =====================================================
     # SCRYFALL — ERRO
     # =====================================================
@@ -3985,6 +5162,10 @@ class DeckScryfallPanel(QFrame):
             search_id,
             error,
     ):
+        self._active_workers.pop(
+            search_id,
+            None,
+        )
 
         if (
                 search_id
@@ -4002,6 +5183,7 @@ class DeckScryfallPanel(QFrame):
             "[SCRYFALL] Erro:",
             error,
         )
+
     # =====================================================
     # RENDERIZAR RESULTADOS
     # =====================================================
@@ -4525,246 +5707,6 @@ class DeckNameDialog(QDialog):
 # DETALHES DA CARTA
 # =========================================================
 
-class DeckCardDetailsDialog(QDialog):
-
-    def __init__(
-        self,
-        card,
-        pixmap=None,
-        parent=None,
-    ):
-        super().__init__(parent)
-
-        self.setWindowTitle(
-            card.get(
-                "name",
-                "Carta",
-            )
-        )
-
-        self.setMinimumSize(
-            760,
-            620,
-        )
-
-        self.setStyleSheet(
-            DARK_THEME
-        )
-
-        layout = QHBoxLayout(
-            self
-        )
-
-        layout.setContentsMargins(
-            24,
-            24,
-            24,
-            24,
-        )
-
-        layout.setSpacing(
-            24
-        )
-
-        self.image_label = QLabel()
-
-        self.image_label.setObjectName(
-            "CardDetailImage"
-        )
-
-        self.image_label.setAlignment(
-            Qt.AlignmentFlag.AlignCenter
-        )
-
-        self.image_label.setFixedSize(
-            320,
-            450,
-        )
-
-        if (
-            pixmap
-            and not pixmap.isNull()
-        ):
-
-            self.set_image(
-                pixmap
-            )
-
-        else:
-
-            self.image_label.setText(
-                "Imagem indisponível"
-            )
-
-        layout.addWidget(
-            self.image_label
-        )
-
-        info = QWidget()
-
-        info_layout = QVBoxLayout(
-            info
-        )
-
-        info_layout.setContentsMargins(
-            0,
-            0,
-            0,
-            0,
-        )
-
-        info_layout.setSpacing(
-            10
-        )
-
-        name = QLabel(
-            card.get(
-                "name",
-                "—",
-            )
-        )
-
-        name.setObjectName(
-            "CardDetailName"
-        )
-
-        name.setWordWrap(
-            True
-        )
-
-        info_layout.addWidget(
-            name
-        )
-
-        mana_cost = card.get(
-            "mana_cost"
-        )
-
-        if mana_cost:
-
-            mana = ManaSymbolsWidget(
-                mana_cost,
-                symbol_size=26,
-            )
-
-            info_layout.addWidget(
-                mana
-            )
-
-        type_label = QLabel(
-            card.get(
-                "type_line"
-            )
-            or "—"
-        )
-
-        type_label.setObjectName(
-            "CardDetailType"
-        )
-
-        type_label.setWordWrap(
-            True
-        )
-
-        info_layout.addWidget(
-            type_label
-        )
-
-        set_label = QLabel(
-            (
-                f"Edição: "
-                f"{card.get('set_name') or '—'}\n"
-                f"Número: "
-                f"{card.get('collector_number') or '—'}"
-            )
-        )
-
-        set_label.setObjectName(
-            "CardDetailSet"
-        )
-
-        info_layout.addWidget(
-            set_label
-        )
-
-        quantity_label = QLabel(
-            f"Na coleção: "
-            f"{card.get('quantity', 0)}"
-        )
-
-        quantity_label.setObjectName(
-            "CardDetailQuantity"
-        )
-
-        info_layout.addWidget(
-            quantity_label
-        )
-
-        oracle = QLabel(
-            card.get(
-                "oracle_text"
-            )
-            or "Sem texto de regras."
-        )
-
-        oracle.setObjectName(
-            "CardDetailText"
-        )
-
-        oracle.setWordWrap(
-            True
-        )
-
-        oracle.setAlignment(
-            Qt.AlignmentFlag.AlignTop
-        )
-
-        oracle.setSizePolicy(
-            QSizePolicy.Policy.Expanding,
-            QSizePolicy.Policy.Expanding,
-        )
-
-        info_layout.addWidget(
-            oracle
-        )
-
-        buttons = QDialogButtonBox(
-            QDialogButtonBox.StandardButton.Close
-        )
-
-        buttons.rejected.connect(
-            self.reject
-        )
-
-        buttons.accepted.connect(
-            self.accept
-        )
-
-        info_layout.addWidget(
-            buttons
-        )
-
-        layout.addWidget(
-            info
-        )
-
-    def set_image(
-        self,
-        pixmap,
-    ):
-
-        scaled = pixmap.scaled(
-            320,
-            450,
-            Qt.AspectRatioMode.KeepAspectRatio,
-            Qt.TransformationMode.SmoothTransformation,
-        )
-
-        self.image_label.setPixmap(
-            scaled
-        )
-
-        self.image_label.setText("")
 
 
 # =========================================================
@@ -5073,6 +6015,22 @@ class DecksPage(QWidget):
 
         toolbar.addWidget(
             self.deck_total_label
+        )
+
+        self.export_button = QPushButton(
+            "Exportar"
+        )
+
+        self.export_button.setObjectName(
+            "DeckToolbarButton"
+        )
+
+        self.export_button.clicked.connect(
+            self.export_current_deck
+        )
+
+        toolbar.addWidget(
+            self.export_button
         )
 
         self.rename_button = QPushButton(
@@ -6111,6 +7069,44 @@ class DecksPage(QWidget):
 
                 column = index % columns
 
+                # Carregar imagem SÍNCRONA antes de adicionar ao grid
+                image_path = _get_card_value(
+                    card,
+                    "image_path",
+                    11,
+                )
+
+                pixmap = _load_pixmap(
+                    image_path
+                )
+
+                if pixmap:
+                    scaled = pixmap.scaled(
+                        156,
+                        226,
+                        Qt.AspectRatioMode.KeepAspectRatio,
+                        Qt.TransformationMode.SmoothTransformation,
+                    )
+
+                    frame.image_label.setPixmap(
+                        scaled
+                    )
+
+                    frame.image_label.setText("")
+                else:
+                    # Usar card.png como placeholder
+                    if CARD_ICON_PATH.exists():
+                        placeholder = QPixmap(str(CARD_ICON_PATH))
+                        if not placeholder.isNull():
+                            scaled = placeholder.scaled(
+                                156,
+                                226,
+                                Qt.AspectRatioMode.KeepAspectRatio,
+                                Qt.TransformationMode.SmoothTransformation,
+                            )
+                            frame.image_label.setPixmap(scaled)
+                            frame.image_label.setText("")
+
                 self.cards_grid.addWidget(
                     frame,
                     row,
@@ -6118,197 +7114,9 @@ class DecksPage(QWidget):
                     Qt.AlignmentFlag.AlignTop,
                 )
 
-                self.load_deck_card_image(
-                    frame.image_label,
-                    card,
-                    generation,
-                )
-
         finally:
 
             self._rendering_cards = False
-
-    # =====================================================
-    # CARREGAR IMAGEM DA CARTA DO DECK
-    # =====================================================
-
-    def load_deck_card_image(
-        self,
-        label,
-        card,
-        generation,
-    ):
-
-        image_path = _get_card_value(
-            card,
-            "image_path",
-            11,
-        )
-
-        pixmap = _load_pixmap(
-            image_path
-        )
-
-        if pixmap:
-
-            scaled = pixmap.scaled(
-                156,
-                226,
-                Qt.AspectRatioMode.KeepAspectRatio,
-                Qt.TransformationMode.SmoothTransformation,
-            )
-
-            label.setPixmap(
-                scaled
-            )
-
-            label.setText("")
-
-            return
-
-        image_url = _get_card_value(
-            card,
-            "image_url",
-            9,
-        )
-
-        if not image_url:
-            return
-
-        card_id = _get_card_value(
-            card,
-            "id",
-            0,
-        )
-
-        cache_dir = (
-            BASE_DIR
-            / "cache"
-            / "cards"
-        )
-
-        cache_dir.mkdir(
-            parents=True,
-            exist_ok=True,
-        )
-
-        local_path = (
-            cache_dir
-            / f"{card_id}.jpg"
-        )
-
-        cached_pixmap = _load_pixmap(
-            local_path
-        )
-
-        if cached_pixmap:
-
-            scaled = cached_pixmap.scaled(
-                156,
-                226,
-                Qt.AspectRatioMode.KeepAspectRatio,
-                Qt.TransformationMode.SmoothTransformation,
-            )
-
-            label.setPixmap(
-                scaled
-            )
-
-            label.setText("")
-
-            return
-
-        task = ImageTask(
-            image_url,
-            local_path,
-            generation,
-        )
-
-        task.signals.finished.connect(
-            self._image_download_finished,
-        )
-
-        task.signals.failed.connect(
-            lambda url, error:
-            print(
-                "[DECK IMAGE] Falha:",
-                url,
-                error,
-            )
-        )
-
-        self.image_pool.start(
-            task
-        )
-
-    # =====================================================
-    # IMAGEM BAIXADA
-    # =====================================================
-
-    def _image_download_finished(
-        self,
-        url,
-        path,
-        data,
-        label,
-        generation,
-    ):
-
-        if generation != self._render_generation:
-            return
-
-        if not self.isVisible():
-            return
-
-        if not label:
-            return
-
-        try:
-
-            pixmap = QPixmap()
-
-            if not pixmap.loadFromData(
-                data
-            ):
-
-                pixmap = _load_pixmap(
-                    path
-                )
-
-            if (
-                not pixmap
-                or pixmap.isNull()
-            ):
-                return
-
-            self.image_cache[
-                str(path)
-            ] = pixmap
-            
-            # Limpar cache se necessário
-            self._cleanup_image_cache()
-
-            scaled = pixmap.scaled(
-                156,
-                226,
-                Qt.AspectRatioMode.KeepAspectRatio,
-                Qt.TransformationMode.SmoothTransformation,
-            )
-
-            if label:
-
-                label.setPixmap(
-                    scaled
-                )
-
-                label.setText("")
-
-        except Exception as error:
-
-            print(
-                "[DECK IMAGE] Erro ao aplicar imagem:",
-                error,
-            )
 
     # =====================================================
     # ALTERAR QUANTIDADE
@@ -6510,6 +7318,53 @@ class DecksPage(QWidget):
             self.stack.setCurrentWidget(
                 self.deck_page
             )
+
+    def export_current_deck(
+            self,
+    ):
+        if not self.current_deck_id:
+            QMessageBox.information(
+                self,
+                "Nenhum deck",
+                "Nenhum deck está aberto.",
+            )
+
+            return
+
+        cards = get_deck_cards(
+            self.current_deck_id
+        )
+
+        if not cards:
+            QMessageBox.information(
+                self,
+                "Deck vazio",
+                "Não há cartas neste deck para exportar.",
+            )
+
+            return
+
+        dialog = CollectionExportDialog(
+            cards,
+            self,
+        )
+
+        dialog.setWindowTitle(
+            f"Exportar deck — "
+            f"{self.current_deck_name}"
+        )
+
+        dialog.set_export_title(
+            self.current_deck_name
+        )
+
+        if (
+                dialog.exec()
+                != QDialog.DialogCode.Accepted
+        ):
+            return
+
+        dialog.export_cards()
 
     # =====================================================
     # EXCLUIR
@@ -6837,7 +7692,7 @@ class DecksPage(QWidget):
                 image_path
             )
 
-        dialog = DeckCardDetailsDialog(
+        dialog = CardDetailsDialog(
             card_dict,
             pixmap,
             self,

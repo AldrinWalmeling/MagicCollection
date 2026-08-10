@@ -56,6 +56,8 @@ class CollectionExportDialog(QDialog):
 
         self.cards = list(cards or [])
 
+        self.export_title = "coleção"
+
         self.setWindowTitle(
             "Exportar coleção"
         )
@@ -162,6 +164,225 @@ class CollectionExportDialog(QDialog):
         # =================================================
         # CAMPOS
         # =================================================
+
+        # =================================================
+        # FILTROS DAS CARTAS
+        # =================================================
+
+        filters_group = QGroupBox(
+            "Filtros das cartas"
+        )
+
+        filters_layout = QFormLayout(
+            filters_group
+        )
+
+        # -------------------------------------------------
+        # COR
+        # -------------------------------------------------
+
+        self.export_color_filter = QComboBox()
+
+        self.export_color_filter.addItem(
+            "Todas as cores",
+            "all",
+        )
+
+        self.export_color_filter.addItem(
+            "Branco",
+            "W",
+        )
+
+        self.export_color_filter.addItem(
+            "Azul",
+            "U",
+        )
+
+        self.export_color_filter.addItem(
+            "Preto",
+            "B",
+        )
+
+        self.export_color_filter.addItem(
+            "Vermelho",
+            "R",
+        )
+
+        self.export_color_filter.addItem(
+            "Verde",
+            "G",
+        )
+
+        self.export_color_filter.addItem(
+            "Incolor",
+            "C",
+        )
+
+        self.export_color_filter.addItem(
+            "Multicolor",
+            "M",
+        )
+
+        filters_layout.addRow(
+            "Cor:",
+            self.export_color_filter,
+        )
+
+        # -------------------------------------------------
+        # TIPO
+        # -------------------------------------------------
+
+        self.export_type_filter = QComboBox()
+
+        self.export_type_filter.addItem(
+            "Todos os tipos",
+            "all",
+        )
+
+        self.export_type_filter.addItem(
+            "Criatura",
+            "creature",
+        )
+
+        self.export_type_filter.addItem(
+            "Mágica Instantânea",
+            "instant",
+        )
+
+        self.export_type_filter.addItem(
+            "Feitiço",
+            "sorcery",
+        )
+
+        self.export_type_filter.addItem(
+            "Encantamento",
+            "enchantment",
+        )
+
+        self.export_type_filter.addItem(
+            "Artefato",
+            "artifact",
+        )
+
+        self.export_type_filter.addItem(
+            "Planeswalker",
+            "planeswalker",
+        )
+
+        self.export_type_filter.addItem(
+            "Terreno",
+            "land",
+        )
+
+        filters_layout.addRow(
+            "Tipo:",
+            self.export_type_filter,
+        )
+
+        # -------------------------------------------------
+        # EDIÇÃO
+        # -------------------------------------------------
+
+        self.export_set_filter = QComboBox()
+
+        self.export_set_filter.addItem(
+            "Todas as edições",
+            "all",
+        )
+
+        sets = set()
+
+        for card in self.cards:
+
+            if isinstance(card, dict):
+
+                set_name = (
+                        card.get(
+                            "set_name"
+                        )
+                        or card.get(
+                    "set"
+                )
+                        or ""
+                )
+
+            else:
+
+                try:
+                    set_name = (
+                        card[4]
+                        if len(card) > 4
+                        else ""
+                    )
+
+                except (
+                        IndexError,
+                        TypeError,
+                ):
+                    set_name = ""
+
+            set_name = str(
+                set_name or ""
+            ).strip()
+
+            if set_name:
+                sets.add(
+                    set_name
+                )
+
+        for set_name in sorted(
+                sets,
+                key=str.lower,
+        ):
+            self.export_set_filter.addItem(
+                set_name,
+                set_name,
+            )
+
+        filters_layout.addRow(
+            "Edição:",
+            self.export_set_filter,
+        )
+
+        # -------------------------------------------------
+        # IDIOMA
+        # -------------------------------------------------
+
+        self.export_language_filter = QComboBox()
+
+        self.export_language_filter.addItem(
+            "Todos os idiomas",
+            "all",
+        )
+
+        languages = {
+            "Inglês": "en",
+            "Português": "pt",
+            "Espanhol": "es",
+            "Francês": "fr",
+            "Alemão": "de",
+            "Italiano": "it",
+            "Japonês": "ja",
+            "Coreano": "ko",
+            "Chinês Simplificado": "zhs",
+            "Chinês Tradicional": "zht",
+            "Russo": "ru",
+        }
+
+        for label, code in languages.items():
+            self.export_language_filter.addItem(
+                label,
+                code,
+            )
+
+        filters_layout.addRow(
+            "Idioma:",
+            self.export_language_filter,
+        )
+
+        layout.addWidget(
+            filters_group
+        )
 
         fields_group = QGroupBox(
             "Campos da exportação"
@@ -470,13 +691,21 @@ class CollectionExportDialog(QDialog):
     # RESUMO
     # =====================================================
 
-    def update_summary(self):
+    def update_summary(
+            self,
+    ):
+        fields = (
+            self.selected_fields()
+        )
 
-        fields = self.selected_fields()
+        filtered_cards = (
+            self.get_filtered_cards()
+        )
 
         self.summary_label.setText(
             f"{len(fields)} campo(s) selecionado(s) "
-            f"• {len(self.cards)} carta(s)"
+            f"• {len(filtered_cards)} carta(s) "
+            f"de {len(self.cards)}"
         )
 
     # =====================================================
@@ -548,6 +777,273 @@ class CollectionExportDialog(QDialog):
             f'O modelo "{name}" foi salvo.',
         )
 
+    def set_export_title(
+            self,
+            title,
+    ):
+        title = str(
+            title or ""
+        ).strip()
+
+        if title:
+            self.export_title = title
+    def get_filtered_cards(
+            self,
+    ):
+        color_filter = (
+                self.export_color_filter
+                .currentData()
+                or "all"
+        )
+
+        type_filter = (
+                self.export_type_filter
+                .currentData()
+                or "all"
+        )
+
+        set_filter = (
+                self.export_set_filter
+                .currentData()
+                or "all"
+        )
+
+        language_filter = (
+                self.export_language_filter
+                .currentData()
+                or "all"
+        )
+
+        filtered = []
+
+        for card in self.cards:
+
+            # =================================================
+            # DADOS
+            # =================================================
+
+            if isinstance(
+                    card,
+                    dict,
+            ):
+
+                mana_cost = str(
+                    card.get(
+                        "mana_cost",
+                        "",
+                    )
+                    or ""
+                )
+
+                type_line = str(
+                    card.get(
+                        "type_line",
+                        "",
+                    )
+                    or ""
+                )
+
+                set_name = str(
+                    card.get(
+                        "set_name",
+                        card.get(
+                            "set",
+                            "",
+                        ),
+                    )
+                    or ""
+                )
+
+                language = str(
+                    card.get(
+                        "lang",
+                        "",
+                    )
+                    or ""
+                )
+
+            else:
+
+                try:
+                    mana_cost = str(
+                        card[6]
+                        if len(card) > 6
+                        else ""
+                    )
+
+                    type_line = str(
+                        card[7]
+                        if len(card) > 7
+                        else ""
+                    )
+
+                    set_name = str(
+                        card[4]
+                        if len(card) > 4
+                        else ""
+                    )
+
+                    language = str(
+                        card[3]
+                        if len(card) > 3
+                        else ""
+                    )
+
+                except (
+                        IndexError,
+                        TypeError,
+                ):
+                    continue
+
+            mana_cost = (
+                mana_cost
+                .strip()
+                .upper()
+            )
+
+            type_line = (
+                type_line
+                .strip()
+                .lower()
+            )
+
+            set_name = (
+                set_name
+                .strip()
+                .lower()
+            )
+
+            language = (
+                language
+                .strip()
+                .lower()
+            )
+
+            # =================================================
+            # COR
+            # =================================================
+
+            if color_filter != "all":
+
+                colors = set()
+
+                for symbol in (
+                        "W",
+                        "U",
+                        "B",
+                        "R",
+                        "G",
+                ):
+
+                    if (
+                            f"{{{symbol}}}"
+                            in mana_cost
+                    ):
+                        colors.add(
+                            symbol
+                        )
+
+                if color_filter == "C":
+
+                    if colors:
+                        continue
+
+                elif color_filter == "M":
+
+                    if len(colors) < 2:
+                        continue
+
+                elif color_filter not in colors:
+
+                    continue
+
+            # =================================================
+            # TIPO
+            # =================================================
+
+            if type_filter != "all":
+
+                type_map = {
+                    "creature": (
+                        "creature",
+                        "criatura",
+                    ),
+
+                    "instant": (
+                        "instant",
+                        "mágica instantânea",
+                    ),
+
+                    "sorcery": (
+                        "sorcery",
+                        "feitiço",
+                    ),
+
+                    "enchantment": (
+                        "enchantment",
+                        "encantamento",
+                    ),
+
+                    "artifact": (
+                        "artifact",
+                        "artefato",
+                    ),
+
+                    "planeswalker": (
+                        "planeswalker",
+                    ),
+
+                    "land": (
+                        "land",
+                        "terreno",
+                    ),
+                }
+
+                accepted = (
+                    type_map.get(
+                        type_filter,
+                        (),
+                    )
+                )
+
+                if not any(
+                        value in type_line
+                        for value in accepted
+                ):
+                    continue
+
+            # =================================================
+            # EDIÇÃO
+            # =================================================
+
+            if (
+                    set_filter != "all"
+                    and set_name
+                    != str(
+                set_filter
+            ).strip().lower()
+            ):
+                continue
+
+            # =================================================
+            # IDIOMA
+            # =================================================
+
+            if (
+                    language_filter != "all"
+                    and language
+                    != str(
+                language_filter
+            ).strip().lower()
+            ):
+                continue
+
+            filtered.append(
+                card
+            )
+
+        return filtered
+
     # =====================================================
     # VALIDAR
     # =====================================================
@@ -594,6 +1090,22 @@ class CollectionExportDialog(QDialog):
 
         config = self.get_config()
 
+        filtered_cards = (
+            self.get_filtered_cards()
+        )
+
+        if not filtered_cards:
+            QMessageBox.warning(
+                self,
+                "Nenhuma carta encontrada",
+                (
+                    "Nenhuma carta corresponde "
+                    "aos filtros selecionados."
+                ),
+            )
+
+            return False
+
         if not filepath:
 
             extension = config.format
@@ -601,7 +1113,7 @@ class CollectionExportDialog(QDialog):
             filepath, _ = QFileDialog.getSaveFileName(
                 self,
                 "Salvar exportação",
-                f"minha_colecao.{extension}",
+                f"{self.export_title}.{extension}",
                 (
                     "CSV (*.csv)"
                     if extension == "csv"
@@ -620,7 +1132,7 @@ class CollectionExportDialog(QDialog):
 
             export_collection_custom(
                 filepath,
-                self.cards,
+                filtered_cards,
                 config,
             )
 

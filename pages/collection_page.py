@@ -9,11 +9,17 @@ from PySide6.QtCore import (
     QRunnable,
     QThreadPool,
     QSettings,
+    QRect,
+    Property,
 )
 
 import shiboken6
 
 from PySide6.QtGui import QPixmap
+
+from components.card_details_dialog import (
+    CardDetailsDialog,
+)
 
 
 # =========================================================
@@ -210,23 +216,55 @@ class ScryfallTask(QRunnable):
 
 
 class ScryfallCardSignals(QObject):
-    finished = Signal(str, object)
-    failed = Signal(str, str)
+
+    finished = Signal(
+        str,
+        object,
+    )
+
+    failed = Signal(
+        str,
+        str,
+    )
 
 
 class ScryfallCardTask(QRunnable):
 
-    def __init__(self, name):
+    def __init__(
+        self,
+        name,
+        language="en",
+    ):
         super().__init__()
 
-        self.name = name
-        self.signals = ScryfallCardSignals()
+        self.name = str(
+            name or ""
+        ).strip()
+
+        self.language = (
+            language
+            or "en"
+        )
+
+        self.signals = (
+            ScryfallCardSignals()
+        )
 
     def run(self):
+
         try:
+
+            if not self.name:
+                self.signals.failed.emit(
+                    "",
+                    "Nome da carta vazio.",
+                )
+
+                return
+
             card_data = get_card_by_name(
-                name,
-                language=self.selected_language,
+                self.name,
+                language=self.language,
             )
 
             self.signals.finished.emit(
@@ -235,21 +273,16 @@ class ScryfallCardTask(QRunnable):
             )
 
         except Exception as error:
+
             print(
                 "[SCRYFALL] Erro ao buscar carta:",
                 error,
             )
 
             self.signals.failed.emit(
-                self.url,
+                self.name,
                 str(error),
-                self.label,
             )
-
-
-# =========================================================
-# TAREFA DE IMAGEM
-# =========================================================
 
 class ImageSignals(QObject):
     finished = Signal(str, str, bytes, object)
@@ -446,11 +479,18 @@ class CardImageLabel(QLabel):
 # CARD DA GRADE
 # =========================================================
 
+# =========================================================
+# CARD DA GRADE — COLLECTION
+# =========================================================
+
 class GridCardFrame(QFrame):
 
     doubleClicked = Signal()
 
-    def __init__(self, parent=None):
+    def __init__(
+        self,
+        parent=None,
+    ):
 
         super().__init__(parent)
 
@@ -484,6 +524,17 @@ class GridCardFrame(QFrame):
         )
 
         # =================================================
+        # TAMANHO BASE
+        # =================================================
+
+        self._base_width = 120
+        self._base_height = round(
+            120 * 88 / 63
+        )
+
+        self._hover_scale = 1.08
+
+        # =================================================
         # IMAGEM DA CARTA
         # =================================================
 
@@ -503,16 +554,30 @@ class GridCardFrame(QFrame):
             ""
         )
 
-        # Usar card.png como placeholder
+        self.image_label.setAttribute(
+            Qt.WidgetAttribute.WA_TransparentForMouseEvents,
+            True,
+        )
+
+        # Placeholder
         if CARD_ICON_PATH.exists():
-            pixmap = QPixmap(str(CARD_ICON_PATH))
+
+            pixmap = QPixmap(
+                str(CARD_ICON_PATH)
+            )
+
             if not pixmap.isNull():
+
                 scaled = pixmap.scaled(
-                    self.image_label.size(),
+                    self._base_width,
+                    self._base_height,
                     Qt.AspectRatioMode.KeepAspectRatio,
                     Qt.TransformationMode.SmoothTransformation,
                 )
-                self.image_label.setPixmap(scaled)
+
+                self.image_label.setPixmap(
+                    scaled
+                )
 
         self.image_label.doubleClicked.connect(
             self.doubleClicked.emit
@@ -539,22 +604,13 @@ class GridCardFrame(QFrame):
             27
         )
 
-
-
-        self.quantity_badge.move(
-            8,
-            8,
-        )
-
         self.quantity_badge.setAttribute(
             Qt.WidgetAttribute.WA_TransparentForMouseEvents,
             True,
         )
 
-        self.quantity_badge.show()
-
         # =================================================
-        # CONTROLES DE QUANTIDADE
+        # CONTROLES
         # =================================================
 
         self.controls = QFrame(
@@ -584,6 +640,10 @@ class GridCardFrame(QFrame):
             Qt.AlignmentFlag.AlignCenter
         )
 
+        # -------------------------------------------------
+        # BOTÃO -
+        # -------------------------------------------------
+
         self.minus_button = QPushButton(
             "−",
             self.controls,
@@ -612,6 +672,10 @@ class GridCardFrame(QFrame):
             Qt.AlignmentFlag.AlignCenter,
         )
 
+        # -------------------------------------------------
+        # QUANTIDADE
+        # -------------------------------------------------
+
         self.control_quantity = QLabel(
             "0",
             self.controls,
@@ -635,6 +699,10 @@ class GridCardFrame(QFrame):
             0,
             Qt.AlignmentFlag.AlignCenter,
         )
+
+        # -------------------------------------------------
+        # BOTÃO +
+        # -------------------------------------------------
 
         self.plus_button = QPushButton(
             "+",
@@ -666,19 +734,12 @@ class GridCardFrame(QFrame):
 
         self.controls.adjustSize()
 
-        self.controls.move(
-            self.width()
-            - self.controls.width()
-            - 4,
-            self.height()
-            - self.controls.height()
-            - 4,
-        )
-
         self.controls.hide()
 
+        self._hovering = False
+
     # =====================================================
-    # TAMANHO
+    # TAMANHO NORMAL
     # =====================================================
 
     def set_card_width(
@@ -695,10 +756,15 @@ class GridCardFrame(QFrame):
             width * 88 / 63
         )
 
+        self._base_width = width
+        self._base_height = height
+
         self.setFixedSize(
             width,
             height,
         )
+
+        self._normal_geometry = self.geometry()
 
         self.image_label.setGeometry(
             0,
@@ -707,49 +773,14 @@ class GridCardFrame(QFrame):
             height,
         )
 
-        # -------------------------------------------------
-        # CONTROLES INFERIORES
-        # -------------------------------------------------
-
-        overlay_height = 48
-
-        self.controls.setGeometry(
-            0,
-            height - overlay_height,
-            width,
-            overlay_height,
-        )
-
-        self.controls.raise_()
-
-        # -------------------------------------------------
-        # BADGE SUPERIOR DIREITO
-        # -------------------------------------------------
-
-        badge_width = 38
-        badge_height = 27
-
-        margin_right = 7
-        margin_top = 7
-
-        self.quantity_badge.setGeometry(
-            width
-            - badge_width
-            - margin_right,
-            margin_top,
-            badge_width,
-            badge_height,
-        )
-
-        self.quantity_badge.raise_()
+        self._update_overlays()
 
     # =====================================================
-    # RESIZE
+    # OVERLAYS
     # =====================================================
 
-    def resizeEvent(
+    def _update_overlays(
         self,
-        event,
     ):
 
         width = self.width()
@@ -781,8 +812,15 @@ class GridCardFrame(QFrame):
 
         self.quantity_badge.adjustSize()
 
-        badge_width = self.quantity_badge.width()
-        badge_height = self.quantity_badge.height()
+        badge_width = max(
+            38,
+            self.quantity_badge.width(),
+        )
+
+        badge_height = max(
+            27,
+            self.quantity_badge.height(),
+        )
 
         margin_right = 7
         margin_top = 7
@@ -799,90 +837,130 @@ class GridCardFrame(QFrame):
         self.controls.raise_()
         self.quantity_badge.raise_()
 
+    # =====================================================
+    # RESIZE
+    # =====================================================
+
+    def resizeEvent(
+        self,
+        event,
+    ):
+
         super().resizeEvent(
             event
         )
 
+        self._update_overlays()
+
     # =====================================================
-    # ATUALIZAR QUANTIDADE
+    # QUANTIDADE
     # =====================================================
 
     def set_quantity(
-            self,
-            quantity,
+        self,
+        quantity,
     ):
+
         quantity = max(
             0,
             int(quantity or 0),
         )
 
-        # Badge permanente
         self.quantity_badge.setText(
             f"×{quantity}"
         )
 
-        # Número dentro dos controles de hover
         self.control_quantity.setText(
             str(quantity)
         )
 
+    # =====================================================
+    # COMEÇAR ZOOM
+    # =====================================================
 
-    # =====================================================
-    # HOVER
-    # =====================================================
-    def resizeEvent(
-            self,
-            event,
+    def _animate_hover(
+        self,
+        hovering,
     ):
 
-        super().resizeEvent(
-            event
-        )
+        self._hovering = hovering
 
-        self.image_label.setGeometry(
-            0,
-            0,
-            self.width(),
-            self.height(),
-        )
+        # -------------------------------------------------
+        # Controles e Badge
+        # -------------------------------------------------
 
-        self.controls.adjustSize()
+        if hovering:
 
-        control_margin_x = 10
-        control_margin_y = -2
+            self.controls.show()
 
-        self.controls.move(
-            self.width()
-            - self.controls.width()
-            - control_margin_x,
-            self.height()
-            - self.controls.height()
-            - control_margin_y,
-        )
+            # Ficar acima das cartas vizinhas
+            self.raise_()
+
+            self.quantity_badge.raise_()
+            self.controls.raise_()
+
+        else:
+
+            self.controls.hide()
+
+        # Removida animação de zoom que causava reposicionamento
+        # O hover agora é puramente visual via CSS
+
+    # =====================================================
+    # ENTER
+    # =====================================================
 
     def enterEvent(
-            self,
-            event,
+        self,
+        event,
     ):
 
-        self.controls.show()
-        self.controls.raise_()
-        self.quantity_badge.raise_()
+        self._animate_hover(
+            True
+        )
 
         super().enterEvent(
             event
         )
 
     # =====================================================
+    # LEAVE
+    # =====================================================
 
     def leaveEvent(
-            self,
-            event,
+        self,
+        event,
     ):
 
-        self.controls.hide()
+        self._animate_hover(
+            False
+        )
 
         super().leaveEvent(
+            event
+        )
+
+    # =====================================================
+    # DOUBLE CLICK
+    # =====================================================
+
+    def mouseDoubleClickEvent(
+        self,
+        event,
+    ):
+
+        if (
+            event.button()
+            == Qt.MouseButton.LeftButton
+        ):
+
+            self.doubleClicked.emit()
+
+            event.accept()
+
+            return
+
+        super().mouseDoubleClickEvent(
             event
         )
 # =========================================================
@@ -3348,28 +3426,92 @@ class CollectionPage(QWidget):
 
         return colors
 
-
     def card_matches_type(
-        self,
-        card,
-        type_filter,
+            self,
+            card,
+            type_filter,
     ):
-
-        if type_filter == "all":
+        if (
+                not type_filter
+                or type_filter == "all"
+        ):
             return True
 
-        if not card or len(card) <= 7:
+        if not card:
             return False
 
-        type_line = str(
-            card[7] if len(card) > 7 else ""
+        try:
+            type_line = str(
+                card[7]
+                if len(card) > 7
+                else ""
+            ).strip().lower()
+
+        except (
+                IndexError,
+                TypeError,
+        ):
+            return False
+
+        if not type_line:
+            return False
+
+        type_map = {
+            "Criatura": (
+                "criatura",
+                "creature",
+            ),
+
+            "Mágica Instantânea": (
+                "mágica instantânea",
+                "instant",
+            ),
+
+            "Feitiço": (
+                "feitiço",
+                "sorcery",
+            ),
+
+            "Encantamento": (
+                "encantamento",
+                "enchantment",
+            ),
+
+            "Artefato": (
+                "artefato",
+                "artifact",
+            ),
+
+            "Planeswalker": (
+                "planeswalker",
+            ),
+
+            "Terreno": (
+                "terreno",
+                "land",
+            ),
+        }
+
+        accepted_types = (
+            type_map.get(
+                type_filter
+            )
         )
 
-        return (
-            type_filter.lower()
-            in type_line.lower()
-        )
+        if not accepted_types:
+            # Fallback para filtros futuros
+            return (
+                    str(type_filter)
+                    .strip()
+                    .lower()
+                    in type_line
+            )
 
+        return any(
+            accepted_type in type_line
+            for accepted_type
+            in accepted_types
+        )
     def card_matches_set(
         self,
         card,
@@ -3467,78 +3609,110 @@ class CollectionPage(QWidget):
             )
 
         return cards
-    def apply_collection_filters(
-        self,
-    ):
 
-        if not hasattr(
+    def apply_collection_filters(
             self,
-            "color_filter",
+    ):
+        if not hasattr(
+                self,
+                "color_filter",
         ):
             return
 
         color = (
-            self.color_filter.currentData()
+                self.color_filter.currentData()
+                or "all"
         )
 
         card_type = (
-            self.type_filter.currentData()
+                self.type_filter.currentData()
+                or "all"
         )
 
         set_name = (
-            self.set_filter.currentData()
+                self.set_filter.currentData()
+                or "all"
         )
 
         sort_mode = (
-            self.sort_filter.currentData()
+                self.sort_filter.currentData()
+                or "name_asc"
         )
 
-        if color is None:
-            color = "all"
-
-        if card_type is None:
-            card_type = "all"
-
-        if set_name is None:
-            set_name = "all"
-
-        if sort_mode is None:
-            sort_mode = "name_asc"
-
-        self.active_color_filter = color
-        self.active_type_filter = card_type
-        self.active_set_filter = set_name
-        self.active_sort = sort_mode
-
-        cards = list(
-            self.search_result_cards
+        self.active_color_filter = (
+            color
         )
+
+        self.active_type_filter = (
+            card_type
+        )
+
+        self.active_set_filter = (
+            set_name
+        )
+
+        self.active_sort = (
+            sort_mode
+        )
+
+        # =================================================
+        # FONTE DOS DADOS
+        # =================================================
+
+        search_text = ""
+
+        if hasattr(
+                self,
+                "search_input",
+        ):
+            search_text = (
+                self.search_input
+                .text()
+                .strip()
+            )
+
+        if search_text:
+            cards = list(
+                self.search_result_cards
+            )
+        else:
+            cards = list(
+                self.all_collection_cards
+            )
+
+        # =================================================
+        # FILTROS
+        # =================================================
 
         filtered = []
 
         for card in cards:
 
             if not self.card_matches_color(
-                card,
-                color,
+                    card,
+                    color,
             ):
                 continue
 
             if not self.card_matches_type(
-                card,
-                card_type,
+                    card,
+                    card_type,
             ):
                 continue
 
             if not self.card_matches_set(
-                card,
-                set_name,
+                    card,
+                    set_name,
             ):
                 continue
 
             filtered.append(
                 card
             )
+
+        # =================================================
+        # ORDENAÇÃO
+        # =================================================
 
         filtered = (
             self.sort_collection_cards(
@@ -3547,12 +3721,17 @@ class CollectionPage(QWidget):
             )
         )
 
-        self.display_cards(
+        # =================================================
+        # MOSTRAR
+        # =================================================
+
+        self.current_cards = list(
             filtered
         )
 
-        self.save_collection_filter_settings()
-
+        self.display_cards(
+            self.current_cards
+        )
     def clear_collection_filters(
         self,
     ):
@@ -5793,302 +5972,3 @@ class CollectionPage(QWidget):
             )
 
 
-# =========================================================
-# DETALHES
-# =========================================================
-
-class CardDetailsDialog(QDialog):
-
-
-    def __init__(
-        self,
-        card,
-        pixmap=None,
-        parent=None,
-    ):
-
-        super().__init__(
-            parent
-        )
-
-        self.setWindowTitle(
-            card.get(
-                "name",
-                "Carta",
-            )
-        )
-
-        self.setMinimumSize(
-            760,
-            620,
-        )
-
-        self.setStyleSheet(
-            DARK_THEME
-        )
-
-        layout = QHBoxLayout(
-            self
-        )
-
-        layout.setContentsMargins(
-            32,
-            32,
-            32,
-            32,
-        )
-
-        layout.setSpacing(
-            32
-        )
-
-        # =================================================
-        # IMAGEM (LADO ESQUERDO)
-        # =================================================
-
-        self.image_label = QLabel()
-
-        self.image_label.setFixedSize(
-            320,
-            450,
-        )
-
-        self.image_label.setScaledContents(
-            False
-        )
-
-        self.image_label.setAlignment(
-            Qt.AlignmentFlag.AlignCenter
-        )
-
-        self.image_label.setObjectName(
-            "CardDetailImage"
-        )
-
-        if (
-            pixmap
-            and not pixmap.isNull()
-        ):
-
-            scaled = pixmap.scaled(
-                320,
-                450,
-                Qt.AspectRatioMode.KeepAspectRatio,
-                Qt.TransformationMode.SmoothTransformation,
-            )
-
-            self.image_label.setPixmap(
-                scaled
-            )
-
-        else:
-
-            self.image_label.setText(
-                ""
-            )
-            
-            # Usar card.png como placeholder
-            if CARD_ICON_PATH.exists():
-                placeholder = QPixmap(str(CARD_ICON_PATH))
-                if not placeholder.isNull():
-                    scaled = placeholder.scaled(
-                        320,
-                        450,
-                        Qt.AspectRatioMode.KeepAspectRatio,
-                        Qt.TransformationMode.SmoothTransformation,
-                    )
-                    self.image_label.setPixmap(scaled)
-
-        layout.addWidget(
-            self.image_label,
-            0,
-            Qt.AlignmentFlag.AlignTop
-        )
-
-        # =================================================
-        # INFORMAÇÕES (LADO DIREITO)
-        # =================================================
-
-        info_widget = QWidget()
-
-        info_layout = QVBoxLayout(
-            info_widget
-        )
-
-        info_layout.setContentsMargins(
-            0,
-            0,
-            0,
-            0,
-        )
-
-        info_layout.setSpacing(
-            16
-        )
-
-        # =================================================
-        # NOME (TÍTULO PRINCIPAL)
-        # =================================================
-
-        name_label = QLabel(
-            card.get(
-                "name",
-                "—",
-            )
-        )
-
-        name_label.setObjectName(
-            "CardDetailName"
-        )
-
-        name_label.setWordWrap(
-            True
-        )
-
-        info_layout.addWidget(
-            name_label
-        )
-
-        # =================================================
-        # SEPARADOR
-        # =================================================
-
-        separator1 = QFrame()
-        separator1.setObjectName("CardDetailSeparator")
-        separator1.setFrameShape(QFrame.Shape.HLine)
-        separator1.setFixedHeight(2)
-        info_layout.addWidget(separator1)
-
-        # =================================================
-        # CARACTERÍSTICAS
-        # =================================================
-
-        characteristics_widget = QWidget()
-        characteristics_layout = QVBoxLayout(
-            characteristics_widget
-        )
-        characteristics_layout.setContentsMargins(0, 0, 0, 0)
-        characteristics_layout.setSpacing(8)
-
-        # Custo de Mana
-        if card.get("mana_cost"):
-            mana_widget = ManaSymbolsWidget(
-                card.get("mana_cost"),
-                symbol_size=24,
-            )
-            mana_widget.setParent(characteristics_widget)
-            characteristics_layout.addWidget(mana_widget)
-
-        # Tipo
-        if card.get("type_line"):
-            type_label = QLabel(
-                card.get("type_line", "—")
-            )
-            type_label.setObjectName("CardDetailType")
-            type_label.setWordWrap(True)
-            characteristics_layout.addWidget(type_label)
-
-        # Poder/Resistência
-        power = card.get("power")
-        toughness = card.get("toughness")
-        if power or toughness:
-            pt_text = f"{power or '?'}/{toughness or '?'}"
-            pt_label = QLabel(pt_text)
-            pt_label.setObjectName("CardDetailPT")
-            characteristics_layout.addWidget(pt_label)
-
-        if characteristics_layout.count() > 0:
-            info_layout.addWidget(characteristics_widget)
-
-        # =================================================
-        # SEPARADOR
-        # =================================================
-
-        separator2 = QFrame()
-        separator2.setObjectName("CardDetailSeparator")
-        separator2.setFrameShape(QFrame.Shape.HLine)
-        separator2.setFixedHeight(2)
-        info_layout.addWidget(separator2)
-
-        # =================================================
-        # INFORMAÇÕES ADICIONAIS
-        # =================================================
-
-        details_widget = QWidget()
-        details_layout = QVBoxLayout(
-            details_widget
-        )
-        details_layout.setContentsMargins(0, 0, 0, 0)
-        details_layout.setSpacing(8)
-
-        # Nome impresso
-        if card.get("printed_name"):
-            printed_label = QLabel(
-                f"Nome impresso: {card.get('printed_name')}"
-            )
-            printed_label.setObjectName("CardDetailField")
-            printed_label.setWordWrap(True)
-            details_layout.addWidget(printed_label)
-
-        # Set
-        if card.get("set_name"):
-            set_label = QLabel(
-                f"Edição: {card.get('set_name')}"
-            )
-            set_label.setObjectName("CardDetailField")
-            set_label.setWordWrap(True)
-            details_layout.addWidget(set_label)
-
-        # Número coletor
-        if card.get("collector_number"):
-            collector_label = QLabel(
-                f"Número: {card.get('collector_number')}"
-            )
-            collector_label.setObjectName("CardDetailField")
-            details_layout.addWidget(collector_label)
-
-        # Idioma
-        if card.get("lang"):
-            lang_label = QLabel(
-                f"Idioma: {card.get('lang')}"
-            )
-            lang_label.setObjectName("CardDetailField")
-            details_layout.addWidget(lang_label)
-
-        if details_layout.count() > 0:
-            info_layout.addWidget(details_widget)
-
-        # =================================================
-        # SEPARADOR
-        # =================================================
-
-        separator3 = QFrame()
-        separator3.setObjectName("CardDetailSeparator")
-        separator3.setFrameShape(QFrame.Shape.HLine)
-        separator3.setFixedHeight(2)
-        info_layout.addWidget(separator3)
-
-        # =================================================
-        # TEXTO ORACLE
-        # =================================================
-
-        if card.get("oracle_text"):
-            oracle_label = QLabel(
-                card.get("oracle_text", "")
-            )
-            oracle_label.setObjectName("CardDetailOracle")
-            oracle_label.setWordWrap(True)
-            oracle_label.setAlignment(
-                Qt.AlignmentFlag.AlignTop
-            )
-            info_layout.addWidget(
-                oracle_label,
-                1
-            )
-
-        info_layout.addStretch()
-
-        layout.addWidget(
-            info_widget,
-            1
-        )

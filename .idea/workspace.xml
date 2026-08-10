@@ -5,12 +5,13 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="14717f08-37a0-4c50-85ce-aa9bd2e175ab" name="Changes" comment="">
+      <change afterPath="$PROJECT_DIR$/components/card_details_dialog.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/data/export_presets.json" beforeDir="false" afterPath="$PROJECT_DIR$/data/export_presets.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/database.py" beforeDir="false" afterPath="$PROJECT_DIR$/database.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/export_dialog.py" beforeDir="false" afterPath="$PROJECT_DIR$/export_dialog.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/pages/collection_page.py" beforeDir="false" afterPath="$PROJECT_DIR$/pages/collection_page.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/pages/decks_page.py" beforeDir="false" afterPath="$PROJECT_DIR$/pages/decks_page.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/save/save.db" beforeDir="false" afterPath="$PROJECT_DIR$/save/save.db" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/services/collection_export.py" beforeDir="false" afterPath="$PROJECT_DIR$/services/collection_export.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/services/scryfall.py" beforeDir="false" afterPath="$PROJECT_DIR$/services/scryfall.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />

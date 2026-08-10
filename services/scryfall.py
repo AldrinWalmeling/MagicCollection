@@ -942,3 +942,67 @@ def get_card_by_name(
 
     return card
 
+# =========================================================
+# PESQUISA AVANÇADA
+# =========================================================
+
+def search_cards(
+    query,
+    language="en",
+    unique="prints",
+    order="name",
+):
+    query = str(
+        query or ""
+    ).strip()
+
+    language = _normalize_language(
+        language
+    )
+
+    if language != "all":
+        query_parts = [
+            query,
+            f"lang:{language}",
+        ]
+
+        query = " ".join(
+            part
+            for part in query_parts
+            if part
+        )
+
+    if not query:
+        return []
+
+    data = _request_json(
+        "/cards/search",
+        params={
+            "q": query,
+            "unique": unique,
+            "order": order,
+        },
+    )
+
+    if not data:
+        return []
+
+    cards = data.get(
+        "data",
+        [],
+    )
+
+    if not isinstance(
+        cards,
+        list,
+    ):
+        return []
+
+    return [
+        card
+        for card in cards
+        if isinstance(
+            card,
+            dict,
+        )
+    ]
