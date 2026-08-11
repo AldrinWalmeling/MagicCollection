@@ -97,7 +97,9 @@ from export_dialog import CollectionExportDialog
 
 from database import (
     add_card,
+    ensure_card_exists,
     get_all_cards,
+    get_all_catalog_cards,
     search_cards,
     change_quantity,
     set_card_quantity,
@@ -288,6 +290,77 @@ class ScryfallCardTask(QRunnable):
             self.signals.failed.emit(
                 self.name,
                 str(error),
+            )
+
+
+class RefreshCardDataSignals(QObject):
+    progress = Signal(int, int, str)
+    finished = Signal(int, int)
+    failed = Signal(str)
+
+
+class RefreshCardDataTask(QRunnable):
+    def __init__(self, cards):
+        super().__init__()
+        self.cards = list(cards or [])
+        self.signals = RefreshCardDataSignals()
+
+    def run(self):
+        total = len(self.cards)
+        updated = 0
+
+        try:
+            for index, card in enumerate(self.cards, start=1):
+                name = (
+                    card.get("printed_name")
+                    or card.get("name")
+                    or ""
+                )
+
+                name = str(name).strip()
+
+                if not name:
+                    continue
+
+                language = (
+                    card.get("lang")
+                    or "en"
+                )
+
+                if language not in SCRYFALL_LANGUAGES.values():
+                    language = "en"
+
+                self.signals.progress.emit(
+                    index,
+                    total,
+                    name,
+                )
+
+                card_data = get_card_by_name(
+                    name,
+                    language=language,
+                )
+
+                if not card_data and language != "en":
+                    card_data = get_card_by_name(
+                        card.get("name") or name,
+                        language="en",
+                    )
+
+                if not card_data:
+                    continue
+
+                if ensure_card_exists(card_data):
+                    updated += 1
+
+            self.signals.finished.emit(
+                updated,
+                total,
+            )
+
+        except Exception as error:
+            self.signals.failed.emit(
+                str(error)
             )
 
 class ImageSignals(QObject):
@@ -1371,6 +1444,22 @@ class CollectionPage(QWidget):
 
         actions_layout.addWidget(
             self.export_button
+        )
+
+        self.refresh_data_button = QPushButton(
+            "Atualizar dados"
+        )
+
+        self.refresh_data_button.setObjectName(
+            "RefreshDataButton"
+        )
+
+        self.refresh_data_button.clicked.connect(
+            self.refresh_missing_card_data
+        )
+
+        actions_layout.addWidget(
+            self.refresh_data_button
         )
 
         # =================================================
@@ -3177,6 +3266,112 @@ class CollectionPage(QWidget):
 
         self.apply_collection_filters()
 
+    def refresh_missing_card_data(
+            self,
+    ):
+        try:
+            catalog_cards = get_all_catalog_cards()
+        except Exception as error:
+            QMessageBox.warning(
+                self,
+                "Atualizar dados",
+                f"Nao foi possivel ler o catalogo:\n{error}",
+            )
+            return
+
+        missing_cards = [
+            card
+            for card in catalog_cards
+            if not card.get("card_faces")
+        ]
+
+        if not missing_cards:
+            QMessageBox.information(
+                self,
+                "Atualizar dados",
+                "Todas as cartas existentes ja possuem dados completos.",
+            )
+            return
+
+        reply = QMessageBox.question(
+            self,
+            "Atualizar dados",
+            (
+                f"Encontradas {len(missing_cards)} cartas sem dados "
+                "de faces salvos.\n\n"
+                "Deseja consultar o Scryfall e atualizar essas cartas?"
+            ),
+            QMessageBox.StandardButton.Yes
+            | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.Yes,
+        )
+
+        if reply != QMessageBox.StandardButton.Yes:
+            return
+
+        self.refresh_data_button.setEnabled(False)
+        self.refresh_data_button.setText("Atualizando...")
+
+        task = RefreshCardDataTask(
+            missing_cards
+        )
+        task.signals.progress.connect(
+            self.on_refresh_card_data_progress
+        )
+        task.signals.finished.connect(
+            self.on_refresh_card_data_finished
+        )
+        task.signals.failed.connect(
+            self.on_refresh_card_data_failed
+        )
+
+        self.scryfall_pool.start(task)
+
+    def on_refresh_card_data_progress(
+            self,
+            current,
+            total,
+            name,
+    ):
+        self.refresh_data_button.setText(
+            f"Atualizando {current}/{total}"
+        )
+        self.collection_count_label.setText(
+            f"Analisando: {name}"
+        )
+
+    def on_refresh_card_data_finished(
+            self,
+            updated,
+            total,
+    ):
+        self.refresh_data_button.setEnabled(True)
+        self.refresh_data_button.setText("Atualizar dados")
+        self.load_cards()
+
+        QMessageBox.information(
+            self,
+            "Atualizar dados",
+            (
+                "Analise concluida.\n\n"
+                f"Cartas verificadas: {total}\n"
+                f"Cartas atualizadas: {updated}"
+            ),
+        )
+
+    def on_refresh_card_data_failed(
+            self,
+            message,
+    ):
+        self.refresh_data_button.setEnabled(True)
+        self.refresh_data_button.setText("Atualizar dados")
+
+        QMessageBox.warning(
+            self,
+            "Atualizar dados",
+            f"Nao foi possivel concluir a atualizacao:\n{message}",
+        )
+
     # =====================================================
     # PESQUISA DA COLEÇÃO
     # =====================================================
@@ -3937,6 +4132,7 @@ class CollectionPage(QWidget):
                 power = card[12] if len(card) > 12 else None
                 toughness = card[13] if len(card) > 13 else None
                 created_at = card[14] if len(card) > 14 else None
+                card_faces = card[15] if len(card) > 15 else None
             except (IndexError, TypeError):
                 continue
 
@@ -3954,6 +4150,7 @@ class CollectionPage(QWidget):
                 image_path,
                 power,
                 toughness,
+                card_faces,
             )
 
     # =====================================================
@@ -4700,6 +4897,7 @@ class CollectionPage(QWidget):
                 power = card[12] if len(card) > 12 else None
                 toughness = card[13] if len(card) > 13 else None
                 created_at = card[14] if len(card) > 14 else None
+                card_faces = card[15] if len(card) > 15 else None
             except (IndexError, TypeError):
                 continue
 
@@ -4734,6 +4932,7 @@ class CollectionPage(QWidget):
                 "power": power,
                 "toughness": toughness,
                 "created_at": created_at,
+                "card_faces": card_faces,
             }
 
             frame = GridCardFrame()
@@ -4925,6 +5124,7 @@ class CollectionPage(QWidget):
         image_path,
         power,
         toughness,
+        card_faces=None,
     ):
 
         try:
@@ -4975,6 +5175,7 @@ class CollectionPage(QWidget):
             "quantity": quantity,
             "power": power,
             "toughness": toughness,
+            "card_faces": card_faces,
         }
 
         frame.doubleClicked.connect(

@@ -1,3 +1,4 @@
+import json
 import sqlite3
 import unicodedata
 from pathlib import Path
@@ -117,6 +118,59 @@ def normalize_search_text(value):
         for character in normalized
         if not unicodedata.combining(character)
     )
+
+
+def serialize_card_faces(card_data):
+    faces = card_data.get(
+        "card_faces"
+    )
+
+    if not isinstance(
+        faces,
+        list,
+    ):
+        return None
+
+    try:
+        return json.dumps(
+            faces,
+            ensure_ascii=False,
+        )
+    except (
+        TypeError,
+        ValueError,
+    ):
+        return None
+
+
+def deserialize_card_faces(value):
+    if not value:
+        return None
+
+    if isinstance(
+        value,
+        list,
+    ):
+        return value
+
+    try:
+        faces = json.loads(
+            value
+        )
+    except (
+        TypeError,
+        ValueError,
+        json.JSONDecodeError,
+    ):
+        return None
+
+    if isinstance(
+        faces,
+        list,
+    ):
+        return faces
+
+    return None
 
 
 def extract_image_url(card_data):
@@ -240,6 +294,8 @@ def init_database():
 
                 image_path TEXT,
 
+                card_faces TEXT,
+
                 quantity INTEGER NOT NULL DEFAULT 0,
 
                 created_at TIMESTAMP
@@ -341,6 +397,7 @@ def migrate_database():
             "toughness": "TEXT",
             "image_url": "TEXT",
             "image_path": "TEXT",
+            "card_faces": "TEXT",
             "rarity": "TEXT",
             "cmc": "REAL",
             "colors": "TEXT",
@@ -918,6 +975,10 @@ def ensure_card_exists(card_data):
         else None
     )
 
+    card_faces = serialize_card_faces(
+        card_data
+    )
+
     connection = get_connection()
 
     try:
@@ -1001,6 +1062,7 @@ def ensure_card_exists(card_data):
                     toughness = ?,
                     image_url = ?,
                     image_path = ?,
+                    card_faces = ?,
                     updated_at =
                         CURRENT_TIMESTAMP
                 WHERE id = ?
@@ -1020,6 +1082,7 @@ def ensure_card_exists(card_data):
                     toughness,
                     image_url,
                     image_path_string,
+                    card_faces,
                     card_id,
                 ),
             )
@@ -1045,11 +1108,12 @@ def ensure_card_exists(card_data):
                 toughness,
                 image_url,
                 image_path,
+                card_faces,
                 quantity
             )
             VALUES (
                 ?, ?, ?, ?, ?, ?, ?, ?, ?,
-                ?, ?, ?, ?, ?, 0
+                ?, ?, ?, ?, ?, ?, 0
             )
             """,
             (
@@ -1067,6 +1131,7 @@ def ensure_card_exists(card_data):
                 toughness,
                 image_url,
                 image_path_string,
+                card_faces,
             ),
         )
 
@@ -1188,7 +1253,8 @@ def get_all_cards():
                 image_path,
                 power,
                 toughness,
-                created_at
+                created_at,
+                card_faces
             FROM cards
             WHERE quantity > 0
             ORDER BY
@@ -1245,7 +1311,8 @@ def search_cards(text):
                 image_path,
                 power,
                 toughness,
-                created_at
+                created_at,
+                card_faces
             FROM cards
             WHERE
                 quantity > 0
@@ -1328,7 +1395,8 @@ def get_card_by_id(card_id):
                 toughness,
                 image_url,
                 image_path,
-                quantity
+                quantity,
+                card_faces
             FROM cards
             WHERE id = ?
             """,
@@ -1342,7 +1410,12 @@ def get_card_by_id(card_id):
         if not row:
             return None
 
-        return dict(row)
+        card = dict(row)
+        card["card_faces"] = deserialize_card_faces(
+            card.get("card_faces")
+        )
+
+        return card
 
     finally:
         connection.close()
@@ -1696,6 +1769,7 @@ def get_collection_for_export():
                 c.toughness,
                 c.image_url,
                 c.quantity,
+                c.card_faces,
                 GROUP_CONCAT(
                     DISTINCT d.name
                 ) AS decks
@@ -1714,10 +1788,18 @@ def get_collection_for_export():
 
         rows = cursor.fetchall()
 
-        return [
-            dict(row)
-            for row in rows
-        ]
+        cards = []
+
+        for row in rows:
+            card = dict(row)
+            card["card_faces"] = deserialize_card_faces(
+                card.get("card_faces")
+            )
+            cards.append(
+                card
+            )
+
+        return cards
 
     finally:
         connection.close()
@@ -1760,7 +1842,8 @@ def get_all_catalog_cards():
                 image_path,
                 quantity,
                 created_at,
-                updated_at
+                updated_at,
+                card_faces
             FROM cards
             ORDER BY
                 name COLLATE NOCASE ASC
@@ -1769,10 +1852,16 @@ def get_all_catalog_cards():
 
         rows = cursor.fetchall()
 
-        return [
-            dict(row)
-            for row in rows
-        ]
+        cards = []
+
+        for row in rows:
+            card = dict(row)
+            card["card_faces"] = deserialize_card_faces(
+                card.get("card_faces")
+            )
+            cards.append(card)
+
+        return cards
 
     finally:
         connection.close()
