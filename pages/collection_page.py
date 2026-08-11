@@ -3,6 +3,7 @@ import requests
 
 from PySide6.QtCore import (
     Qt,
+    QEvent,
     Signal,
     QObject,
     QTimer,
@@ -697,7 +698,7 @@ class GridCardFrame(QFrame):
         )
 
         self.controls.setObjectName(
-            "DeckQuantityControls"
+            "GridQuantityOverlay"
         )
 
         controls_layout = QHBoxLayout(
@@ -729,7 +730,7 @@ class GridCardFrame(QFrame):
         )
 
         self.minus_button.setObjectName(
-            "DeckQuantityButton"
+            "GridQuantityButton"
         )
 
         self.minus_button.setFixedSize(
@@ -761,7 +762,7 @@ class GridCardFrame(QFrame):
         )
 
         self.control_quantity.setObjectName(
-            "DeckControlQuantity"
+            "GridQuantityInput"
         )
 
         self.control_quantity.setAlignment(
@@ -797,7 +798,7 @@ class GridCardFrame(QFrame):
         )
 
         self.plus_button.setObjectName(
-            "DeckQuantityButton"
+            "GridQuantityButton"
         )
 
         self.plus_button.setFixedSize(
@@ -824,6 +825,26 @@ class GridCardFrame(QFrame):
         self.controls.hide()
 
         self._hovering = False
+        self._editing_quantity = False
+
+        self.controls.setMouseTracking(
+            True
+        )
+        self.controls.installEventFilter(
+            self
+        )
+        self.minus_button.installEventFilter(
+            self
+        )
+        self.plus_button.installEventFilter(
+            self
+        )
+        self.control_quantity.installEventFilter(
+            self
+        )
+        self.control_quantity.editingFinished.connect(
+            self._finish_quantity_edit
+        )
 
     # =====================================================
     # TAMANHO NORMAL
@@ -884,12 +905,12 @@ class GridCardFrame(QFrame):
         # CONTROLES
         # -------------------------------------------------
 
-        overlay_height = 48
+        overlay_height = 58
 
         self.controls.setGeometry(
-            0,
-            height - overlay_height,
-            width,
+            10,
+            height - overlay_height - 10,
+            max(80, width - 20),
             overlay_height,
         )
 
@@ -960,6 +981,38 @@ class GridCardFrame(QFrame):
         self.control_quantity.setText(
             str(quantity)
         )
+
+    def eventFilter(
+        self,
+        watched,
+        event,
+    ):
+        if watched in (
+            self.controls,
+            self.minus_button,
+            self.plus_button,
+            self.control_quantity,
+        ):
+            if event.type() in (
+                QEvent.Type.Enter,
+                QEvent.Type.FocusIn,
+                QEvent.Type.MouseButtonPress,
+            ):
+                self._editing_quantity = True
+                self._animate_hover(True)
+
+            elif event.type() == QEvent.Type.FocusOut:
+                self._finish_quantity_edit()
+
+        return super().eventFilter(
+            watched,
+            event,
+        )
+
+    def _finish_quantity_edit(self):
+        self._editing_quantity = False
+        if not self.underMouse():
+            self._animate_hover(False)
 
     # =====================================================
     # DADOS DA CARTA
@@ -1074,6 +1127,9 @@ class GridCardFrame(QFrame):
             self.controls.raise_()
 
         else:
+            if self._editing_quantity:
+                self.controls.show()
+                return
 
             self.controls.hide()
 
@@ -1106,9 +1162,10 @@ class GridCardFrame(QFrame):
         event,
     ):
 
-        self._animate_hover(
-            False
-        )
+        if not self._editing_quantity:
+            self._animate_hover(
+                False
+            )
 
         super().leaveEvent(
             event
@@ -4140,6 +4197,7 @@ class CollectionPage(QWidget):
                 card_id,
                 name,
                 printed_name,
+                lang,
                 set_name,
                 collector_number,
                 mana_cost,
@@ -4921,6 +4979,7 @@ class CollectionPage(QWidget):
                 "id": card_id,
                 "name": name,
                 "printed_name": printed_name,
+                "lang": lang,
                 "set_name": set_name,
                 "collector_number": collector_number,
                 "mana_cost": mana_cost,
@@ -5114,6 +5173,7 @@ class CollectionPage(QWidget):
         card_id,
         name,
         printed_name,
+        lang,
         set_name,
         collector_number,
         mana_cost,
@@ -5165,6 +5225,7 @@ class CollectionPage(QWidget):
             "id": card_id,
             "name": name,
             "printed_name": printed_name,
+            "lang": lang,
             "set_name": set_name,
             "collector_number": collector_number,
             "mana_cost": mana_cost,

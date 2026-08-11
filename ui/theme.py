@@ -473,11 +473,9 @@ QLabel#GridCardImage {
 
 
 QFrame#GridQuantityOverlay {
-    background-color: rgba(13, 14, 16, 235);
-    border: none;
-    border-top: 1px solid #303339;
-    border-bottom-left-radius: 9px;
-    border-bottom-right-radius: 9px;
+    background-color: rgba(12, 13, 15, 226);
+    border: 1px solid rgba(255, 255, 255, 52);
+    border-radius: 13px;
 }
 
 QPushButton#GridQuantityButton {
@@ -512,6 +510,21 @@ QLabel#GridQuantityLabel {
     border: none;
     font-size: 14px;
     font-weight: bold;
+}
+
+QLineEdit#GridQuantityInput {
+    background-color: rgba(255, 255, 255, 18);
+    border: 1px solid rgba(255, 255, 255, 46);
+    border-radius: 8px;
+    color: #FFFFFF;
+    font-size: 15px;
+    font-weight: bold;
+    padding: 0;
+}
+
+QLineEdit#GridQuantityInput:focus {
+    border: 1px solid #D7B56D;
+    background-color: rgba(255, 255, 255, 28);
 }
 
 
@@ -2307,9 +2320,9 @@ QPushButton#DeckAddCardsButton:hover {
    ========================================================= */
 
 QFrame#GridQuantityBadge {
-    background-color: rgba(0, 0, 0, 190);
-    border: 1px solid rgba(255, 255, 255, 180);
-    border-radius: 8px;
+    background-color: rgba(12, 13, 15, 210);
+    border: 1px solid rgba(255, 255, 255, 96);
+    border-radius: 9px;
     padding: 0;
 }
 
@@ -2362,6 +2375,122 @@ QPushButton#GridQuantityButton:disabled {
     background-color: #181A1D;
     color: #55585E;
     border: 1px solid #25272B;
+}
+
+
+/* =========================================================
+   DETALHES PREMIUM
+========================================================= */
+
+QWidget#CardDetailLeftPanel,
+QWidget#CardDetailRightPanel {
+    background-color: transparent;
+    border: none;
+}
+
+QWidget#FaceSwitch {
+    background-color: #15171A;
+    border: 1px solid #30343A;
+    border-radius: 10px;
+}
+
+QPushButton#FaceSwitchButton {
+    background-color: transparent;
+    color: #AEB2BA;
+    border: none;
+    border-radius: 7px;
+    padding: 8px 16px;
+    font-weight: 600;
+}
+
+QPushButton#FaceSwitchButton:hover {
+    background-color: #20242A;
+    color: #FFFFFF;
+}
+
+QPushButton#FaceSwitchButton:checked {
+    background-color: #E8E8EA;
+    color: #111214;
+}
+
+QComboBox#DetailSelector {
+    background-color: #15171A;
+    border: 1px solid #30343A;
+    border-radius: 9px;
+    color: #E7E9ED;
+    padding: 9px 12px;
+}
+
+QWidget#CardDetailMana,
+QWidget#CardDetailMana QLabel,
+QWidget#CardDetailMana QWidget {
+    background-color: transparent;
+    border: none;
+}
+
+QFrame#DetailInfoCard {
+    background-color: #15171A;
+    border: 1px solid #2C3036;
+    border-radius: 8px;
+}
+
+QFrame#DetailInfoCard:hover {
+    border: 1px solid #3A3F47;
+    background-color: #181B20;
+}
+
+QLabel#DetailInfoTitle {
+    background-color: transparent;
+    color: #858A94;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+QLabel#DetailInfoValue {
+    background-color: transparent;
+    color: #F1F3F6;
+    font-size: 13px;
+}
+
+QTabWidget#CardDetailTabs::pane {
+    background-color: transparent;
+    border: none;
+}
+
+QTabWidget#CardDetailTabs QTabBar::tab {
+    background-color: #15171A;
+    color: #8E949E;
+    border: 1px solid #2C3036;
+    border-radius: 7px;
+    padding: 8px 14px;
+    margin-right: 6px;
+}
+
+QTabWidget#CardDetailTabs QTabBar::tab:selected {
+    background-color: #252A31;
+    color: #FFFFFF;
+    border-color: #454B55;
+}
+
+QLabel#CardDetailOracle {
+    background-color: transparent;
+    color: #F0F2F5;
+    font-size: 14px;
+    line-height: 1.45;
+}
+
+QLabel#CardDetailFlavor {
+    background-color: transparent;
+    color: #A6ABB4;
+    font-size: 13px;
+    font-style: italic;
+}
+
+QLabel#CardDetailMuted {
+    background-color: transparent;
+    color: #8A909A;
+    font-size: 13px;
 }
 
 
