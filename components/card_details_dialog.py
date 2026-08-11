@@ -23,7 +23,8 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from services.scryfall import get_card_by_name
+from database import update_card_printing
+from services.scryfall import get_card_by_name, get_card_printings
 from services.scryfall_symbols import ManaSymbolsWidget
 from ui.theme import DARK_THEME
 
@@ -67,10 +68,29 @@ def _parse_faces(value):
     return [face for face in parsed if isinstance(face, dict)]
 
 
+def _parse_printings(value):
+    if isinstance(value, list):
+        return [item for item in value if isinstance(item, dict)]
+
+    if not value:
+        return []
+
+    try:
+        parsed = json.loads(value)
+    except (TypeError, ValueError, json.JSONDecodeError):
+        return []
+
+    if not isinstance(parsed, list):
+        return []
+
+    return [item for item in parsed if isinstance(item, dict)]
+
+
 def card_to_dict(card):
     if isinstance(card, dict):
         result = dict(card)
         result["card_faces"] = _parse_faces(result.get("card_faces"))
+        result["card_printings"] = _parse_printings(result.get("card_printings"))
         return result
 
     if not card:
@@ -100,12 +120,21 @@ def card_to_dict(card):
         "toughness": value(13),
         "deck_quantity": value(14, 0),
         "card_faces": _parse_faces(value(15)),
+        "card_printings": _parse_printings(value(16)),
+        "preferred_language": value(17),
+        "preferred_variant": value(18),
+        "preferred_finish": value(19),
+        "preferred_image": value(20),
+        "preferred_face": value(21, 0),
+        "favorite": value(22, 0),
+        "custom_tags": value(23),
+        "last_view": value(24),
     }
 
 
 def _has_missing_image_status(data):
     status = str(data.get("image_status") or "").casefold()
-    return status in ("missing", "placeholder", "lowres")
+    return status in ("missing", "placeholder")
 
 
 def _best_image_url(data):
@@ -183,8 +212,18 @@ class CardDetailsDialog(QDialog):
 
         self.card = card_to_dict(card)
         self.initial_pixmap = pixmap
-        self.current_face_index = 0
+        try:
+            self.current_face_index = int(
+                self.card.get("preferred_face") or 0
+            )
+        except (
+            TypeError,
+            ValueError,
+        ):
+            self.current_face_index = 0
         self.english_card = None
+        self.printings = self._load_printings()
+        self._syncing_controls = False
         self.faces = self._build_faces(self.card)
 
         self.setWindowTitle(f"{self.card.get('name') or 'Carta'} - Magic Collection")
@@ -209,19 +248,25 @@ class CardDetailsDialog(QDialog):
         self.image_label.setScaledContents(False)
         left_layout.addWidget(self.image_label, 0, Qt.AlignmentFlag.AlignHCenter)
 
+        self.image_status_label = QLabel()
+        self.image_status_label.setObjectName("CardDetailImageStatus")
+        self.image_status_label.setWordWrap(True)
+        self.image_status_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.image_status_label.hide()
+        left_layout.addWidget(self.image_status_label)
+
         self.language_combo = QComboBox()
         self.language_combo.setObjectName("DetailSelector")
-        self.language_combo.addItem(
-            LANGUAGE_LABELS.get(self.card.get("lang") or "en", self.card.get("lang") or "English"),
-            self.card.get("lang") or "en",
+        self.language_combo.currentIndexChanged.connect(
+            self.on_language_changed
         )
-        self.language_combo.setEnabled(False)
         left_layout.addWidget(self.language_combo)
 
         self.variant_combo = QComboBox()
         self.variant_combo.setObjectName("DetailSelector")
-        self.variant_combo.addItem("Arte atual", 0)
-        self.variant_combo.setEnabled(False)
+        self.variant_combo.currentIndexChanged.connect(
+            self.on_variant_changed
+        )
         left_layout.addWidget(self.variant_combo)
 
         tools_layout = QHBoxLayout()
@@ -306,7 +351,11 @@ class CardDetailsDialog(QDialog):
         right_layout.addWidget(buttons)
 
         root.addWidget(right_panel, 1)
-        self.set_face(0)
+        self._populate_selectors()
+        if self.current_face_index >= len(self.faces):
+            self.current_face_index = 0
+
+        self.set_face(self.current_face_index)
 
     def _build_main_tab(self):
         tab = QWidget()
@@ -431,11 +480,278 @@ class CardDetailsDialog(QDialog):
             return faces
         return [card]
 
+    def _load_printings(self):
+        printings = _parse_printings(
+            self.card.get("card_printings")
+        )
+
+        if printings:
+            return printings
+
+        try:
+            printings = get_card_printings(
+                self.card
+            )
+        except Exception as error:
+            print(
+                "[DETAILS] Erro ao buscar impressoes:",
+                error,
+            )
+            printings = []
+
+        if not printings:
+            printings = [
+                self.card
+            ]
+
+        return printings
+
+    def _populate_selectors(self):
+        self._syncing_controls = True
+
+        self.language_combo.clear()
+
+        languages = []
+        seen_languages = set()
+
+        for printing in self.printings:
+            language = printing.get("lang") or "en"
+
+            if language in seen_languages:
+                continue
+
+            seen_languages.add(language)
+            languages.append(language)
+
+        if not languages:
+            languages = [
+                self.card.get("lang") or "en"
+            ]
+
+        preferred_language = (
+            self.card.get("preferred_language")
+            or self.card.get("lang")
+            or languages[0]
+        )
+
+        for language in languages:
+            self.language_combo.addItem(
+                LANGUAGE_LABELS.get(language, language),
+                language,
+            )
+
+        index = self.language_combo.findData(
+            preferred_language
+        )
+        if index < 0:
+            index = 0
+
+        self.language_combo.setCurrentIndex(
+            index
+        )
+
+        self._populate_variant_combo(
+            self.language_combo.currentData()
+        )
+
+        self._syncing_controls = False
+
+    def _populate_variant_combo(
+        self,
+        language,
+    ):
+        self.variant_combo.clear()
+
+        variants = [
+            printing
+            for printing in self.printings
+            if (printing.get("lang") or "en") == language
+        ]
+
+        if not variants:
+            variants = list(self.printings)
+
+        variants = sorted(
+            variants,
+            key=lambda printing: (
+                0 if self._printing_has_image(printing) else 1,
+                str(printing.get("released_at") or ""),
+                str(printing.get("collector_number") or ""),
+            ),
+        )
+
+        preferred_variant = (
+            self.card.get("preferred_variant")
+            or self.card.get("scryfall_id")
+            or self.card.get("id")
+        )
+
+        for printing in variants:
+            self.variant_combo.addItem(
+                self._variant_label(printing),
+                printing,
+            )
+
+        preferred_index = -1
+        image_index = -1
+
+        for item_index in range(self.variant_combo.count()):
+            printing = self.variant_combo.itemData(
+                item_index
+            )
+            printing_id = (
+                printing.get("id")
+                or printing.get("scryfall_id")
+            )
+
+            if printing_id == preferred_variant and self._printing_has_image(printing):
+                preferred_index = item_index
+
+            if image_index < 0 and self._printing_has_image(printing):
+                image_index = item_index
+
+        if preferred_index >= 0:
+            index = preferred_index
+        elif image_index >= 0:
+            index = image_index
+        else:
+            index = 0
+
+        self.variant_combo.setCurrentIndex(
+            index
+        )
+
+    def _variant_label(self, printing):
+        set_code = str(
+            printing.get("set")
+            or printing.get("set_code")
+            or ""
+        ).upper()
+
+        collector = printing.get("collector_number") or "?"
+        language = printing.get("lang") or "en"
+        rarity = printing.get("rarity") or ""
+
+        finishes = printing.get("finishes") or []
+        finish_text = "/".join(finishes) if finishes else "normal"
+
+        parts = [
+            f"{set_code} #{collector}",
+            LANGUAGE_LABELS.get(language, language),
+            finish_text,
+        ]
+
+        if rarity:
+            parts.append(str(rarity).title())
+
+        if not self._printing_has_image(printing):
+            parts.append("sem imagem")
+
+        return " | ".join(parts)
+
+    def _printing_has_image(self, printing):
+        if _best_image_url(printing):
+            return True
+
+        for face in self._build_faces(printing):
+            if _best_image_url(face):
+                return True
+
+        return False
+
+    def on_language_changed(self, *_args):
+        if self._syncing_controls:
+            return
+
+        language = self.language_combo.currentData()
+
+        self._syncing_controls = True
+        self._populate_variant_combo(language)
+        self._syncing_controls = False
+
+        self.apply_selected_printing()
+
+    def on_variant_changed(self, *_args):
+        if self._syncing_controls:
+            return
+
+        self.apply_selected_printing()
+
+    def apply_selected_printing(self):
+        printing = self.variant_combo.currentData()
+
+        if not isinstance(printing, dict):
+            return
+
+        quantity = self.card.get("quantity", 0)
+        deck_quantity = self.card.get("deck_quantity")
+        local_id = self.card.get("id")
+
+        self.card.update(printing)
+        self.card["id"] = local_id
+        self.card["scryfall_id"] = (
+            printing.get("id")
+            or printing.get("scryfall_id")
+        )
+        self.card["set_code"] = (
+            printing.get("set")
+            or printing.get("set_code")
+        )
+        self.card["quantity"] = quantity
+        self.card["deck_quantity"] = deck_quantity
+        self.card["card_faces"] = _parse_faces(
+            printing.get("card_faces")
+        )
+        self.card["card_printings"] = self.printings
+        self.card["preferred_language"] = (
+            self.language_combo.currentData()
+        )
+        self.card["preferred_variant"] = self.card.get("scryfall_id")
+
+        self.faces = self._build_faces(self.card)
+
+        if self.current_face_index >= len(self.faces):
+            self.current_face_index = 0
+
+        if local_id:
+            update_card_printing(
+                local_id,
+                self.card,
+                printings=self.printings,
+                preferred_language=self.card.get("preferred_language"),
+                preferred_variant=self.card.get("preferred_variant"),
+                preferred_finish=self.card.get("preferred_finish"),
+                preferred_face=self.current_face_index,
+            )
+
+        self.setWindowTitle(
+            f"{self.card.get('name') or 'Carta'} - Magic Collection"
+        )
+        self.set_face(
+            self.current_face_index
+        )
+
     def _face_value(self, face, key, fallback=True):
+        localized_key = {
+            "name": "printed_name",
+            "type_line": "printed_type_line",
+            "oracle_text": "printed_text",
+        }.get(key)
+
+        if localized_key:
+            value = face.get(localized_key)
+            if value not in (None, "", []):
+                return value
+
         value = face.get(key)
         if value not in (None, "", []):
             return value
         if fallback:
+            if localized_key:
+                value = self.card.get(localized_key)
+                if value not in (None, "", []):
+                    return value
+
             value = self.card.get(key)
             if value not in (None, "", []):
                 return value
@@ -447,6 +763,26 @@ class CardDetailsDialog(QDialog):
 
         self.current_face_index = face_index
         face = self.faces[face_index]
+        self.card["preferred_face"] = face_index
+
+        face_button = self.face_buttons.button(
+            face_index
+        )
+
+        if face_button:
+            face_button.setChecked(True)
+
+        local_id = self.card.get("id")
+        if local_id:
+            update_card_printing(
+                local_id,
+                self.card,
+                printings=self.printings,
+                preferred_language=self.card.get("preferred_language"),
+                preferred_variant=self.card.get("preferred_variant"),
+                preferred_finish=self.card.get("preferred_finish"),
+                preferred_face=face_index,
+            )
 
         name = self._face_value(face, "name") or "Carta"
         printed_name = self._face_value(face, "printed_name", fallback=False)
@@ -601,17 +937,8 @@ class CardDetailsDialog(QDialog):
         return _download_pixmap(_best_image_url(self.english_card))
 
     def _set_face_image(self, face):
-        pixmap = None
         card_lang = str(self.card.get("lang") or "en").casefold()
-
-        if card_lang != "en":
-            pixmap = self._english_fallback_pixmap()
-
-        if not pixmap or pixmap.isNull():
-            pixmap = _download_pixmap(_best_image_url(face))
-
-        if (not pixmap or pixmap.isNull()) and card_lang != "en":
-            pixmap = self._english_fallback_pixmap()
+        pixmap = _download_pixmap(_best_image_url(face))
 
         if (
             (not pixmap or pixmap.isNull())
@@ -621,10 +948,9 @@ class CardDetailsDialog(QDialog):
         ):
             pixmap = self.initial_pixmap
 
-        if (not pixmap or pixmap.isNull()) and card_lang != "en":
-            pixmap = self._english_fallback_pixmap()
-
         if pixmap and not pixmap.isNull():
+            self.image_status_label.clear()
+            self.image_status_label.hide()
             self.image_label.setPixmap(
                 pixmap.scaled(
                     360,
@@ -635,6 +961,21 @@ class CardDetailsDialog(QDialog):
             )
             self.image_label.setText("")
             return
+
+        language_name = LANGUAGE_LABELS.get(card_lang, card_lang.upper())
+        status = str(
+            face.get("image_status")
+            or self.card.get("image_status")
+            or ""
+        ).casefold()
+
+        if status in ("missing", "placeholder"):
+            message = f"Sem arte disponível para {language_name}."
+        else:
+            message = f"Sem imagem desta impressão em {language_name}."
+
+        self.image_status_label.setText(message)
+        self.image_status_label.show()
 
         if CARD_ICON_PATH.exists():
             placeholder = QPixmap(str(CARD_ICON_PATH))
@@ -652,3 +993,4 @@ class CardDetailsDialog(QDialog):
 
         self.image_label.clear()
         self.image_label.setText("Imagem indisponivel")
+

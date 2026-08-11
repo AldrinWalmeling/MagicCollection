@@ -9,7 +9,11 @@
       <change beforePath="$PROJECT_DIR$/components/card_details_dialog.py" beforeDir="false" afterPath="$PROJECT_DIR$/components/card_details_dialog.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/database.py" beforeDir="false" afterPath="$PROJECT_DIR$/database.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/pages/collection_page.py" beforeDir="false" afterPath="$PROJECT_DIR$/pages/collection_page.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/decks_page.py" beforeDir="false" afterPath="$PROJECT_DIR$/pages/decks_page.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/save/save.db" beforeDir="false" afterPath="$PROJECT_DIR$/save/save.db" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/services/decks_database.py" beforeDir="false" afterPath="$PROJECT_DIR$/services/decks_database.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/services/scryfall.py" beforeDir="false" afterPath="$PROJECT_DIR$/services/scryfall.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ui/theme.py" beforeDir="false" afterPath="$PROJECT_DIR$/ui/theme.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />

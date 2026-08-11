@@ -956,9 +956,14 @@ def search_cards(
         query or ""
     ).strip()
 
-    language = _normalize_language(
-        language
-    )
+    language = str(
+        language or "en"
+    ).strip().lower()
+
+    if language != "all":
+        language = _normalize_language(
+            language
+        )
 
     if language != "all":
         query_parts = [
@@ -1006,3 +1011,78 @@ def search_cards(
             dict,
         )
     ]
+
+
+def get_card_printings(card_data):
+    if not isinstance(card_data, dict):
+        return []
+
+    oracle_id = str(
+        card_data.get("oracle_id")
+        or ""
+    ).strip()
+
+    name = str(
+        card_data.get("name")
+        or ""
+    ).strip()
+
+    if not oracle_id and name:
+        english_card = get_card_by_name(
+            name,
+            language="en",
+        )
+
+        if isinstance(
+            english_card,
+            dict,
+        ):
+            oracle_id = str(
+                english_card.get("oracle_id")
+                or ""
+            ).strip()
+
+    if not oracle_id and not name:
+        return []
+
+    base_query = (
+        f"oracleid:{oracle_id}"
+        if oracle_id
+        else f'!"{name}"'
+    )
+
+    queries = [
+        base_query
+    ]
+
+    if oracle_id:
+        queries.extend(
+            f"{base_query} lang:{language}"
+            for language in SUPPORTED_LANGUAGES
+        )
+
+    cards = []
+
+    for query in queries:
+        cards.extend(
+            search_cards(
+                query,
+                language="all",
+                unique="prints",
+                order="released",
+            )
+        )
+
+    seen = set()
+    result = []
+
+    for card in cards:
+        scryfall_id = card.get("id")
+
+        if not scryfall_id or scryfall_id in seen:
+            continue
+
+        seen.add(scryfall_id)
+        result.append(card)
+
+    return result

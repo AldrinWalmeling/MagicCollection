@@ -280,6 +280,25 @@ QMenu::separator {
     margin: 4px 8px;
 }
 
+QMenu#CardContextMenu {
+    background-color: #181A1E;
+    color: #EEEEF0;
+    border: 1px solid #363940;
+    border-radius: 8px;
+    padding: 6px;
+}
+
+QMenu#CardContextMenu::item {
+    padding: 8px 22px 8px 12px;
+    border-radius: 6px;
+    color: #D7D9DD;
+}
+
+QMenu#CardContextMenu::item:selected {
+    background-color: #2B2F36;
+    color: #FFFFFF;
+}
+
 
 /* =========================================================
    DECK PANEL FILTERS
@@ -460,6 +479,16 @@ QFrame#GridCardFrame {
 QFrame#GridCardFrame[hover="true"] {
     background-color: #191B1F;
     border: 1px solid #3A3D43;
+}
+
+QFrame#GridCardFrame[selected="true"] {
+    background-color: #1A1D22;
+    border: 2px solid #D7B56D;
+}
+
+QFrame#GridCardFrame[selected="true"][hover="true"] {
+    background-color: #20242A;
+    border: 2px solid #E6C77B;
 }
 
 QLabel#GridCardImage {

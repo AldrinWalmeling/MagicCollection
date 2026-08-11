@@ -1,4 +1,5 @@
 import sqlite3
+import json
 from datetime import datetime
 
 from database import (
@@ -708,6 +709,16 @@ def get_deck_cards(deck_id):
 
                 c.image_url,
                 c.image_path,
+                c.card_faces,
+                c.card_printings,
+                c.preferred_language,
+                c.preferred_variant,
+                c.preferred_finish,
+                c.preferred_image,
+                c.preferred_face,
+                c.favorite,
+                c.custom_tags,
+                c.last_view,
 
                 c.quantity
                     AS collection_quantity,
@@ -736,10 +747,34 @@ def get_deck_cards(deck_id):
 
         rows = cursor.fetchall()
 
-        return [
-            dict(row)
-            for row in rows
-        ]
+        cards = []
+
+        for row in rows:
+            card = dict(row)
+
+            for key in (
+                "card_faces",
+                "card_printings",
+            ):
+                value = card.get(key)
+
+                if not value:
+                    card[key] = [] if key == "card_printings" else None
+                    continue
+
+                if isinstance(value, str):
+                    try:
+                        card[key] = json.loads(value)
+                    except (
+                        TypeError,
+                        ValueError,
+                        json.JSONDecodeError,
+                    ):
+                        card[key] = [] if key == "card_printings" else None
+
+            cards.append(card)
+
+        return cards
 
     except Exception as error:
 

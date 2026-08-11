@@ -1,4 +1,7 @@
 from pathlib import Path
+import webbrowser
+from urllib.parse import quote_plus
+
 import requests
 
 from PySide6.QtCore import (
@@ -73,6 +76,7 @@ from PySide6.QtWidgets import (
     QGridLayout,
     QMessageBox,
     QComboBox,
+    QApplication,
 )
 
 from services.scryfall import (
@@ -565,6 +569,7 @@ class CardImageLabel(QLabel):
 
 class GridCardFrame(QFrame):
 
+    clicked = Signal()
     doubleClicked = Signal()
 
     def __init__(
@@ -827,18 +832,6 @@ class GridCardFrame(QFrame):
         self._hovering = False
         self._editing_quantity = False
 
-        self.controls.setMouseTracking(
-            True
-        )
-        self.controls.installEventFilter(
-            self
-        )
-        self.minus_button.installEventFilter(
-            self
-        )
-        self.plus_button.installEventFilter(
-            self
-        )
         self.control_quantity.installEventFilter(
             self
         )
@@ -987,21 +980,32 @@ class GridCardFrame(QFrame):
         watched,
         event,
     ):
-        if watched in (
-            self.controls,
-            self.minus_button,
-            self.plus_button,
-            self.control_quantity,
-        ):
+        if watched is self.control_quantity:
             if event.type() in (
-                QEvent.Type.Enter,
                 QEvent.Type.FocusIn,
                 QEvent.Type.MouseButtonPress,
             ):
                 self._editing_quantity = True
                 self._animate_hover(True)
 
-            elif event.type() == QEvent.Type.FocusOut:
+            elif event.type() in (
+                QEvent.Type.FocusOut,
+                QEvent.Type.KeyPress,
+            ):
+                if (
+                    event.type() == QEvent.Type.KeyPress
+                    and event.key()
+                    not in (
+                        Qt.Key.Key_Return,
+                        Qt.Key.Key_Enter,
+                        Qt.Key.Key_Escape,
+                    )
+                ):
+                    return super().eventFilter(
+                        watched,
+                        event,
+                    )
+
                 self._finish_quantity_edit()
 
         return super().eventFilter(
@@ -1194,6 +1198,17 @@ class GridCardFrame(QFrame):
         super().mouseDoubleClickEvent(
             event
         )
+
+    def mousePressEvent(
+        self,
+        event,
+    ):
+        if event.button() == Qt.MouseButton.LeftButton:
+            self.clicked.emit()
+
+        super().mousePressEvent(
+            event
+        )
 # =========================================================
 # CONTAINER DA GRADE
 # =========================================================
@@ -1280,6 +1295,7 @@ class CollectionPage(QWidget):
         self.active_sort = "name_asc"
 
         self.card_rows = {}
+        self.selected_card_id = None
 
         self.rebuilding_grid = False
 
@@ -4190,6 +4206,15 @@ class CollectionPage(QWidget):
                 toughness = card[13] if len(card) > 13 else None
                 created_at = card[14] if len(card) > 14 else None
                 card_faces = card[15] if len(card) > 15 else None
+                card_printings = card[16] if len(card) > 16 else None
+                preferred_language = card[17] if len(card) > 17 else None
+                preferred_variant = card[18] if len(card) > 18 else None
+                preferred_finish = card[19] if len(card) > 19 else None
+                preferred_image = card[20] if len(card) > 20 else None
+                preferred_face = card[21] if len(card) > 21 else 0
+                favorite = card[22] if len(card) > 22 else 0
+                custom_tags = card[23] if len(card) > 23 else None
+                last_view = card[24] if len(card) > 24 else None
             except (IndexError, TypeError):
                 continue
 
@@ -4209,6 +4234,15 @@ class CollectionPage(QWidget):
                 power,
                 toughness,
                 card_faces,
+                card_printings,
+                preferred_language,
+                preferred_variant,
+                preferred_finish,
+                preferred_image,
+                preferred_face,
+                favorite,
+                custom_tags,
+                last_view,
             )
 
     # =====================================================
@@ -4956,6 +4990,15 @@ class CollectionPage(QWidget):
                 toughness = card[13] if len(card) > 13 else None
                 created_at = card[14] if len(card) > 14 else None
                 card_faces = card[15] if len(card) > 15 else None
+                card_printings = card[16] if len(card) > 16 else None
+                preferred_language = card[17] if len(card) > 17 else None
+                preferred_variant = card[18] if len(card) > 18 else None
+                preferred_finish = card[19] if len(card) > 19 else None
+                preferred_image = card[20] if len(card) > 20 else None
+                preferred_face = card[21] if len(card) > 21 else 0
+                favorite = card[22] if len(card) > 22 else 0
+                custom_tags = card[23] if len(card) > 23 else None
+                last_view = card[24] if len(card) > 24 else None
             except (IndexError, TypeError):
                 continue
 
@@ -4992,6 +5035,15 @@ class CollectionPage(QWidget):
                 "toughness": toughness,
                 "created_at": created_at,
                 "card_faces": card_faces,
+                "card_printings": card_printings,
+                "preferred_language": preferred_language,
+                "preferred_variant": preferred_variant,
+                "preferred_finish": preferred_finish,
+                "preferred_image": preferred_image,
+                "preferred_face": preferred_face,
+                "favorite": favorite,
+                "custom_tags": custom_tags,
+                "last_view": last_view,
             }
 
             frame = GridCardFrame()
@@ -5008,6 +5060,30 @@ class CollectionPage(QWidget):
                 lambda card=card_data:
                 self.show_card_details(
                     card
+                )
+            )
+
+            frame.clicked.connect(
+                lambda cid=card_id:
+                self.select_collection_card(
+                    cid
+                )
+            )
+
+            frame.setContextMenuPolicy(
+                Qt.ContextMenuPolicy.CustomContextMenu
+            )
+
+            frame.customContextMenuRequested.connect(
+                lambda position,
+                       cid=card_id,
+                       card=card_data,
+                       widget=frame:
+                self.show_card_context_menu(
+                    cid,
+                    card,
+                    widget,
+                    position,
                 )
             )
 
@@ -5185,6 +5261,15 @@ class CollectionPage(QWidget):
         power,
         toughness,
         card_faces=None,
+        card_printings=None,
+        preferred_language=None,
+        preferred_variant=None,
+        preferred_finish=None,
+        preferred_image=None,
+        preferred_face=0,
+        favorite=0,
+        custom_tags=None,
+        last_view=None,
     ):
 
         try:
@@ -5237,6 +5322,15 @@ class CollectionPage(QWidget):
             "power": power,
             "toughness": toughness,
             "card_faces": card_faces,
+            "card_printings": card_printings,
+            "preferred_language": preferred_language,
+            "preferred_variant": preferred_variant,
+            "preferred_finish": preferred_finish,
+            "preferred_image": preferred_image,
+            "preferred_face": preferred_face,
+            "favorite": favorite,
+            "custom_tags": custom_tags,
+            "last_view": last_view,
         }
 
         frame.doubleClicked.connect(
@@ -6207,6 +6301,144 @@ class CollectionPage(QWidget):
     # =====================================================
     # DETALHES DA CARTA
     # =====================================================
+
+    def select_collection_card(
+            self,
+            card_id,
+    ):
+        try:
+            card_id = int(card_id)
+        except (
+                TypeError,
+                ValueError,
+        ):
+            return
+
+        if self.selected_card_id == card_id:
+            return
+
+        previous_id = self.selected_card_id
+        self.selected_card_id = card_id
+
+        for current_id in (
+            previous_id,
+            card_id,
+        ):
+            if not current_id:
+                continue
+
+            row_data = self.card_rows.get(
+                current_id
+            )
+
+            if not row_data:
+                continue
+
+            frame = row_data.get(
+                "frame"
+            )
+
+            if not frame:
+                continue
+
+            frame.setProperty(
+                "selected",
+                current_id == card_id,
+            )
+            frame.style().unpolish(frame)
+            frame.style().polish(frame)
+            frame.update()
+
+    def show_card_context_menu(
+            self,
+            card_id,
+            card,
+            widget,
+            position,
+    ):
+        self.select_collection_card(
+            card_id
+        )
+
+        menu = QMenu(
+            self
+        )
+        menu.setObjectName(
+            "CardContextMenu"
+        )
+
+        add_action = menu.addAction(
+            "Adicionar copia"
+        )
+        remove_action = menu.addAction(
+            "Remover copia"
+        )
+        menu.addSeparator()
+        details_action = menu.addAction(
+            "Abrir detalhes"
+        )
+        scryfall_action = menu.addAction(
+            "Abrir no Scryfall"
+        )
+        menu.addSeparator()
+        copy_name_action = menu.addAction(
+            "Copiar nome"
+        )
+        copy_oracle_action = menu.addAction(
+            "Copiar Oracle"
+        )
+
+        chosen = menu.exec(
+            widget.mapToGlobal(position)
+        )
+
+        if chosen is None:
+            return
+
+        if chosen == add_action:
+            self.change_card_quantity(
+                card_id,
+                1,
+            )
+            return
+
+        if chosen == remove_action:
+            self.change_card_quantity(
+                card_id,
+                -1,
+            )
+            return
+
+        if chosen == details_action:
+            self.show_card_details(
+                card
+            )
+            return
+
+        if chosen == scryfall_action:
+            name = str(
+                card.get("name")
+                or ""
+            ).strip()
+
+            if name:
+                webbrowser.open(
+                    "https://scryfall.com/search?q="
+                    + quote_plus(f'!"{name}"')
+                )
+            return
+
+        if chosen == copy_name_action:
+            QApplication.clipboard().setText(
+                str(card.get("name") or "")
+            )
+            return
+
+        if chosen == copy_oracle_action:
+            QApplication.clipboard().setText(
+                str(card.get("oracle_text") or "")
+            )
+            return
 
     def show_card_details(
         self,

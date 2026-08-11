@@ -143,6 +143,22 @@ def serialize_card_faces(card_data):
         return None
 
 
+def serialize_card_printings(printings):
+    if not isinstance(printings, list):
+        return None
+
+    try:
+        return json.dumps(
+            printings,
+            ensure_ascii=False,
+        )
+    except (
+        TypeError,
+        ValueError,
+    ):
+        return None
+
+
 def deserialize_card_faces(value):
     if not value:
         return None
@@ -171,6 +187,36 @@ def deserialize_card_faces(value):
         return faces
 
     return None
+
+
+def deserialize_card_printings(value):
+    if not value:
+        return []
+
+    if isinstance(value, list):
+        return [
+            item
+            for item in value
+            if isinstance(item, dict)
+        ]
+
+    try:
+        data = json.loads(value)
+    except (
+        TypeError,
+        ValueError,
+        json.JSONDecodeError,
+    ):
+        return []
+
+    if not isinstance(data, list):
+        return []
+
+    return [
+        item
+        for item in data
+        if isinstance(item, dict)
+    ]
 
 
 def extract_image_url(card_data):
@@ -398,6 +444,15 @@ def migrate_database():
             "image_url": "TEXT",
             "image_path": "TEXT",
             "card_faces": "TEXT",
+            "card_printings": "TEXT",
+            "preferred_language": "TEXT",
+            "preferred_variant": "TEXT",
+            "preferred_finish": "TEXT",
+            "preferred_image": "TEXT",
+            "preferred_face": "INTEGER NOT NULL DEFAULT 0",
+            "favorite": "INTEGER NOT NULL DEFAULT 0",
+            "custom_tags": "TEXT",
+            "last_view": "TIMESTAMP",
             "rarity": "TEXT",
             "cmc": "REAL",
             "colors": "TEXT",
@@ -945,12 +1000,14 @@ def ensure_card_exists(card_data):
         "mana_cost"
     )
 
-    type_line = card_data.get(
-        "type_line"
+    type_line = (
+        card_data.get("printed_type_line")
+        or card_data.get("type_line")
     )
 
-    oracle_text = card_data.get(
-        "oracle_text"
+    oracle_text = (
+        card_data.get("printed_text")
+        or card_data.get("oracle_text")
     )
 
     power = card_data.get(
@@ -1224,6 +1281,166 @@ def add_card(card_data, quantity=1):
         connection.close()
 
 
+def update_card_printing(
+    card_id,
+    card_data,
+    printings=None,
+    preferred_language=None,
+    preferred_variant=None,
+    preferred_finish=None,
+    preferred_face=None,
+):
+    try:
+        card_id = int(card_id)
+    except (
+        TypeError,
+        ValueError,
+    ):
+        return False
+
+    if card_id <= 0 or not card_data:
+        return False
+
+    scryfall_id = (
+        card_data.get("scryfall_id")
+        or card_data.get("id")
+    )
+
+    if scryfall_id:
+        scryfall_id = str(scryfall_id).strip()
+
+    image_url = extract_image_url(card_data)
+    image_path = get_card_image_path(scryfall_id)
+    image_path_string = str(image_path) if image_path else None
+    card_faces = serialize_card_faces(card_data)
+    card_printings = serialize_card_printings(printings)
+
+    preferred_language = (
+        preferred_language
+        or card_data.get("lang")
+    )
+    preferred_variant = (
+        preferred_variant
+        or scryfall_id
+    )
+    preferred_image = image_url
+
+    connection = get_connection()
+
+    try:
+        cursor = connection.cursor()
+
+        cursor.execute(
+            """
+            SELECT scryfall_id
+            FROM cards
+            WHERE id = ?
+            LIMIT 1
+            """,
+            (
+                card_id,
+            ),
+        )
+
+        current_row = cursor.fetchone()
+        current_scryfall_id = (
+            current_row["scryfall_id"]
+            if current_row
+            else None
+        )
+
+        if scryfall_id:
+            cursor.execute(
+                """
+                SELECT id
+                FROM cards
+                WHERE scryfall_id = ?
+                    AND id != ?
+                LIMIT 1
+                """,
+                (
+                    scryfall_id,
+                    card_id,
+                ),
+            )
+
+            if cursor.fetchone():
+                scryfall_id = current_scryfall_id
+
+        cursor.execute(
+            """
+            UPDATE cards
+            SET
+                scryfall_id = ?,
+                name = ?,
+                printed_name = ?,
+                lang = ?,
+                set_code = ?,
+                set_name = ?,
+                collector_number = ?,
+                mana_cost = ?,
+                type_line = ?,
+                oracle_text = ?,
+                power = ?,
+                toughness = ?,
+                image_url = ?,
+                image_path = ?,
+                card_faces = ?,
+                card_printings = COALESCE(?, card_printings),
+                preferred_language = ?,
+                preferred_variant = ?,
+                preferred_finish = ?,
+                preferred_image = ?,
+                preferred_face = ?,
+                last_view = CURRENT_TIMESTAMP,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE id = ?
+            """,
+            (
+                scryfall_id,
+                card_data.get("name"),
+                card_data.get("printed_name"),
+                card_data.get("lang"),
+                card_data.get("set_code")
+                or card_data.get("set"),
+                card_data.get("set_name"),
+                card_data.get("collector_number"),
+                card_data.get("mana_cost"),
+                card_data.get("printed_type_line")
+                or card_data.get("type_line"),
+                card_data.get("printed_text")
+                or card_data.get("oracle_text"),
+                card_data.get("power"),
+                card_data.get("toughness"),
+                image_url,
+                image_path_string,
+                card_faces,
+                card_printings,
+                preferred_language,
+                preferred_variant,
+                preferred_finish,
+                preferred_image,
+                int(preferred_face or 0),
+                card_id,
+            ),
+        )
+
+        connection.commit()
+
+        return cursor.rowcount > 0
+
+    except Exception as error:
+        connection.rollback()
+        print(
+            "[DATABASE] Erro ao atualizar impressao:",
+            error,
+        )
+        return False
+
+    finally:
+        connection.close()
+
+
 # =========================================================
 # TODAS AS CARTAS DA COLEÇÃO
 #
@@ -1254,7 +1471,16 @@ def get_all_cards():
                 power,
                 toughness,
                 created_at,
-                card_faces
+                card_faces,
+                card_printings,
+                preferred_language,
+                preferred_variant,
+                preferred_finish,
+                preferred_image,
+                preferred_face,
+                favorite,
+                custom_tags,
+                last_view
             FROM cards
             WHERE quantity > 0
             ORDER BY
@@ -1312,7 +1538,16 @@ def search_cards(text):
                 power,
                 toughness,
                 created_at,
-                card_faces
+                card_faces,
+                card_printings,
+                preferred_language,
+                preferred_variant,
+                preferred_finish,
+                preferred_image,
+                preferred_face,
+                favorite,
+                custom_tags,
+                last_view
             FROM cards
             WHERE
                 quantity > 0
@@ -1396,7 +1631,16 @@ def get_card_by_id(card_id):
                 image_url,
                 image_path,
                 quantity,
-                card_faces
+                card_faces,
+                card_printings,
+                preferred_language,
+                preferred_variant,
+                preferred_finish,
+                preferred_image,
+                preferred_face,
+                favorite,
+                custom_tags,
+                last_view
             FROM cards
             WHERE id = ?
             """,
@@ -1413,6 +1657,9 @@ def get_card_by_id(card_id):
         card = dict(row)
         card["card_faces"] = deserialize_card_faces(
             card.get("card_faces")
+        )
+        card["card_printings"] = deserialize_card_printings(
+            card.get("card_printings")
         )
 
         return card

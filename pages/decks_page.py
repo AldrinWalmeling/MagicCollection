@@ -145,6 +145,16 @@ def _card_to_dict(card):
         12 power
         13 toughness
         14 deck_quantity
+        15 card_faces
+        16 card_printings
+        17 preferred_language
+        18 preferred_variant
+        19 preferred_finish
+        20 preferred_image
+        21 preferred_face
+        22 favorite
+        23 custom_tags
+        24 last_view
     """
 
     if isinstance(card, dict):
@@ -176,6 +186,16 @@ def _card_to_dict(card):
         "power": value(12),
         "toughness": value(13),
         "deck_quantity": value(14, 0),
+        "card_faces": value(15),
+        "card_printings": value(16),
+        "preferred_language": value(17),
+        "preferred_variant": value(18),
+        "preferred_finish": value(19),
+        "preferred_image": value(20),
+        "preferred_face": value(21, 0),
+        "favorite": value(22, 0),
+        "custom_tags": value(23),
+        "last_view": value(24),
     }
 
 
