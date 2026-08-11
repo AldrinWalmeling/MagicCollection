@@ -34,6 +34,7 @@ EXPORT_FIELDS = {
     "loyalty": "Lealdade",
     "defense": "Defesa",
     "quantity": "Quantidade",
+    "decks": "Decks",
     "set_name": "Edição",
     "set_code": "Código da edição",
     "collector_number": "Número coletor",
@@ -51,6 +52,7 @@ DEFAULT_FIELDS = [
     "oracle_text",
     "power_toughness",
     "quantity",
+    "decks",
     "set_name",
     "collector_number",
 ]
@@ -68,6 +70,7 @@ PRESETS = {
         "loyalty",
         "defense",
         "quantity",
+        "decks",
         "set_name",
         "set_code",
         "collector_number",
@@ -81,6 +84,7 @@ PRESETS = {
     "Planilha": [
         "name",
         "quantity",
+        "decks",
         "set_name",
         "set_code",
         "collector_number",
@@ -1036,4 +1040,3 @@ def _export_txt(
         text,
         encoding="utf-8",
     )
-

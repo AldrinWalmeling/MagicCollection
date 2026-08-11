@@ -1,4 +1,5 @@
 import sqlite3
+import unicodedata
 from pathlib import Path
 
 
@@ -61,7 +62,7 @@ def build_scryfall_image_url(scryfall_id):
 
     return (
         "https://cards.scryfall.io/"
-        "normal/front/"
+        "large/front/"
         f"{first}/{second}/"
         f"{scryfall_id}.jpg"
     )
@@ -108,6 +109,16 @@ def normalize_image_url(image_url):
     return image_url
 
 
+def normalize_search_text(value):
+    value = str(value or "").casefold()
+    normalized = unicodedata.normalize("NFKD", value)
+    return "".join(
+        character
+        for character in normalized
+        if not unicodedata.combining(character)
+    )
+
+
 def extract_image_url(card_data):
     if not card_data:
         return None
@@ -125,7 +136,8 @@ def extract_image_url(card_data):
 
     if isinstance(image_uris, dict):
         normal = normalize_image_url(
-            image_uris.get("normal")
+            image_uris.get("large")
+            or image_uris.get("normal")
         )
 
         if normal:
@@ -151,7 +163,8 @@ def extract_image_url(card_data):
                 continue
 
             normal = normalize_image_url(
-                face_image_uris.get("normal")
+                face_image_uris.get("large")
+                or face_image_uris.get("normal")
             )
 
             if normal:
@@ -1236,33 +1249,39 @@ def search_cards(text):
             FROM cards
             WHERE
                 quantity > 0
-                AND (
-                    name LIKE ?
-                    OR printed_name LIKE ?
-                    OR set_name LIKE ?
-                    OR collector_number LIKE ?
-                    OR type_line LIKE ?
-                    OR oracle_text LIKE ?
-                )
             ORDER BY
                 name COLLATE NOCASE ASC
-            """,
-            (
-                search_text,
-                search_text,
-                search_text,
-                search_text,
-                search_text,
-                search_text,
-            ),
+            """
         )
 
         rows = cursor.fetchall()
 
-        return [
-            tuple(row)
-            for row in rows
-        ]
+        query = normalize_search_text(
+            text
+        )
+
+        results = []
+
+        for row in rows:
+            searchable = " ".join(
+                str(row[key] or "")
+                for key in row.keys()
+                if key in (
+                    "name",
+                    "printed_name",
+                    "set_name",
+                    "collector_number",
+                    "type_line",
+                    "oracle_text",
+                )
+            )
+
+            if query in normalize_search_text(searchable):
+                results.append(
+                    tuple(row)
+                )
+
+        return results
 
     finally:
         connection.close()
@@ -1444,6 +1463,60 @@ def change_quantity(card_id, amount):
         if new_quantity < 0:
             new_quantity = 0
 
+        connection.close()
+
+        return set_card_quantity(
+            card_id,
+            new_quantity,
+        )
+
+    except Exception as error:
+        connection.rollback()
+
+        print(
+            "[DATABASE] Erro ao alterar "
+            "quantidade:",
+            error,
+        )
+
+        return False
+
+    finally:
+        try:
+            connection.close()
+        except Exception:
+            pass
+
+
+def set_card_quantity(card_id, quantity):
+    try:
+        card_id = int(
+            card_id
+        )
+
+        quantity = int(
+            quantity
+        )
+
+    except (
+        TypeError,
+        ValueError,
+    ):
+        return False
+
+    if card_id <= 0:
+        return False
+
+    quantity = max(
+        0,
+        quantity,
+    )
+
+    connection = get_connection()
+
+    try:
+        cursor = connection.cursor()
+
         cursor.execute(
             """
             UPDATE cards
@@ -1454,21 +1527,20 @@ def change_quantity(card_id, amount):
             WHERE id = ?
             """,
             (
-                new_quantity,
+                quantity,
                 card_id,
             ),
         )
 
         connection.commit()
 
-        return True
+        return cursor.rowcount > 0
 
     except Exception as error:
         connection.rollback()
 
         print(
-            "[DATABASE] Erro ao alterar "
-            "quantidade:",
+            "[DATABASE] Erro ao definir quantidade:",
             error,
         )
 
@@ -1610,24 +1682,33 @@ def get_collection_for_export():
         cursor.execute(
             """
             SELECT
-                scryfall_id,
-                name,
-                printed_name,
-                lang,
-                set_code,
-                set_name,
-                collector_number,
-                mana_cost,
-                type_line,
-                oracle_text,
-                power,
-                toughness,
-                image_url,
-                quantity
-            FROM cards
-            WHERE quantity > 0
+                c.scryfall_id,
+                c.name,
+                c.printed_name,
+                c.lang,
+                c.set_code,
+                c.set_name,
+                c.collector_number,
+                c.mana_cost,
+                c.type_line,
+                c.oracle_text,
+                c.power,
+                c.toughness,
+                c.image_url,
+                c.quantity,
+                GROUP_CONCAT(
+                    DISTINCT d.name
+                ) AS decks
+            FROM cards c
+            LEFT JOIN deck_cards dc
+                ON dc.card_id = c.id
+            LEFT JOIN decks d
+                ON d.id = dc.deck_id
+            WHERE c.quantity > 0
+            GROUP BY
+                c.id
             ORDER BY
-                name COLLATE NOCASE ASC
+                c.name COLLATE NOCASE ASC
             """
         )
 

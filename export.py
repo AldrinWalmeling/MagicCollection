@@ -121,6 +121,7 @@ def export_collection_treated_json(filepath, cards):
             "defesa": _value(card, "defense"),
 
             "quantidade": _quantity(card),
+            "decks": _value(card, "decks", ""),
 
             "set": _value(card, "set_name"),
             "set_code": _value(card, "set_code"),
@@ -226,6 +227,10 @@ def export_collection_txt(
                 0
             )
 
+            decks = card.get(
+                "decks"
+            )
+
             file.write(
                 "──────────────────────────────────────────────────\n"
             )
@@ -271,6 +276,11 @@ def export_collection_txt(
                 f"Quantidade: {quantity}\n\n"
             )
 
+            if decks:
+                file.write(
+                    f"Decks: {decks}\n\n"
+                )
+
 
 
 # =========================================================
@@ -301,7 +311,8 @@ def export_collection_csv(filepath, cards):
 
         "image_url",
 
-        "quantity"
+        "quantity",
+        "decks"
     ]
 
     with open(
@@ -347,6 +358,8 @@ def export_collection_csv(filepath, cards):
                 "image_url": card.get("image_url", ""),
 
                 "quantity": _quantity(card)
+                ,
+                "decks": card.get("decks", "")
             }
 
             writer.writerow(row)

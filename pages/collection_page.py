@@ -15,7 +15,11 @@ from PySide6.QtCore import (
 
 import shiboken6
 
-from PySide6.QtGui import QPixmap
+from PySide6.QtGui import (
+    QPixmap,
+    QAction,
+    QIntValidator,
+)
 
 from components.card_details_dialog import (
     CardDetailsDialog,
@@ -96,6 +100,7 @@ from database import (
     get_all_cards,
     search_cards,
     change_quantity,
+    set_card_quantity,
     get_collection_for_export,
     get_card_image_path,
     get_collection_stats,
@@ -166,10 +171,11 @@ class ScryfallTask(QRunnable):
         query,
         language="en",
     ):
-
         super().__init__()
 
-        self.query = query
+        self.query = str(
+            query or ""
+        ).strip()
 
         self.language = (
             language
@@ -676,7 +682,7 @@ class GridCardFrame(QFrame):
         # QUANTIDADE
         # -------------------------------------------------
 
-        self.control_quantity = QLabel(
+        self.control_quantity = QLineEdit(
             "0",
             self.controls,
         )
@@ -687,6 +693,14 @@ class GridCardFrame(QFrame):
 
         self.control_quantity.setAlignment(
             Qt.AlignmentFlag.AlignCenter
+        )
+
+        self.control_quantity.setValidator(
+            QIntValidator(
+                0,
+                999999,
+                self.control_quantity,
+            )
         )
 
         self.control_quantity.setFixedSize(
@@ -873,6 +887,93 @@ class GridCardFrame(QFrame):
         self.control_quantity.setText(
             str(quantity)
         )
+
+    # =====================================================
+    # DADOS DA CARTA
+    # =====================================================
+
+    def set_card_data(
+        self,
+        card_data,
+        face_index=0,
+        art_index=0,
+    ):
+
+        self.card_data = card_data
+        self.current_face_index = face_index
+        self.current_art_index = art_index
+
+        self.update_card_image()
+
+    def update_card_image(self):
+
+        if not self.card_data:
+            return
+
+        # Obter URL da imagem
+        face = self.card_data.get("card_faces", [self.card_data])[self.current_face_index] if self.card_data.get("card_faces") else self.card_data
+        image_uris = face.get("image_uris") or {}
+
+        # Se houver arte selecionada
+        url = None
+        if self.current_art_index > 0 and "artworks" in face:
+            artworks = face.get("artworks") or []
+            if self.current_art_index <= len(artworks):
+                art = artworks[self.current_art_index - 1]
+                url = art.get("large") or art.get("image_uri") or art.get("normal")
+
+        if not url:
+            for key in ("large", "normal", "png", "border_crop", "small"):
+                url = image_uris.get(key)
+                if url:
+                    break
+
+        if not url:
+            # Fallback para imagem padrão
+            scryfall_id = self.card_data.get("scryfall_id") or self.card_data.get("id")
+            if scryfall_id:
+                from database import build_scryfall_image_url
+                url = build_scryfall_image_url(scryfall_id)
+
+        if not url:
+            return
+
+        # Caminho local
+        scryfall_id = self.card_data.get("scryfall_id") or self.card_data.get("id")
+        if scryfall_id:
+            from database import get_card_image_path
+            local_path = get_card_image_path(
+                scryfall_id
+            )
+
+            if local_path and Path(local_path).exists():
+                pixmap = QPixmap(
+                    str(local_path)
+                )
+
+                if not pixmap.isNull():
+                    width = max(
+                        120,
+                        self.card_width,
+                    )
+
+                    height = round(
+                        width * 88 / 63
+                    )
+
+                    self.image_label.setPixmap(
+                        pixmap.scaled(
+                            width,
+                            height,
+                            Qt.AspectRatioMode.KeepAspectRatio,
+                            Qt.TransformationMode.SmoothTransformation,
+                        )
+                    )
+
+                    self.image_label.setText(
+                        ""
+                    )
+
 
     # =====================================================
     # COMEÇAR ZOOM
@@ -1272,6 +1373,26 @@ class CollectionPage(QWidget):
             self.export_button
         )
 
+        # =================================================
+        # CONTADOR DA COLEÇÃO
+        # =================================================
+
+        self.collection_count_label = QLabel(
+            "0 cartas · 0 diferentes"
+        )
+
+        self.collection_count_label.setObjectName(
+            "CollectionCountLabel"
+        )
+
+        self.collection_count_label.setAlignment(
+            Qt.AlignmentFlag.AlignCenter
+        )
+
+        actions_layout.addWidget(
+            self.collection_count_label
+        )
+
         actions_layout.addStretch()
 
         self.layout_button = QPushButton(
@@ -1651,61 +1772,80 @@ class CollectionPage(QWidget):
         )
 
         # =========================================================
-        # SELETOR DE IDIOMA
+        # SELETOR DE IDIOMAS
         # =========================================================
 
-        self.language_combo = QComboBox()
-
-        self.language_combo.addItem(
-            "🇺🇸 Inglês",
+        self.selected_languages = [
             "en",
+        ]
+
+        self.selected_language = "en"
+
+        self.language_button = QPushButton(
+            "🇺🇸 Inglês"
         )
 
-        self.language_combo.addItem(
-            "🇧🇷 Português",
-            "pt",
+        self.language_button.setObjectName(
+            "LanguageButton"
         )
 
-        self.language_combo.addItem(
-            "🇪🇸 Espanhol",
-            "es",
+        self.language_menu = QMenu(
+            self.language_button
         )
 
-        self.language_combo.addItem(
-            "🇩🇪 Alemão",
-            "de",
-        )
+        self.language_actions = {}
 
-        self.language_combo.addItem(
-            "🇫🇷 Francês",
-            "fr",
-        )
+        language_options = [
+            ("🇺🇸 Inglês", "en"),
+            ("🇧🇷 Português", "pt"),
+            ("🇪🇸 Espanhol", "es"),
+            ("🇫🇷 Francês", "fr"),
+            ("🇩🇪 Alemão", "de"),
+            ("🇮🇹 Italiano", "it"),
+            ("🇯🇵 Japonês", "ja"),
+            ("🇰🇷 Coreano", "ko"),
+            ("🇨🇳 Chinês Simplificado", "zhs"),
+            ("🇹🇼 Chinês Tradicional", "zht"),
+            ("🇷🇺 Russo", "ru"),
+        ]
 
-        self.language_combo.addItem(
-            "🇮🇹 Italiano",
-            "it",
-        )
+        for label, code in language_options:
+            action = QAction(
+                label,
+                self.language_menu,
+            )
 
-        self.language_combo.addItem(
-            "🇯🇵 Japonês",
-            "ja",
-        )
+            action.setCheckable(
+                True
+            )
 
-        self.language_combo.addItem(
-            "🇨🇳 Chinês",
-            "zhs",
-        )
+            action.setChecked(
+                code == "en"
+            )
 
-        self.selected_language = (
-            self.language_combo.currentData()
-        )
+            action.triggered.connect(
+                lambda checked,
+                       language=code:
+                self.on_language_toggled(
+                    language,
+                    checked,
+                )
+            )
 
-        self.language_combo.currentIndexChanged.connect(
-            self.on_language_changed
+            self.language_menu.addAction(
+                action
+            )
+
+            self.language_actions[
+                code
+            ] = action
+
+        self.language_button.setMenu(
+            self.language_menu
         )
 
         add_layout.addWidget(
-            self.language_combo
+            self.language_button
         )
 
         self.add_input.setFrame(
@@ -2158,24 +2298,248 @@ class CollectionPage(QWidget):
         )
 
     # =========================================================
-    # ALTERAR IDIOMA
+    # ALTERAR IDIOMAS
     # =========================================================
-
-    def on_language_changed(
+    def on_language_toggled(
             self,
-            index,
+            language,
+            checked,
     ):
-
-        self.selected_language = (
-            self.language_combo.itemData(
-                index
+        if checked:
+            self.selected_languages.add(
+                language
             )
+        else:
+            self.selected_languages.discard(
+                language
+            )
+
+        self.update_language_button()
+
+        self.apply_collection_filters()
+    def on_language_toggled(
+            self,
+            language,
+            checked,
+    ):
+        if checked:
+
+            if language not in self.selected_languages:
+                self.selected_languages.append(
+                    language
+                )
+
+        else:
+
+            if language in self.selected_languages:
+                self.selected_languages.remove(
+                    language
+                )
+
+        def update_language_button(
+                self,
+        ):
+            languages = getattr(
+                self,
+                "selected_languages",
+                set(),
+            )
+
+            if not languages:
+                self.language_button.setText(
+                    "🌐"
+                )
+
+                return
+
+            flags = {
+                "br": "🇧🇷",
+                "us": "🇺🇸",
+                "es": "🇪🇸",
+                "fr": "🇫🇷",
+                "de": "🇩🇪",
+                "it": "🇮🇹",
+                "ja": "🇯🇵",
+                "ko": "🇰🇷",
+                "zhs": "🇨🇳",
+                "zht": "🇹🇼",
+                "ru": "🇷🇺",
+            }
+
+            selected_flags = []
+
+            for language in languages:
+                flag = flags.get(
+                    language,
+                    language.upper(),
+                )
+
+                selected_flags.append(
+                    flag
+                )
+
+            self.language_button.setText(
+                " ".join(
+                    selected_flags
+                )
+            )
+
+        def update_language_button(
+                self,
+        ):
+
+            if not self.selected_languages:
+                self.language_filter_button.setText(
+                    "🌐 Idioma"
+                )
+
+                return
+
+            language_flags = {
+                "br": "🇧🇷",
+                "us": "🇺🇸",
+                "es": "🇪🇸",
+                "fr": "🇫🇷",
+                "de": "🇩🇪",
+                "it": "🇮🇹",
+                "ja": "🇯🇵",
+                "ko": "🇰🇷",
+                "zhs": "🇨🇳",
+                "zht": "🇹🇼",
+                "ru": "🇷🇺",
+            }
+
+            flags = []
+
+            for language in sorted(
+                    self.selected_languages
+            ):
+                flag = language_flags.get(
+                    language,
+                    language,
+                )
+
+                flags.append(
+                    flag
+                )
+
+            self.language_button.setText(
+                " ".join(flags)
+            )
+
+        # -------------------------------------------------
+        # GARANTIR PELO MENOS UM IDIOMA
+        # -------------------------------------------------
+
+        if not self.selected_languages:
+
+            self.selected_languages = [
+                "en",
+            ]
+
+            action = self.language_actions.get(
+                "en"
+            )
+
+            if action is not None:
+                action.blockSignals(
+                    True
+                )
+
+                action.setChecked(
+                    True
+                )
+
+                action.blockSignals(
+                    False
+                )
+
+
+        self.update_language_button()
+
+        # -------------------------------------------------
+        # REFAZER AUTOCOMPLETE
+        # -------------------------------------------------
+
+        self.search_timer.stop()
+
+        self.pending_search = ""
+
+        self.suggestion_list.clear()
+
+        self.suggestion_list.hide()
+
+        self.search_status.clear()
+
+        current_text = (
+            self.add_input
+            .text()
+            .strip()
         )
+
+        if len(current_text) < 2:
+            return
+
+        self.pending_search = current_text
+
+        self.search_status.setText(
+            "🔄"
+        )
+
+        self.search_timer.start()
 
         print(
             "[SCRYFALL] Idioma selecionado:",
             self.selected_language,
         )
+
+        # =========================================================
+        # ATUALIZAR TEXTO DO BOTÃO DE IDIOMAS
+        # =========================================================
+
+        def update_language_button(
+                self,
+        ):
+            language_labels = {
+                "en": "🇺🇸 Inglês",
+                "pt": " Português",
+                "es": "🇪🇸 Espanhol",
+                "fr": "🇫🇷 Francês",
+                "de": "🇩🇪 Alemão",
+                "it": "🇮🇹 Italiano",
+                "ja": "🇯🇵 Japonês",
+                "ko": "🇰🇷 Coreano",
+                "zhs": "🇨🇳 Chinês Simplificado",
+                "zht": "🇹🇼 Chinês Tradicional",
+                "ru": "🇷🇺 Russo",
+            }
+
+            selected = [
+                language_labels.get(
+                    language,
+                    language,
+                )
+                for language
+                in self.selected_languages
+            ]
+
+            if not selected:
+                self.language_button.setText(
+                    "Idioma"
+                )
+
+                return
+
+            if len(selected) == 1:
+                self.language_button.setText(
+                    selected[0]
+                )
+
+                return
+
+            self.language_button.setText(
+                f"{len(selected)} idiomas selecionados"
+            )
 
         # =====================================================
         # CANCELA PESQUISA ANTERIOR
@@ -2219,6 +2583,50 @@ class CollectionPage(QWidget):
     # AUTOCOMPLETE
     # =====================================================
 
+    def update_language_button(
+            self,
+    ):
+        language_labels = {
+            "en": "Ingles",
+            "pt": "Portugues",
+            "es": "Espanhol",
+            "fr": "Frances",
+            "de": "Alemao",
+            "it": "Italiano",
+            "ja": "Japones",
+            "ko": "Coreano",
+            "zhs": "Chines Simplificado",
+            "zht": "Chines Tradicional",
+            "ru": "Russo",
+        }
+
+        if not self.selected_languages:
+            self.selected_languages = [
+                "en",
+            ]
+
+        self.selected_language = (
+            self.selected_languages[0]
+        )
+
+        selected = [
+            language_labels.get(
+                language,
+                language,
+            )
+            for language in self.selected_languages
+        ]
+
+        if len(selected) == 1:
+            self.language_button.setText(
+                selected[0]
+            )
+            return
+
+        self.language_button.setText(
+            f"{len(selected)} idiomas"
+        )
+
     def search_scryfall(self, text):
 
         text = text.strip()
@@ -2245,48 +2653,166 @@ class CollectionPage(QWidget):
 
         self.search_timer.start()
 
-
-
-    def perform_scryfall_search(self):
-
+    def perform_scryfall_search(
+            self,
+    ):
         query = self.pending_search
 
         if not query:
             return
 
-        # =================================================
-        # IDIOMA ATUAL
-        # =================================================
-
-        language = (
-                self.selected_language
-                or "en"
+        languages = list(
+            self.selected_languages
         )
+
+        if not languages:
+            languages = [
+                "en",
+            ]
 
         print(
             "[SCRYFALL] Pesquisando autocomplete:",
             query,
-            "| Idioma:",
-            language,
+            "| Idiomas:",
+            languages,
         )
 
-        # =================================================
-        # WORKER
-        # =================================================
+        # =====================================================
+        # LIMPAR RESULTADOS ANTERIORES
+        # =====================================================
 
-        task = ScryfallTask(
+        self.suggestion_list.clear()
+
+        self.search_status.setText(
+            "🔄"
+        )
+
+        # =====================================================
+        # PESQUISAR EM CADA IDIOMA
+        # =====================================================
+
+        self._language_search_pending = len(
+            languages
+        )
+
+        self._language_search_results = []
+
+        for language in languages:
+            task = ScryfallTask(
+                query,
+                language,
+            )
+
+            task.signals.finished.connect(
+                self.receive_multi_language_results
+            )
+
+            self.scryfall_pool.start(
+                task
+            )
+
+    # =========================================================
+    # RECEBER RESULTADOS DE MÚLTIPLOS IDIOMAS
+    # =========================================================
+
+    def receive_multi_language_results(
+            self,
             query,
-            language,
+            suggestions,
+    ):
+        current_text = (
+            self.add_input
+            .text()
+            .strip()
         )
 
-        task.signals.finished.connect(
-            self.receive_scryfall_results
+        if query != current_text:
+            return
+
+        if not hasattr(
+                self,
+                "_language_search_results",
+        ):
+            self._language_search_results = []
+
+        self._language_search_results.extend(
+            suggestions or []
         )
 
-        self.scryfall_pool.start(
-            task
+        self._language_search_pending = max(
+            0,
+            getattr(
+                self,
+                "_language_search_pending",
+                1,
+            ) - 1,
         )
 
+        if (
+                self._language_search_pending
+                > 0
+        ):
+            return
+
+        # =====================================================
+        # REMOVER DUPLICADOS
+        # =====================================================
+
+        unique_suggestions = []
+
+        seen = set()
+
+        for name in self._language_search_results:
+
+            name = str(
+                name or ""
+            ).strip()
+
+            if not name:
+                continue
+
+            key = name.casefold()
+
+            if key in seen:
+                continue
+
+            seen.add(
+                key
+            )
+
+            unique_suggestions.append(
+                name
+            )
+
+            if len(
+                    unique_suggestions
+            ) >= 8:
+                break
+
+        self._language_search_results = []
+
+        self.search_status.clear()
+
+        self.suggestion_list.clear()
+
+        if not unique_suggestions:
+            self.suggestion_list.hide()
+
+            return
+
+        for name in unique_suggestions:
+            self.suggestion_list.addItem(
+                name
+            )
+
+        if self.suggestion_list.count() > 0:
+            self.suggestion_list.setCurrentRow(
+                0
+            )
+
+        self.update_suggestion_height()
+
+        self.suggestion_list.show()
 
 
     # =====================================================
@@ -2335,46 +2861,6 @@ class CollectionPage(QWidget):
         self.suggestion_list.setFixedHeight(
             height
         )
-    def receive_scryfall_results(
-        self,
-        query,
-        suggestions,
-    ):
-
-        current_text = (
-            self.add_input
-            .text()
-            .strip()
-        )
-
-        if query != current_text:
-            return
-
-        self.search_status.clear()
-
-        self.suggestion_list.clear()
-
-        if not suggestions:
-
-            self.suggestion_list.hide()
-
-            return
-
-        for name in suggestions[:8]:
-
-            self.suggestion_list.addItem(
-                name
-            )
-
-        if self.suggestion_list.count() > 0:
-
-            self.suggestion_list.setCurrentRow(
-                0
-            )
-
-        self.update_suggestion_height()
-
-        self.suggestion_list.show()
 
     # =====================================================
     # SUGESTÃO
@@ -2455,11 +2941,30 @@ class CollectionPage(QWidget):
 
         try:
 
-            card_data = get_card_by_name(
-                name,
-                language=self.selected_language,
+            card_data = None
+
+            languages = list(
+                self.selected_languages
             )
 
+            if not languages:
+                languages = [
+                    "en",
+                ]
+
+            # =================================================
+            # TENTAR CADA IDIOMA SELECIONADO
+            # =================================================
+
+            for language in languages:
+
+                card_data = get_card_by_name(
+                    name,
+                    language=language,
+                )
+
+                if card_data:
+                    break
 
 
         except requests.RequestException as error:
@@ -2627,6 +3132,48 @@ class CollectionPage(QWidget):
         # =================================================
         # APLICAR FILTROS
         # =================================================
+
+        # =====================================================
+        # ATUALIZAR CONTADOR DA COLEÇÃO
+        # =====================================================
+
+        def update_collection_count(
+                self,
+                cards,
+        ):
+            if cards is None:
+                cards = []
+
+            total_quantity = 0
+
+            for card in cards:
+                try:
+                    quantity = int(
+                        card[10]
+                        if len(card) > 10
+                        else 0
+                    )
+
+                except (
+                        TypeError,
+                        ValueError,
+                        IndexError,
+                ):
+                    quantity = 0
+
+                total_quantity += max(
+                    quantity,
+                    0,
+                )
+
+            different_cards = len(
+                cards
+            )
+
+            self.collection_count_label.setText(
+                f"{total_quantity} cartas · "
+                f"{different_cards} diferentes"
+            )
 
         self.apply_collection_filters()
 
@@ -3097,7 +3644,48 @@ class CollectionPage(QWidget):
     # =====================================================
     # LIMPAR FILTROS
     # =====================================================
+    # =====================================================
+    # CONTADOR DA COLEÇÃO
+    # =====================================================
 
+    def update_collection_count(
+            self,
+            cards,
+    ):
+        if cards is None:
+            cards = []
+
+        total_quantity = 0
+
+        for card in cards:
+
+            try:
+                quantity = int(
+                    card[10]
+                    if len(card) > 10
+                    else 0
+                )
+
+            except (
+                    TypeError,
+                    ValueError,
+                    IndexError,
+            ):
+                quantity = 0
+
+            total_quantity += max(
+                quantity,
+                0,
+            )
+
+        different_cards = len(
+            cards
+        )
+
+        self.collection_count_label.setText(
+            f"{total_quantity} cartas · "
+            f"{different_cards} diferentes"
+        )
     def clear_collection_filters(
             self,
     ):
@@ -3722,6 +4310,14 @@ class CollectionPage(QWidget):
         )
 
         # =================================================
+        # CONTADOR
+        # =================================================
+
+        self.update_collection_count(
+            filtered
+        )
+
+        # =================================================
         # MOSTRAR
         # =================================================
 
@@ -3732,8 +4328,9 @@ class CollectionPage(QWidget):
         self.display_cards(
             self.current_cards
         )
+
     def clear_collection_filters(
-        self,
+            self,
     ):
 
         self.color_filter.blockSignals(
@@ -3785,7 +4382,6 @@ class CollectionPage(QWidget):
         )
 
         self.apply_collection_filters()
-
     def populate_set_filter(
         self,
     ):
@@ -4176,6 +4772,15 @@ class CollectionPage(QWidget):
                 self.change_card_quantity(
                     cid,
                     1,
+                )
+            )
+
+            frame.control_quantity.editingFinished.connect(
+                lambda cid=card_id,
+                       widget=frame.control_quantity:
+                self.set_card_quantity_from_input(
+                    cid,
+                    widget,
                 )
             )
 
@@ -4797,7 +5402,7 @@ class CollectionPage(QWidget):
             Qt.AlignmentFlag.AlignVCenter,
         )
 
-        quantity_label = QLabel(
+        quantity_label = QLineEdit(
             str(quantity)
         )
 
@@ -4807,6 +5412,14 @@ class CollectionPage(QWidget):
 
         quantity_label.setAlignment(
             Qt.AlignmentFlag.AlignCenter
+        )
+
+        quantity_label.setValidator(
+            QIntValidator(
+                0,
+                999999,
+                quantity_label,
+            )
         )
 
         quantity_label.setFixedSize(
@@ -4839,6 +5452,15 @@ class CollectionPage(QWidget):
             self.change_card_quantity(
                 cid,
                 1,
+            )
+        )
+
+        quantity_label.editingFinished.connect(
+            lambda cid=card_id,
+                   widget=quantity_label:
+            self.set_card_quantity_from_input(
+                cid,
+                widget,
             )
         )
 
@@ -5422,6 +6044,111 @@ class CollectionPage(QWidget):
     # QUANTIDADE
     # =====================================================
 
+    def set_card_quantity_from_input(
+            self,
+            card_id,
+            quantity_widget,
+    ):
+        try:
+            card_id = int(
+                card_id
+            )
+        except (
+                TypeError,
+                ValueError,
+        ):
+            return
+
+        if card_id <= 0 or quantity_widget is None:
+            return
+
+        text = (
+            quantity_widget
+            .text()
+            .strip()
+        )
+
+        try:
+            new_quantity = int(
+                text
+            )
+        except (
+                TypeError,
+                ValueError,
+        ):
+            new_quantity = 0
+
+        new_quantity = max(
+            0,
+            new_quantity,
+        )
+
+        success = set_card_quantity(
+            card_id,
+            new_quantity,
+        )
+
+        if not success:
+            return
+
+        if new_quantity <= 0:
+            self.card_rows.pop(
+                card_id,
+                None,
+            )
+
+            self.current_cards = [
+                card
+                for card in self.current_cards
+                if str(card[0]) != str(card_id)
+            ]
+
+            self.all_collection_cards = [
+                card
+                for card in self.all_collection_cards
+                if str(card[0]) != str(card_id)
+            ]
+
+            self.search_result_cards = [
+                card
+                for card in self.search_result_cards
+                if str(card[0]) != str(card_id)
+            ]
+
+            self.apply_collection_filters()
+            return
+
+        row_data = self.card_rows.get(
+            card_id,
+            {},
+        )
+
+        frame = row_data.get(
+            "frame"
+        )
+
+        if row_data.get("grid") and frame is not None:
+            if hasattr(
+                    frame,
+                    "set_quantity",
+            ):
+                frame.set_quantity(
+                    new_quantity
+                )
+        else:
+            quantity_widget.setText(
+                str(new_quantity)
+            )
+
+        self.update_quantity_in_filter_sources(
+            card_id,
+            new_quantity,
+        )
+
+        self.update_collection_count(
+            self.current_cards
+        )
+
     def change_card_quantity(
             self,
             card_id,
@@ -5588,22 +6315,18 @@ class CollectionPage(QWidget):
         # ALTERAR NO BANCO
         # =================================================
 
-        success = change_quantity(
-            card_id,
-            amount,
-        )
-
-        if not success:
-            return
-
-        # =================================================
-        # NOVA QUANTIDADE
-        # =================================================
-
         new_quantity = max(
             0,
             current_quantity + amount,
         )
+
+        success = set_card_quantity(
+            card_id,
+            new_quantity,
+        )
+
+        if not success:
+            return
 
         # =================================================
         # CARTA REMOVIDA
@@ -5652,6 +6375,10 @@ class CollectionPage(QWidget):
                 self.display_cards_list(
                     self.current_cards
                 )
+
+            self.update_collection_count(
+                self.current_cards
+            )
 
             return
 
@@ -5747,6 +6474,10 @@ class CollectionPage(QWidget):
         self.update_quantity_in_filter_sources(
             card_id,
             new_quantity,
+        )
+
+        self.update_collection_count(
+            self.current_cards
         )
 
     # =====================================================
