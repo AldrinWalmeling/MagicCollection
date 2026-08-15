@@ -3,6 +3,11 @@ import sqlite3
 import unicodedata
 from pathlib import Path
 
+print(
+    "[DATABASE] ARQUIVO CARREGADO:",
+    __file__
+)
+
 
 # =========================================================
 # CONFIGURAÇÃO
@@ -236,7 +241,8 @@ def extract_image_url(card_data):
 
     if isinstance(image_uris, dict):
         normal = normalize_image_url(
-            image_uris.get("large")
+            image_uris.get("png")
+            or image_uris.get("large")
             or image_uris.get("normal")
         )
 
@@ -263,8 +269,9 @@ def extract_image_url(card_data):
                 continue
 
             normal = normalize_image_url(
-                face_image_uris.get("large")
-                or face_image_uris.get("normal")
+                image_uris.get("png")
+                or image_uris.get("large")
+                or image_uris.get("normal")
             )
 
             if normal:
@@ -291,9 +298,24 @@ def get_card_image_path(scryfall_id):
     if not scryfall_id:
         return None
 
-    return CARDS_DIR / (
+    png_path = CARDS_DIR / (
+        f"{scryfall_id}.png"
+    )
+
+    jpg_path = CARDS_DIR / (
         f"{scryfall_id}.jpg"
     )
+
+    # PNG é o formato principal
+    if png_path.exists() and png_path.stat().st_size > 0:
+        return png_path
+
+    # Compatibilidade com imagens antigas
+    if jpg_path.exists() and jpg_path.stat().st_size > 0:
+        return jpg_path
+
+    # O caminho oficial continua sendo PNG
+    return png_path
 
 
 # =========================================================
@@ -431,6 +453,15 @@ def migrate_database():
 
         required_columns = {
             "scryfall_id": "TEXT",
+            "oracle_id": "TEXT",
+            "illustration_id": "TEXT",
+            "released_at": "TEXT",
+            "artist": "TEXT",
+            "frame": "TEXT",
+            "keywords": "TEXT",
+            "games": "TEXT",
+            "legalities": "TEXT",
+
             "printed_name": "TEXT",
             "lang": "TEXT",
             "set_code": "TEXT",
@@ -445,11 +476,15 @@ def migrate_database():
             "image_path": "TEXT",
             "card_faces": "TEXT",
             "card_printings": "TEXT",
+
+            # Preferências da coleção
             "preferred_language": "TEXT",
             "preferred_variant": "TEXT",
             "preferred_finish": "TEXT",
             "preferred_image": "TEXT",
             "preferred_face": "INTEGER NOT NULL DEFAULT 0",
+
+            # Informações gerais
             "favorite": "INTEGER NOT NULL DEFAULT 0",
             "custom_tags": "TEXT",
             "last_view": "TIMESTAMP",
@@ -457,7 +492,19 @@ def migrate_database():
             "cmc": "REAL",
             "colors": "TEXT",
             "color_identity": "TEXT",
+
+            # Quantidade possuída deste printing
             "quantity": "INTEGER NOT NULL DEFAULT 0",
+
+            # PREÇOS SCRYFALL
+            "price_usd": "REAL",
+            "price_usd_foil": "REAL",
+            "price_usd_etched": "REAL",
+            "price_eur": "REAL",
+            "price_eur_foil": "REAL",
+            "price_tix": "REAL",
+
+            # Datas
             "created_at": "TIMESTAMP",
             "updated_at": "TIMESTAMP",
         }
@@ -1036,6 +1083,123 @@ def ensure_card_exists(card_data):
         card_data
     )
 
+    # =========================================================
+    # PREÇOS SCRYFALL
+    # =========================================================
+
+    prices = (
+            card_data.get("prices")
+            or {}
+    )
+
+    def _parse_price(value):
+        try:
+            if value in (
+                    None,
+                    "",
+            ):
+                return None
+
+            return float(value)
+
+        except (
+                TypeError,
+                ValueError,
+        ):
+            return None
+
+    price_usd = _parse_price(
+        prices.get("usd")
+    )
+
+    price_usd_foil = _parse_price(
+        prices.get("usd_foil")
+    )
+
+    price_usd_etched = _parse_price(
+        prices.get("usd_etched")
+    )
+
+    price_eur = _parse_price(
+        prices.get("eur")
+    )
+
+    price_eur_foil = _parse_price(
+        prices.get("eur_foil")
+    )
+
+    price_tix = _parse_price(
+        prices.get("tix")
+    )
+
+    # =========================================================
+    # METADADOS DO SCRYFALL
+    # =========================================================
+
+    oracle_id = (
+            card_data.get("oracle_id")
+            or None
+    )
+
+    illustration_id = (
+            card_data.get("illustration_id")
+            or None
+    )
+
+    released_at = (
+            card_data.get("released_at")
+            or None
+    )
+
+    artist = (
+            card_data.get("artist")
+            or None
+    )
+
+    frame = (
+            card_data.get("frame")
+            or None
+    )
+
+    rarity = (
+            card_data.get("rarity")
+            or None
+    )
+
+    cmc = card_data.get(
+        "cmc"
+    )
+
+    colors = json.dumps(
+        card_data.get("colors")
+        or [],
+        ensure_ascii=False,
+    )
+
+    color_identity = json.dumps(
+        card_data.get("color_identity")
+        or [],
+        ensure_ascii=False,
+    )
+
+    keywords = json.dumps(
+        card_data.get("keywords")
+        or [],
+        ensure_ascii=False,
+    )
+
+    games = json.dumps(
+        card_data.get("games")
+        or [],
+        ensure_ascii=False,
+    )
+
+    legalities = json.dumps(
+        card_data.get("legalities")
+        or {},
+        ensure_ascii=False,
+    )
+
     connection = get_connection()
 
     try:
@@ -1059,34 +1223,32 @@ def ensure_card_exists(card_data):
 
             existing = cursor.fetchone()
 
-        if not existing:
+        # =========================================================
+        # IDENTIDADE DO PRINTING
+        #
+        # O Scryfall ID é a identidade principal da impressão.
+        #
+        # Não devemos reutilizar automaticamente um registro
+        # apenas por nome + set + collector number.
+        # =========================================================
 
+        if not existing and not scryfall_id:
             cursor.execute(
                 """
                 SELECT id
                 FROM cards
                 WHERE
                     name = ?
-                    AND COALESCE(
-                        set_name,
-                        ''
-                    ) = COALESCE(
-                        ?,
-                        ''
-                    )
-                    AND COALESCE(
-                        collector_number,
-                        ''
-                    ) = COALESCE(
-                        ?,
-                        ''
-                    )
+                    AND COALESCE(set_name, '') = COALESCE(?, '')
+                    AND COALESCE(collector_number, '') = COALESCE(?, '')
+                    AND COALESCE(lang, '') = COALESCE(?, '')
                 LIMIT 1
                 """,
                 (
                     name,
                     set_name,
                     collector_number,
+                    lang,
                 ),
             )
 
@@ -1120,9 +1282,30 @@ def ensure_card_exists(card_data):
                     image_url = ?,
                     image_path = ?,
                     card_faces = ?,
+
+                    oracle_id = ?,
+                    illustration_id = ?,
+                    released_at = ?,
+                    artist = ?,
+                    frame = ?,
+                    rarity = ?,
+                    cmc = ?,
+                    colors = ?,
+                    color_identity = ?,
+                    keywords = ?,
+                    games = ?,
+                    legalities = ?,
+                    
+                    price_usd = ?,
+                    price_usd_foil = ?,
+                    price_usd_etched = ?,
+                    price_eur = ?,
+                    price_eur_foil = ?,
+                    price_tix = ?,
+
                     updated_at =
-                        CURRENT_TIMESTAMP
-                WHERE id = ?
+                        CURRENT_TIMESTAMP             
+                    WHERE id = ?
                 """,
                 (
                     scryfall_id,
@@ -1140,6 +1323,27 @@ def ensure_card_exists(card_data):
                     image_url,
                     image_path_string,
                     card_faces,
+
+                    oracle_id,
+                    illustration_id,
+                    released_at,
+                    artist,
+                    frame,
+                    rarity,
+                    cmc,
+                    colors,
+                    color_identity,
+                    keywords,
+                    games,
+                    legalities,
+
+                    price_usd,
+                    price_usd_foil,
+                    price_usd_etched,
+                    price_eur,
+                    price_eur_foil,
+                    price_tix,
+
                     card_id,
                 ),
             )
@@ -1166,11 +1370,39 @@ def ensure_card_exists(card_data):
                 image_url,
                 image_path,
                 card_faces,
+        
+                oracle_id,
+                illustration_id,
+                released_at,
+                artist,
+                frame,
+                rarity,
+                cmc,
+                colors,
+                color_identity,
+                keywords,
+                games,
+                legalities,
+        
+                price_usd,
+                price_usd_foil,
+                price_usd_etched,
+                price_eur,
+                price_eur_foil,
+                price_tix,
+        
                 quantity
             )
             VALUES (
                 ?, ?, ?, ?, ?, ?, ?, ?, ?,
-                ?, ?, ?, ?, ?, ?, 0
+                ?, ?, ?, ?, ?, ?,
+        
+                ?, ?, ?, ?, ?, ?,
+                ?, ?, ?, ?, ?, ?,
+        
+                ?, ?, ?, ?, ?, ?,
+        
+                0
             )
             """,
             (
@@ -1189,6 +1421,26 @@ def ensure_card_exists(card_data):
                 image_url,
                 image_path_string,
                 card_faces,
+
+                oracle_id,
+                illustration_id,
+                released_at,
+                artist,
+                frame,
+                rarity,
+                cmc,
+                colors,
+                color_identity,
+                keywords,
+                games,
+                legalities,
+
+                price_usd,
+                price_usd_foil,
+                price_usd_etched,
+                price_eur,
+                price_eur_foil,
+                price_tix,
             ),
         )
 
@@ -1291,15 +1543,25 @@ def update_card_printing(
     preferred_face=None,
 ):
     try:
-        card_id = int(card_id)
+        card_id = int(
+            card_id
+        )
+
     except (
         TypeError,
         ValueError,
     ):
         return False
 
-    if card_id <= 0 or not card_data:
+    if (
+        card_id <= 0
+        or not card_data
+    ):
         return False
+
+    # =====================================================
+    # IDENTIDADE DO PRINTING
+    # =====================================================
 
     scryfall_id = (
         card_data.get("scryfall_id")
@@ -1307,32 +1569,210 @@ def update_card_printing(
     )
 
     if scryfall_id:
-        scryfall_id = str(scryfall_id).strip()
+        scryfall_id = str(
+            scryfall_id
+        ).strip()
 
-    image_url = extract_image_url(card_data)
-    image_path = get_card_image_path(scryfall_id)
-    image_path_string = str(image_path) if image_path else None
-    card_faces = serialize_card_faces(card_data)
-    card_printings = serialize_card_printings(printings)
+    # =====================================================
+    # IMAGEM
+    # =====================================================
+
+    image_url = extract_image_url(
+        card_data
+    )
+
+    image_path = get_card_image_path(
+        scryfall_id
+    )
+
+    image_path_string = (
+        str(image_path)
+        if image_path
+        else None
+    )
+
+    # =====================================================
+    # FACES
+    # =====================================================
+
+    card_faces = serialize_card_faces(
+        card_data
+    )
+
+    # =====================================================
+    # IMPRESSÕES
+    # =====================================================
+
+    card_printings = (
+        serialize_card_printings(
+            printings
+        )
+    )
+
+    # =====================================================
+    # PREFERÊNCIAS
+    # =====================================================
 
     preferred_language = (
         preferred_language
         or card_data.get("lang")
     )
+
     preferred_variant = (
         preferred_variant
         or scryfall_id
     )
+
     preferred_image = image_url
+
+    try:
+        preferred_face = int(
+            preferred_face
+            or 0
+        )
+
+    except (
+        TypeError,
+        ValueError,
+    ):
+        preferred_face = 0
+
+    # =====================================================
+    # METADADOS SCRYFALL
+    # =====================================================
+
+    oracle_id = (
+        card_data.get("oracle_id")
+        or None
+    )
+
+    illustration_id = (
+        card_data.get("illustration_id")
+        or None
+    )
+
+    released_at = (
+        card_data.get("released_at")
+        or None
+    )
+
+    artist = (
+        card_data.get("artist")
+        or None
+    )
+
+    frame = (
+        card_data.get("frame")
+        or None
+    )
+
+    rarity = (
+            card_data.get("rarity")
+            or None
+    )
+
+    cmc = card_data.get(
+        "cmc"
+    )
+
+    colors = json.dumps(
+        card_data.get("colors")
+        or [],
+        ensure_ascii=False,
+    )
+
+    color_identity = json.dumps(
+        card_data.get("color_identity")
+        or [],
+        ensure_ascii=False,
+    )
+
+    keywords = json.dumps(
+        card_data.get("keywords")
+        or [],
+        ensure_ascii=False,
+    )
+
+    games = json.dumps(
+        card_data.get("games")
+        or [],
+        ensure_ascii=False,
+    )
+
+    legalities = json.dumps(
+        card_data.get("legalities")
+        or {},
+        ensure_ascii=False,
+    )
+
+    # =====================================================
+    # PREÇOS
+    # =====================================================
+
+    prices = (
+        card_data.get("prices")
+        or {}
+    )
+
+    def parse_price(value):
+        try:
+            if value in (
+                None,
+                "",
+            ):
+                return None
+
+            return float(
+                value
+            )
+
+        except (
+            TypeError,
+            ValueError,
+        ):
+            return None
+
+    price_usd = parse_price(
+        prices.get("usd")
+    )
+
+    price_usd_foil = parse_price(
+        prices.get("usd_foil")
+    )
+
+    price_usd_etched = parse_price(
+        prices.get("usd_etched")
+    )
+
+    price_eur = parse_price(
+        prices.get("eur")
+    )
+
+    price_eur_foil = parse_price(
+        prices.get("eur_foil")
+    )
+
+    price_tix = parse_price(
+        prices.get("tix")
+    )
+
+    # =====================================================
+    # BANCO
+    # =====================================================
 
     connection = get_connection()
 
     try:
         cursor = connection.cursor()
 
+        # -------------------------------------------------
+        # VERIFICAR SCRYFALL ID ATUAL
+        # -------------------------------------------------
+
         cursor.execute(
             """
-            SELECT scryfall_id
+            SELECT
+                scryfall_id
             FROM cards
             WHERE id = ?
             LIMIT 1
@@ -1342,19 +1782,29 @@ def update_card_printing(
             ),
         )
 
-        current_row = cursor.fetchone()
+        current_row = (
+            cursor.fetchone()
+        )
+
         current_scryfall_id = (
             current_row["scryfall_id"]
             if current_row
             else None
         )
 
+        # -------------------------------------------------
+        # NÃO PERMITIR DUPLICAÇÃO DE PRINTING
+        # -------------------------------------------------
+
         if scryfall_id:
+
             cursor.execute(
                 """
-                SELECT id
+                SELECT
+                    id
                 FROM cards
-                WHERE scryfall_id = ?
+                WHERE
+                    scryfall_id = ?
                     AND id != ?
                 LIMIT 1
                 """,
@@ -1365,81 +1815,206 @@ def update_card_printing(
             )
 
             if cursor.fetchone():
-                scryfall_id = current_scryfall_id
+
+                scryfall_id = (
+                    current_scryfall_id
+                )
+
+        # -------------------------------------------------
+        # ATUALIZAR CARTA
+        # -------------------------------------------------
 
         cursor.execute(
             """
             UPDATE cards
             SET
                 scryfall_id = ?,
+
                 name = ?,
                 printed_name = ?,
                 lang = ?,
+
                 set_code = ?,
                 set_name = ?,
                 collector_number = ?,
+
                 mana_cost = ?,
                 type_line = ?,
                 oracle_text = ?,
+
                 power = ?,
                 toughness = ?,
+
                 image_url = ?,
                 image_path = ?,
+
                 card_faces = ?,
-                card_printings = COALESCE(?, card_printings),
+                card_printings =
+                    COALESCE(
+                        ?,
+                        card_printings
+                    ),
+
                 preferred_language = ?,
                 preferred_variant = ?,
                 preferred_finish = ?,
                 preferred_image = ?,
                 preferred_face = ?,
-                last_view = CURRENT_TIMESTAMP,
-                updated_at = CURRENT_TIMESTAMP
+
+                oracle_id = ?,
+                illustration_id = ?,
+                released_at = ?,
+                artist = ?,
+                frame = ?,
+                rarity = ?,
+                cmc = ?,
+                colors = ?,
+                color_identity = ?,
+                
+                keywords = ?,
+                games = ?,
+                legalities = ?,
+
+                price_usd = ?,
+                price_usd_foil = ?,
+                price_usd_etched = ?,
+
+                price_eur = ?,
+                price_eur_foil = ?,
+                price_tix = ?,
+
+                last_view =
+                    CURRENT_TIMESTAMP,
+
+                updated_at =
+                    CURRENT_TIMESTAMP
+
             WHERE id = ?
             """,
             (
+                # identidade
                 scryfall_id,
-                card_data.get("name"),
-                card_data.get("printed_name"),
-                card_data.get("lang"),
-                card_data.get("set_code")
-                or card_data.get("set"),
-                card_data.get("set_name"),
-                card_data.get("collector_number"),
-                card_data.get("mana_cost"),
-                card_data.get("printed_type_line")
-                or card_data.get("type_line"),
-                card_data.get("printed_text")
-                or card_data.get("oracle_text"),
-                card_data.get("power"),
-                card_data.get("toughness"),
+
+                # dados principais
+                card_data.get(
+                    "name"
+                ),
+
+                card_data.get(
+                    "printed_name"
+                ),
+
+                card_data.get(
+                    "lang"
+                ),
+
+                # edição
+                card_data.get(
+                    "set_code"
+                )
+                or card_data.get(
+                    "set"
+                ),
+
+                card_data.get(
+                    "set_name"
+                ),
+
+                card_data.get(
+                    "collector_number"
+                ),
+
+                # carta
+                card_data.get(
+                    "mana_cost"
+                ),
+
+                card_data.get(
+                    "printed_type_line"
+                )
+                or card_data.get(
+                    "type_line"
+                ),
+
+                card_data.get(
+                    "printed_text"
+                )
+                or card_data.get(
+                    "oracle_text"
+                ),
+
+                card_data.get(
+                    "power"
+                ),
+
+                card_data.get(
+                    "toughness"
+                ),
+
+                # imagem
                 image_url,
                 image_path_string,
+
+                # faces / impressões
                 card_faces,
                 card_printings,
+
+                # preferências
                 preferred_language,
                 preferred_variant,
                 preferred_finish,
                 preferred_image,
-                int(preferred_face or 0),
+                preferred_face,
+
+                # metadados
+                oracle_id,
+                illustration_id,
+                released_at,
+                artist,
+                frame,
+                rarity,
+                cmc,
+                colors,
+                color_identity,
+
+                keywords,
+                games,
+                legalities,
+
+                # preços
+                price_usd,
+                price_usd_foil,
+                price_usd_etched,
+
+                price_eur,
+                price_eur_foil,
+                price_tix,
+
+                # ID local
                 card_id,
             ),
         )
 
         connection.commit()
 
-        return cursor.rowcount > 0
+        return (
+            cursor.rowcount > 0
+        )
 
     except Exception as error:
+
         connection.rollback()
+
         print(
-            "[DATABASE] Erro ao atualizar impressao:",
+            "[DATABASE] Erro ao atualizar "
+            "impressao:",
             error,
         )
+
         return False
 
     finally:
         connection.close()
-
 
 # =========================================================
 # TODAS AS CARTAS DA COLEÇÃO
@@ -1617,6 +2192,18 @@ def get_card_by_id(card_id):
             SELECT
                 id,
                 scryfall_id,
+                oracle_id,
+                illustration_id,
+                released_at,
+                artist,
+                frame,
+                rarity,
+                cmc,
+                colors,
+                color_identity,
+                keywords,
+                games,
+                legalities,
                 name,
                 printed_name,
                 lang,
@@ -1640,6 +2227,12 @@ def get_card_by_id(card_id):
                 preferred_face,
                 favorite,
                 custom_tags,
+                price_usd,
+                price_usd_foil,
+                price_usd_etched,
+                price_eur,
+                price_eur_foil,
+                price_tix,
                 last_view
             FROM cards
             WHERE id = ?
@@ -1661,6 +2254,66 @@ def get_card_by_id(card_id):
         card["card_printings"] = deserialize_card_printings(
             card.get("card_printings")
         )
+
+        try:
+            card["keywords"] = json.loads(
+                card.get("keywords")
+                or "[]"
+            )
+        except (
+            TypeError,
+            ValueError,
+            json.JSONDecodeError,
+        ):
+            card["keywords"] = []
+
+        try:
+            card["games"] = json.loads(
+                card.get("games")
+                or "[]"
+            )
+        except (
+            TypeError,
+            ValueError,
+            json.JSONDecodeError,
+        ):
+            card["games"] = []
+
+        try:
+            card["legalities"] = json.loads(
+                card.get("legalities")
+                or "{}"
+            )
+        except (
+            TypeError,
+            ValueError,
+            json.JSONDecodeError,
+        ):
+            card["legalities"] = {}
+
+            try:
+                card["colors"] = json.loads(
+                    card.get("colors")
+                    or "[]"
+                )
+            except (
+                    TypeError,
+                    ValueError,
+                    json.JSONDecodeError,
+            ):
+                card["colors"] = []
+
+            try:
+                card["color_identity"] = json.loads(
+                    card.get("color_identity")
+                    or "[]"
+                )
+            except (
+                    TypeError,
+                    ValueError,
+                    json.JSONDecodeError,
+            ):
+                card["color_identity"] = []
 
         return card
 
@@ -1869,7 +2522,149 @@ def set_card_quantity(card_id, quantity):
     finally:
         connection.close()
 
+# =========================================================
+# PREÇOS DE UM PRINTING
+# =========================================================
 
+def get_card_prices(card_id):
+    try:
+        card_id = int(
+            card_id
+        )
+
+    except (
+        TypeError,
+        ValueError,
+    ):
+        return None
+
+    if card_id <= 0:
+        return None
+
+    connection = get_connection()
+
+    try:
+        cursor = connection.cursor()
+
+        cursor.execute(
+            """
+            SELECT
+                price_usd,
+                price_usd_foil,
+                price_usd_etched,
+                price_eur,
+                price_eur_foil,
+                price_tix
+            FROM cards
+            WHERE id = ?
+            LIMIT 1
+            """,
+            (
+                card_id,
+            ),
+        )
+
+        row = cursor.fetchone()
+
+        if not row:
+            return None
+
+        return {
+            "usd": row["price_usd"],
+            "usd_foil": row["price_usd_foil"],
+            "usd_etched": row["price_usd_etched"],
+            "eur": row["price_eur"],
+            "eur_foil": row["price_eur_foil"],
+            "tix": row["price_tix"],
+        }
+
+    finally:
+        connection.close()
+
+# =========================================================
+# VALOR ESTIMADO DE UM PRINTING
+# =========================================================
+
+def get_card_collection_value(
+    card_id,
+    finish="nonfoil",
+):
+    try:
+        card_id = int(
+            card_id
+        )
+
+    except (
+        TypeError,
+        ValueError,
+    ):
+        return 0.0
+
+    if card_id <= 0:
+        return 0.0
+
+    connection = get_connection()
+
+    try:
+        cursor = connection.cursor()
+
+        cursor.execute(
+            """
+            SELECT
+                quantity,
+                price_usd,
+                price_usd_foil,
+                price_usd_etched
+            FROM cards
+            WHERE id = ?
+            LIMIT 1
+            """,
+            (
+                card_id,
+            ),
+        )
+
+        row = cursor.fetchone()
+
+        if not row:
+            return 0.0
+
+        quantity = int(
+            row["quantity"] or 0
+        )
+
+        finish = str(
+            finish or "nonfoil"
+        ).strip().casefold()
+
+        if finish == "foil":
+            unit_price = (
+                row["price_usd_foil"]
+                or row["price_usd"]
+                or 0.0
+            )
+
+        elif finish == "etched":
+            unit_price = (
+                row["price_usd_etched"]
+                or row["price_usd_foil"]
+                or row["price_usd"]
+                or 0.0
+            )
+
+        else:
+            unit_price = (
+                row["price_usd"]
+                or 0.0
+            )
+
+        return float(
+            quantity
+            * float(unit_price)
+        )
+
+    finally:
+        connection.close()
 # =========================================================
 # ESTATÍSTICAS DA COLEÇÃO
 # =========================================================

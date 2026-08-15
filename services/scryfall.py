@@ -715,7 +715,80 @@ def autocomplete_card_names(
         suggestions
     )
 
+# =========================================================
+# BUSCAR CARTA PELO SCRYFALL ID
+# =========================================================
 
+def get_card_by_scryfall_id(
+    scryfall_id,
+):
+    """
+    Retorna exatamente o printing identificado
+    pelo Scryfall ID.
+    """
+
+    scryfall_id = str(
+        scryfall_id or ""
+    ).strip()
+
+    if not scryfall_id:
+        return None
+
+    cache_key = (
+        "id",
+        scryfall_id,
+    )
+
+    # =====================================================
+    # CACHE
+    # =====================================================
+
+    cached = (
+        _CARD_CACHE.get(
+            cache_key
+        )
+    )
+
+    if cached:
+        timestamp, card = cached
+
+        if (
+            time.monotonic()
+            - timestamp
+            < CARD_CACHE_TTL
+        ):
+            return card
+
+        _CARD_CACHE.pop(
+            cache_key,
+            None,
+        )
+
+    # =====================================================
+    # SCRYFALL
+    # =====================================================
+
+    data = _request_json(
+        f"/cards/{scryfall_id}"
+    )
+
+    if not data:
+        return None
+
+    # =====================================================
+    # CACHE
+    # =====================================================
+
+    _CARD_CACHE[
+        cache_key
+    ] = (
+        time.monotonic(),
+        data,
+    )
+
+    _cleanup_card_cache()
+
+    return data
 # =========================================================
 # BUSCAR CARTA PELO NOME
 # =========================================================

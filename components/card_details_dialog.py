@@ -23,8 +23,15 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from database import update_card_printing
-from services.scryfall import get_card_by_name, get_card_printings
+from database import (
+    get_card_by_id,
+    update_card_printing,
+)
+
+from services.scryfall import (
+    get_card_by_name,
+    get_card_printings,
+)
 from services.scryfall_symbols import ManaSymbolsWidget
 from ui.theme import DARK_THEME
 
@@ -138,31 +145,80 @@ def _has_missing_image_status(data):
 
 
 def _best_image_url(data):
-    if not isinstance(data, dict) or _has_missing_image_status(data):
+    if (
+        not isinstance(data, dict)
+        or _has_missing_image_status(data)
+    ):
         return None
 
     image_uris = data.get("image_uris")
 
     if isinstance(image_uris, dict):
-        for key in ("large", "normal", "png", "border_crop", "small"):
+
+        # Prioridade máxima:
+        # PNG original da carta.
+        png_url = image_uris.get("png")
+
+        if png_url:
+            return png_url
+
+        # Fallbacks caso o PNG não exista.
+        for key in (
+            "large",
+            "normal",
+            "border_crop",
+            "small",
+        ):
             url = image_uris.get(key)
+
             if url:
                 return url
 
-    return data.get("image_url") or data.get("image_uri")
-
+    return (
+        data.get("image_url")
+        or data.get("image_uri")
+    )
 
 def _download_pixmap(url):
     if not url:
         return None
 
-    cache_key = hashlib.sha1(str(url).encode("utf-8")).hexdigest()
-    local_path = FACE_CACHE_DIR / f"{cache_key}.jpg"
+    cache_key = hashlib.sha1(
+        str(url).encode("utf-8")
+    ).hexdigest()
 
-    if local_path.exists() and local_path.stat().st_size > 0:
-        pixmap = QPixmap(str(local_path))
+    url_text = str(url).lower()
+
+    if ".png" in url_text:
+        extension = "png"
+    elif ".webp" in url_text:
+        extension = "webp"
+    else:
+        extension = "jpg"
+
+    local_path = (
+        FACE_CACHE_DIR
+        / f"{cache_key}.{extension}"
+    )
+
+    # =====================================================
+    # CACHE
+    # =====================================================
+
+    if (
+        local_path.exists()
+        and local_path.stat().st_size > 0
+    ):
+        pixmap = QPixmap(
+            str(local_path)
+        )
+
         if not pixmap.isNull():
             return pixmap
+
+    # =====================================================
+    # DOWNLOAD
+    # =====================================================
 
     try:
         response = requests.get(
@@ -173,22 +229,54 @@ def _download_pixmap(url):
                 "Accept": "image/*,*/*;q=0.8",
             },
         )
+
         response.raise_for_status()
 
-        content_type = response.headers.get("content-type", "")
-        if "image" not in content_type.lower():
+        content_type = (
+            response.headers.get(
+                "content-type",
+                "",
+            )
+        ).lower()
+
+        if "image" not in content_type:
             return None
 
-        local_path.write_bytes(response.content)
+        # =================================================
+        # CORRIGIR EXTENSÃO PELO CONTEÚDO REAL
+        # =================================================
+
+        if "png" in content_type:
+            extension = "png"
+        elif "webp" in content_type:
+            extension = "webp"
+        elif "jpeg" in content_type or "jpg" in content_type:
+            extension = "jpg"
+
+        local_path = (
+            FACE_CACHE_DIR
+            / f"{cache_key}.{extension}"
+        )
+
+        local_path.write_bytes(
+            response.content
+        )
+
     except Exception as error:
-        print("[DETAILS] Erro ao carregar imagem:", error)
+        print(
+            "[DETAILS] Erro ao carregar imagem:",
+            error,
+        )
         return None
 
-    pixmap = QPixmap(str(local_path))
+    pixmap = QPixmap(
+        str(local_path)
+    )
+
     if pixmap.isNull():
         return None
-    return pixmap
 
+    return pixmap
 
 class DetailCard(QFrame):
     def __init__(self, title, parent=None):
@@ -210,7 +298,53 @@ class CardDetailsDialog(QDialog):
     def __init__(self, card, pixmap=None, parent=None):
         super().__init__(parent)
 
-        self.card = card_to_dict(card)
+        # =====================================================
+        # CARTA RECEBIDA PELA UI
+        # =====================================================
+
+        incoming_card = card_to_dict(
+            card
+        )
+
+        # =====================================================
+        # BUSCAR A VERSÃO COMPLETA NO BANCO
+        # =====================================================
+
+        local_id = incoming_card.get(
+            "id"
+        )
+
+        stored_card = None
+
+        if local_id:
+            try:
+                stored_card = get_card_by_id(
+                    local_id
+                )
+
+            except Exception as error:
+                print(
+                    "[DETAILS] Erro ao carregar "
+                    "carta completa do banco:",
+                    error,
+                )
+
+        # =====================================================
+        # FONTE DE DADOS DOS DETALHES
+        # =====================================================
+
+        if isinstance(
+                stored_card,
+                dict,
+        ):
+            self.card = {
+                **incoming_card,
+                **stored_card,
+            }
+
+        else:
+            self.card = incoming_card
+
         self.initial_pixmap = pixmap
         try:
             self.current_face_index = int(
@@ -352,10 +486,20 @@ class CardDetailsDialog(QDialog):
 
         root.addWidget(right_panel, 1)
         self._populate_selectors()
-        if self.current_face_index >= len(self.faces):
-            self.current_face_index = 0
 
-        self.set_face(self.current_face_index)
+        # =====================================================
+        # APLICAR O PRINTING SELECIONADO AO ABRIR
+        # =====================================================
+
+        if self.variant_combo.currentIndex() >= 0:
+            self.apply_selected_printing()
+        else:
+            if self.current_face_index >= len(self.faces):
+                self.current_face_index = 0
+
+            self.set_face(
+                self.current_face_index
+            )
 
     def _build_main_tab(self):
         tab = QWidget()
@@ -706,9 +850,59 @@ class CardDetailsDialog(QDialog):
         self.card["preferred_language"] = (
             self.language_combo.currentData()
         )
-        self.card["preferred_variant"] = self.card.get("scryfall_id")
+        self.card["preferred_variant"] = self.card.get(
+            "scryfall_id"
+        )
 
-        self.faces = self._build_faces(self.card)
+        # =====================================================
+        # SALVAR A IMAGEM DA IMPRESSÃO SELECIONADA
+        # =====================================================
+
+        selected_face = None
+
+        if self.card.get("card_faces"):
+            faces = self.card.get("card_faces")
+
+            if (
+                    isinstance(faces, list)
+                    and faces
+                    and self.current_face_index < len(faces)
+            ):
+                selected_face = faces[
+                    self.current_face_index
+                ]
+
+        image_source = selected_face or self.card
+
+        image_url = _best_image_url(
+            image_source
+        )
+
+        if not image_url:
+            image_url = _best_image_url(
+                self.card
+            )
+
+        selected_scryfall_id = (
+            self.card.get("scryfall_id")
+        )
+
+        if image_url and selected_scryfall_id:
+            saved_path = self._save_selected_image(
+                image_url,
+                selected_scryfall_id,
+            )
+
+            if saved_path:
+                self.card["image_path"] = str(
+                    saved_path
+                )
+
+                self.card["image_url"] = image_url
+
+        self.faces = self._build_faces(
+            self.card
+        )
 
         if self.current_face_index >= len(self.faces):
             self.current_face_index = 0
@@ -935,6 +1129,70 @@ class CardDetailsDialog(QDialog):
                 return pixmap
 
         return _download_pixmap(_best_image_url(self.english_card))
+
+    def _save_selected_image(self, url, scryfall_id):
+        if not url or not scryfall_id:
+            return None
+
+        try:
+            from database import get_card_image_path
+
+            image_path = get_card_image_path(
+                scryfall_id
+            )
+
+            if not image_path:
+                return None
+
+            image_path = Path(
+                image_path
+            )
+
+            image_path.parent.mkdir(
+                parents=True,
+                exist_ok=True,
+            )
+
+            response = requests.get(
+                url,
+                timeout=10,
+                headers={
+                    "User-Agent": "MagicCollection/1.0",
+                    "Accept": "image/png,image/*,*/*;q=0.8",
+                },
+            )
+
+            response.raise_for_status()
+
+            content_type = response.headers.get(
+                "content-type",
+                "",
+            ).lower()
+
+            if "image" not in content_type:
+                print(
+                    "[DETAILS] Resposta não é uma imagem."
+                )
+                return None
+
+            image_path.write_bytes(
+                response.content
+            )
+
+            print(
+                "[DETAILS] Imagem salva:",
+                image_path,
+            )
+
+            return image_path
+
+        except Exception as error:
+            print(
+                "[DETAILS] Erro ao salvar imagem:",
+                error,
+            )
+
+            return None
 
     def _set_face_image(self, face):
         card_lang = str(self.card.get("lang") or "en").casefold()

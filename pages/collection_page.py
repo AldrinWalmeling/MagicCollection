@@ -82,10 +82,15 @@ from PySide6.QtWidgets import (
 from services.scryfall import (
     autocomplete_card_names,
     get_card_by_name,
+    get_card_by_scryfall_id,
 )
 
 from services.scryfall_symbols import (
     ManaSymbolsWidget,
+)
+
+from services.app_events import (
+    app_events,
 )
 
 from services.collection_export import (
@@ -316,41 +321,84 @@ class RefreshCardDataTask(QRunnable):
 
         try:
             for index, card in enumerate(self.cards, start=1):
-                name = (
-                    card.get("printed_name")
-                    or card.get("name")
+                scryfall_id = str(
+                    card.get("scryfall_id")
                     or ""
+                ).strip()
+
+                name = (
+                        card.get("printed_name")
+                        or card.get("name")
+                        or ""
                 )
 
-                name = str(name).strip()
+                name = str(
+                    name
+                ).strip()
 
-                if not name:
+                if not name and not scryfall_id:
                     continue
-
-                language = (
-                    card.get("lang")
-                    or "en"
-                )
-
-                if language not in SCRYFALL_LANGUAGES.values():
-                    language = "en"
 
                 self.signals.progress.emit(
                     index,
                     total,
-                    name,
+                    name or scryfall_id,
                 )
 
-                card_data = get_card_by_name(
-                    name,
-                    language=language,
-                )
+                # =====================================================
+                # PRIORIDADE 1
+                # PRINTING EXATO
+                # =====================================================
 
-                if not card_data and language != "en":
-                    card_data = get_card_by_name(
-                        card.get("name") or name,
-                        language="en",
+                card_data = None
+
+                if scryfall_id:
+                    card_data = (
+                        get_card_by_scryfall_id(
+                            scryfall_id
+                        )
                     )
+
+                # =====================================================
+                # FALLBACK
+                #
+                # Só usamos nome quando o registro antigo
+                # não possui Scryfall ID.
+                # =====================================================
+
+                if (
+                        not card_data
+                        and not scryfall_id
+                        and name
+                ):
+                    language = (
+                            card.get("lang")
+                            or "en"
+                    )
+
+                    if language not in (
+                            SCRYFALL_LANGUAGES.values()
+                    ):
+                        language = "en"
+
+                    card_data = (
+                        get_card_by_name(
+                            name,
+                            language=language,
+                        )
+                    )
+
+                    if (
+                            not card_data
+                            and language != "en"
+                    ):
+                        card_data = (
+                            get_card_by_name(
+                                card.get("name")
+                                or name,
+                                language="en",
+                            )
+                        )
 
                 if not card_data:
                     continue
@@ -1053,7 +1101,7 @@ class GridCardFrame(QFrame):
                 url = art.get("large") or art.get("image_uri") or art.get("normal")
 
         if not url:
-            for key in ("large", "normal", "png", "border_crop", "small"):
+            for key in ("png","large", "normal", "border_crop", "small"):
                 url = image_uris.get(key)
                 if url:
                     break
@@ -1302,6 +1350,18 @@ class CollectionPage(QWidget):
         self._grid_columns = None
 
         self._grid_generation = 0
+
+        # =========================================================
+        # EVENTOS DA APLICAÇÃO
+        # =========================================================
+
+        app_events.collection_card_changed.connect(
+            self._on_collection_card_changed
+        )
+
+        app_events.card_data_changed.connect(
+            self._on_card_data_changed
+        )
         # =================================================
         # THREAD POOLS
         # =================================================
@@ -4116,6 +4176,112 @@ class CollectionPage(QWidget):
 
                         nested_widget.deleteLater()
 
+    # =========================================================
+    # EVENTOS — CARTA DA COLEÇÃO ALTERADA
+    # =========================================================
+
+    def _on_collection_card_changed(
+            self,
+            card_id,
+            new_quantity,
+    ):
+        try:
+            card_id = int(card_id)
+            new_quantity = int(new_quantity)
+
+        except (
+                TypeError,
+                ValueError,
+        ):
+            return
+
+        if card_id <= 0:
+            return
+
+        # -----------------------------------------------------
+        # ATUALIZAR FONTES DE DADOS EM MEMÓRIA
+        # -----------------------------------------------------
+
+        self.update_quantity_in_filter_sources(
+            card_id,
+            new_quantity,
+        )
+
+        # -----------------------------------------------------
+        # ATUALIZAR WIDGET EXISTENTE
+        # -----------------------------------------------------
+
+        row_data = self.card_rows.get(
+            card_id
+        )
+
+        if row_data:
+
+            frame = row_data.get(
+                "frame"
+            )
+
+            if frame is not None:
+
+                if row_data.get("grid"):
+
+                    if hasattr(
+                            frame,
+                            "set_quantity",
+                    ):
+                        frame.set_quantity(
+                            new_quantity
+                        )
+
+                else:
+
+                    quantity_widget = (
+                        row_data.get(
+                            "quantity_label"
+                        )
+                    )
+
+                    if quantity_widget is not None:
+                        quantity_widget.setText(
+                            str(new_quantity)
+                        )
+
+        # -----------------------------------------------------
+        # ATUALIZAR CONTADOR
+        # -----------------------------------------------------
+
+        self.update_collection_count(
+            self.current_cards
+        )
+
+    # =========================================================
+    # EVENTOS — DADOS DA CARTA ALTERADOS
+    # =========================================================
+
+    def _on_card_data_changed(
+            self,
+            card_id,
+    ):
+        try:
+            card_id = int(card_id)
+
+        except (
+                TypeError,
+                ValueError,
+        ):
+            return
+
+        if card_id <= 0:
+            return
+
+        # Por enquanto NÃO reconstruímos a grade.
+        #
+        # Este evento será utilizado na próxima etapa
+        # para atualizar imagem / idioma / arte / face
+        # somente da carta afetada.
+        #
+        return
+
     # =====================================================
     # DISPLAY
     # =====================================================
@@ -6585,6 +6751,15 @@ class CollectionPage(QWidget):
         if not success:
             return
 
+        # =========================================================
+        # AVISAR A APLICAÇÃO
+        # =========================================================
+
+        app_events.collection_card_changed.emit(
+            card_id,
+            new_quantity,
+        )
+
         if new_quantity <= 0:
             self.card_rows.pop(
                 card_id,
@@ -6821,6 +6996,15 @@ class CollectionPage(QWidget):
 
         if not success:
             return
+
+        # =========================================================
+        # AVISAR A APLICAÇÃO
+        # =========================================================
+
+        app_events.collection_card_changed.emit(
+            card_id,
+            new_quantity,
+        )
 
         # =================================================
         # CARTA REMOVIDA

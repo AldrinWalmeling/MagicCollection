@@ -61,6 +61,10 @@ from components.card_details_dialog import (
     CardDetailsDialog,
 )
 
+from services.app_events import (
+    app_events,
+)
+
 from pages.collection_page import CollectionExportDialog
 
 from services.scryfall import (
@@ -5745,13 +5749,37 @@ class DecksPage(QWidget):
             DARK_THEME
         )
 
-        print("[DECKS PAGE] Inicializando DecksPage...")
+        print(
+            "[DECKS PAGE] Inicializando DecksPage..."
+        )
 
         initialize_decks_database()
 
         self.current_deck_id = None
         self.current_deck_name = ""
         self.current_deck_cards = []
+        self._ui_ready = False
+        self._resize_refresh_pending = False
+
+        # =====================================================
+        # EVENTOS — CARTA DA COLEÇÃO ALTERADA
+        # =====================================================
+
+        self._collection_event_connected = False
+
+        try:
+            app_events.collection_card_changed.connect(
+                self._on_collection_card_changed
+            )
+
+            self._collection_event_connected = True
+
+        except Exception as error:
+
+            print(
+                "[DECKS PAGE] Erro ao conectar evento:",
+                error
+            )
 
         self.image_pool = QThreadPool()
 
@@ -5760,6 +5788,7 @@ class DecksPage(QWidget):
         )
 
         self.image_cache = {}
+
         self._max_image_cache_size = 300
 
         self.panel_open = False
@@ -5791,6 +5820,8 @@ class DecksPage(QWidget):
         self._pending_preview_refresh = False
 
         self.setup_ui()
+
+        self._ui_ready = True
 
         self.show_decks()
 
