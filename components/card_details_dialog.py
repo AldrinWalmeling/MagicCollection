@@ -4,8 +4,18 @@ from pathlib import Path
 
 import requests
 
-from PySide6.QtCore import Qt
-from PySide6.QtGui import QPixmap
+from PySide6.QtCore import (
+    Qt,
+    QObject,
+    Signal,
+    QRunnable,
+    QThreadPool,
+    QTimer,
+)
+from PySide6.QtGui import (
+    QPixmap,
+    QGuiApplication,
+)
 from PySide6.QtWidgets import (
     QButtonGroup,
     QComboBox,
@@ -54,6 +64,7 @@ FACE_CACHE_DIR.mkdir(parents=True, exist_ok=True)
 # =========================================================
 
 DEFAULT_USD_BRL = 5.50
+CACHED_USD_BRL = DEFAULT_USD_BRL
 
 
 LANGUAGE_LABELS = {
@@ -295,20 +306,331 @@ def _download_pixmap(url):
 class DetailCard(QFrame):
     def __init__(self, title, parent=None):
         super().__init__(parent)
-        self.setObjectName("DetailInfoCard")
-        self.layout = QVBoxLayout(self)
-        self.layout.setContentsMargins(14, 12, 14, 12)
-        self.layout.setSpacing(6)
 
-        self.title_label = QLabel(title)
-        self.title_label.setObjectName("DetailInfoTitle")
-        self.layout.addWidget(self.title_label)
+        self.setObjectName(
+            "DetailInfoCard"
+        )
+
+        # =====================================================
+        # LAYOUT INTERNO
+        # =====================================================
+
+        self.card_layout = QVBoxLayout(
+            self
+        )
+
+        self.card_layout.setContentsMargins(
+            14,
+            12,
+            14,
+            12,
+        )
+
+        self.card_layout.setSpacing(
+            6
+        )
+
+        # =====================================================
+        # TÍTULO
+        # =====================================================
+
+        self.title_label = QLabel(
+            title
+        )
+
+        self.title_label.setObjectName(
+            "DetailInfoTitle"
+        )
+
+        self.card_layout.addWidget(
+            self.title_label
+        )
 
     def set_body(self, widget):
-        self.layout.addWidget(widget)
+        """
+        Adiciona o widget de conteúdo dentro do card.
+        """
+
+        self.card_layout.addWidget(
+            widget
+        )
+
+# =========================================================
+# WORKER - BUSCAR IMPRESSÕES DO SCRYFALL SEM TRAVAR A UI
+# =========================================================
+
+class PrintingsWorkerSignals(QObject):
+    finished = Signal(object)
+    error = Signal(str)
 
 
+class PrintingsWorker(QRunnable):
+
+    def __init__(self, card):
+        super().__init__()
+
+        self.card = card
+        self.signals = PrintingsWorkerSignals()
+
+    def run(self):
+        try:
+            print(
+                "[DETAILS] Buscando impressões no Scryfall..."
+            )
+
+            printings = get_card_printings(
+                self.card
+            )
+
+            self.signals.finished.emit(
+                printings or []
+            )
+
+        except Exception as error:
+
+            print(
+                "[DETAILS] Erro ao buscar impressões:",
+                error,
+            )
+
+            self.signals.error.emit(
+                str(error)
+            )
 class CardDetailsDialog(QDialog):
+
+    def _make_scrollable_tab(self, content_widget):
+        """
+        Coloca o conteúdo de uma aba dentro de uma QScrollArea.
+
+        Isso evita que o conteúdo fique para fora da janela
+        em monitores menores ou quando a janela é redimensionada.
+        """
+
+        scroll = QScrollArea()
+        scroll.setObjectName(
+            "CardDetailScrollArea"
+        )
+
+        scroll.setWidgetResizable(True)
+
+        scroll.setFrameShape(
+            QFrame.Shape.NoFrame
+        )
+
+        scroll.setHorizontalScrollBarPolicy(
+            Qt.ScrollBarPolicy.ScrollBarAsNeeded
+        )
+
+        scroll.setVerticalScrollBarPolicy(
+            Qt.ScrollBarPolicy.ScrollBarAsNeeded
+        )
+
+        scroll.setWidget(
+            content_widget
+        )
+
+        return scroll
+
+    def _refresh_layouts_after_show(self):
+        """
+        Recalcula os layouts principais da janela.
+        """
+
+        # =====================================================
+        # LAYOUT DO PRÓPRIO DIÁLOGO
+        # =====================================================
+
+        main_layout = QWidget.layout(self)
+
+        if main_layout is not None:
+            main_layout.invalidate()
+            main_layout.activate()
+
+        # =====================================================
+        # TAB WIDGET
+        # =====================================================
+
+        if self.tabs is not None:
+
+            tabs_layout = QWidget.layout(
+                self.tabs
+            )
+
+            if tabs_layout is not None:
+                tabs_layout.invalidate()
+                tabs_layout.activate()
+
+            self.tabs.updateGeometry()
+            self.tabs.update()
+
+        # =====================================================
+        # ABA ATUAL
+        # =====================================================
+
+        current_tab = self.tabs.currentWidget()
+
+        if current_tab is not None:
+
+            current_layout = QWidget.layout(
+                current_tab
+            )
+
+            if current_layout is not None:
+                current_layout.invalidate()
+                current_layout.activate()
+
+            current_tab.updateGeometry()
+            current_tab.update()
+
+        # =====================================================
+        # DIÁLOGO
+        # =====================================================
+
+        self.updateGeometry()
+        self.update()
+
+        # =====================================================
+        # PROCESSAR EVENTOS PENDENTES
+        # =====================================================
+
+        QGuiApplication.processEvents()
+    def resizeEvent(self, event):
+        """
+        Recalcula os layouts quando a janela muda de tamanho.
+        """
+
+        super().resizeEvent(event)
+
+        # Não recalcular dezenas de vezes durante o mesmo
+        # processo de redimensionamento.
+        QTimer.singleShot(
+            0,
+            self._refresh_layouts_after_show,
+        )
+
+    def _fit_window_to_screen(self):
+        """
+        Ajusta a janela para caber na área disponível da tela.
+
+        A janela pode ser grande quando houver espaço,
+        mas nunca deve ultrapassar a área visível.
+        """
+
+        if self.isMaximized():
+            return
+
+        screen = self.screen()
+
+        if screen is None:
+            screen = QGuiApplication.primaryScreen()
+
+        if screen is None:
+            return
+
+        available = screen.availableGeometry()
+
+        # =====================================================
+        # TAMANHO PREFERIDO
+        # =====================================================
+
+        preferred_width = 1120
+        preferred_height = 800
+
+        # =====================================================
+        # MARGEM DE SEGURANÇA DA TELA
+        # =====================================================
+
+        max_width = max(
+            760,
+            available.width() - 40,
+        )
+
+        max_height = max(
+            520,
+            available.height() - 60,
+        )
+
+        # =====================================================
+        # TAMANHO FINAL
+        # =====================================================
+
+        width = min(
+            preferred_width,
+            max_width,
+        )
+
+        height = min(
+            preferred_height,
+            max_height,
+        )
+
+        # =====================================================
+        # TAMANHO MÍNIMO
+        # =====================================================
+
+        self.setMinimumSize(
+            min(760, max_width),
+            min(520, max_height),
+        )
+
+        # =====================================================
+        # APLICAR TAMANHO
+        # =====================================================
+
+        self.resize(
+            width,
+            height,
+        )
+
+        # =====================================================
+        # CENTRALIZAR
+        # =====================================================
+
+        x = (
+                available.left()
+                + (
+                        available.width()
+                        - self.width()
+                ) // 2
+        )
+
+        y = (
+                available.top()
+                + (
+                        available.height()
+                        - self.height()
+                ) // 2
+        )
+
+        # =====================================================
+        # GARANTIR QUE NÃO SAIA DA TELA
+        # =====================================================
+
+        x = max(
+            available.left(),
+            min(
+                x,
+                available.right()
+                - self.width()
+                + 1,
+            ),
+        )
+
+        y = max(
+            available.top(),
+            min(
+                y,
+                available.bottom()
+                - self.height()
+                + 1,
+            ),
+        )
+
+        self.move(
+            x,
+            y,
+        )
+
     def __init__(self, card, pixmap=None, parent=None):
         super().__init__(parent)
 
@@ -370,29 +692,81 @@ class CardDetailsDialog(QDialog):
         ):
             self.current_face_index = 0
         self.english_card = None
-        self.printings = self._load_printings()
-        self._syncing_controls = False
-        self.faces = self._build_faces(self.card)
 
-        self.setWindowTitle(f"{self.card.get('name') or 'Carta'} - Magic Collection")
-        self.setMinimumSize(1040, 760)
-        self.resize(1120, 800)
-        self.setStyleSheet(DARK_THEME)
+        # =====================================================
+        # IMPRESSÕES JÁ SALVAS LOCALMENTE
+        # =====================================================
+
+        self.printings = self._load_printings()
+
+        self._syncing_controls = False
+
+        self.faces = self._build_faces(
+            self.card
+        )
+
+        # Worker será iniciado depois que a UI estiver pronta.
+        # =====================================================
+        # CONTROLE DA SINCRONIZAÇÃO
+        # =====================================================
+
+        self.printings_worker = None
+        self.printings_sync_running = False
+
+        self.setWindowTitle(
+            f"{self.card.get('name') or 'Carta'} - Magic Collection"
+        )
+
+        # =====================================================
+        # CONFIGURAÇÃO DA JANELA
+        # =====================================================
+
+        self.setSizeGripEnabled(True)
+
+        self.setWindowFlag(
+            Qt.WindowType.WindowMaximizeButtonHint,
+            True,
+        )
+
+        self.setWindowFlag(
+            Qt.WindowType.WindowMinimizeButtonHint,
+            True,
+        )
+
+        self.setStyleSheet(
+            DARK_THEME
+        )
+
+        # Ajustar automaticamente ao tamanho da tela.
+        self._fit_window_to_screen()
 
         root = QHBoxLayout(self)
         root.setContentsMargins(26, 24, 26, 24)
         root.setSpacing(28)
 
-        left_panel = QWidget()
-        left_panel.setObjectName("CardDetailLeftPanel")
-        left_layout = QVBoxLayout(left_panel)
+        self.left_panel = QWidget()
+        self.left_panel.setObjectName("CardDetailLeftPanel")
+        left_layout = QVBoxLayout(self.left_panel)
         left_layout.setContentsMargins(0, 0, 0, 0)
         left_layout.setSpacing(12)
 
         self.image_label = QLabel()
         self.image_label.setObjectName("CardDetailImage")
         self.image_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.image_label.setFixedSize(360, 505)
+        self.image_label.setMinimumSize(
+            280,
+            390,
+        )
+
+        self.image_label.setMaximumSize(
+            360,
+            505,
+        )
+
+        self.image_label.setSizePolicy(
+            QSizePolicy.Policy.Preferred,
+            QSizePolicy.Policy.Preferred,
+        )
         self.image_label.setScaledContents(False)
         left_layout.addWidget(self.image_label, 0, Qt.AlignmentFlag.AlignHCenter)
 
@@ -417,6 +791,25 @@ class CardDetailsDialog(QDialog):
         )
         left_layout.addWidget(self.variant_combo)
 
+        # =====================================================
+        # STATUS DA SINCRONIZAÇÃO DAS IMPRESSÕES
+        # =====================================================
+
+        self.printings_sync_label = QLabel(
+            "🔄 Verificando idiomas e artes..."
+        )
+
+        self.printings_sync_label.setObjectName(
+            "CardDetailMuted"
+        )
+
+        self.printings_sync_label.setWordWrap(True)
+        self.printings_sync_label.hide()
+
+        left_layout.addWidget(
+            self.printings_sync_label
+        )
+
         tools_layout = QHBoxLayout()
         tools_layout.setContentsMargins(0, 0, 0, 0)
         tools_layout.setSpacing(8)
@@ -430,11 +823,11 @@ class CardDetailsDialog(QDialog):
         left_layout.addLayout(tools_layout)
         left_layout.addStretch()
 
-        root.addWidget(left_panel, 0, Qt.AlignmentFlag.AlignTop)
+        root.addWidget(self.left_panel, 0, Qt.AlignmentFlag.AlignTop)
 
-        right_panel = QWidget()
-        right_panel.setObjectName("CardDetailRightPanel")
-        right_layout = QVBoxLayout(right_panel)
+        self.right_panel = QWidget()
+        self.right_panel.setObjectName("CardDetailRightPanel")
+        right_layout = QVBoxLayout(self.right_panel)
         right_layout.setContentsMargins(0, 0, 0, 0)
         right_layout.setSpacing(14)
 
@@ -491,6 +884,10 @@ class CardDetailsDialog(QDialog):
         self.tabs.addTab(self._build_printings_tab(), "Outras impressoes")
         self.tabs.addTab(self._build_extra_tab(), "Informacoes")
         self.tabs.addTab(self._build_history_tab(), "Historico")
+        self.tabs.setSizePolicy(
+            QSizePolicy.Policy.Expanding,
+            QSizePolicy.Policy.Expanding,
+        )
         right_layout.addWidget(self.tabs, 1)
 
         buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Close)
@@ -498,27 +895,469 @@ class CardDetailsDialog(QDialog):
         buttons.accepted.connect(self.accept)
         right_layout.addWidget(buttons)
 
-        root.addWidget(right_panel, 1)
+        root.addWidget(self.right_panel, 1)
         self._populate_selectors()
 
         # =====================================================
-        # APLICAR O PRINTING SELECIONADO AO ABRIR
+        # MOSTRAR A CARTA IMEDIATAMENTE
         # =====================================================
 
         if self.variant_combo.currentIndex() >= 0:
-            self.apply_selected_printing()
+
+            self.apply_selected_printing(
+                save_changes=False
+            )
+
         else:
+
             if self.current_face_index >= len(self.faces):
                 self.current_face_index = 0
 
-            self.set_face(
-                self.current_face_index
+        # =====================================================
+        # AJUSTAR TAMANHO DA JANELA
+        # =====================================================
+
+        self._fit_window_to_screen()
+
+        # =====================================================
+        # PRIMEIRO RECÁLCULO DOS LAYOUTS
+        # =====================================================
+
+        if self.layout() is not None:
+            self.layout().invalidate()
+            self.layout().activate()
+
+        QWidget.layout(
+            self.right_panel
+        ).invalidate()
+
+        QWidget.layout(
+            self.right_panel
+        ).activate()
+
+        QWidget.layout(
+            self.left_panel
+        ).invalidate()
+
+        QWidget.layout(
+            self.left_panel
+        ).activate()
+
+        self.tabs.updateGeometry()
+
+        QGuiApplication.processEvents()
+
+        # =====================================================
+        # ATUALIZAR A FACE DEPOIS DO LAYOUT
+        # =====================================================
+
+        self.set_face(
+            self.current_face_index,
+            save_changes=False,
+        )
+
+        # =====================================================
+        # SINCRONIZAR IMPRESSÕES EM BACKGROUND
+        # =====================================================
+
+        self._start_printings_sync()
+
+        # =====================================================
+        # RECÁLCULO FINAL DA INTERFACE
+        # =====================================================
+
+        if self.layout() is not None:
+            self.layout().invalidate()
+            self.layout().activate()
+
+        if self.tabs.layout() is not None:
+            self.tabs.layout().invalidate()
+            self.tabs.layout().activate()
+
+        self.tabs.updateGeometry()
+
+        QGuiApplication.processEvents()
+
+        # Garantir que a imagem seja redimensionada
+        # corretamente depois do tamanho final.
+        if self.faces:
+            self._set_face_image(
+                self.faces[self.current_face_index]
             )
 
+        # =====================================================
+        # RECÁLCULO APÓS A JANELA ENTRAR NO EVENT LOOP
+        # =====================================================
+
+        QTimer.singleShot(
+            0,
+            self._refresh_layouts_after_show,
+        )
+    def _start_printings_sync(self):
+
+        # =====================================================
+        # EVITAR DUAS CONSULTAS SIMULTÂNEAS
+        # =====================================================
+
+        if self.printings_sync_running:
+            return
+
+        self.printings_sync_running = True
+
+        # Mostrar indicador de carregamento
+        self.printings_sync_label.setText(
+            "🔄 Verificando idiomas e artes..."
+        )
+
+        self.printings_sync_label.show()
+
+        # =====================================================
+        # COPIAR OS DADOS DA CARTA
+        # =====================================================
+
+        card = dict(self.card)
+
+        # =====================================================
+        # CRIAR WORKER
+        # =====================================================
+
+        self.printings_worker = PrintingsWorker(
+            card
+        )
+
+        self.printings_worker.signals.finished.connect(
+            self._on_printings_loaded
+        )
+
+        self.printings_worker.signals.error.connect(
+            self._on_printings_error
+        )
+
+        # =====================================================
+        # EXECUTAR EM BACKGROUND
+        # =====================================================
+
+        QThreadPool.globalInstance().start(
+            self.printings_worker
+        )
+    def _on_printings_loaded(self, printings):
+
+        # =====================================================
+        # FINALIZAR ESTADO DO WORKER
+        # =====================================================
+
+        self.printings_sync_running = False
+
+        # =====================================================
+        # NENHUM RESULTADO
+        # =====================================================
+
+        if not printings:
+
+            self.printings_sync_label.setText(
+                "⚠ Não foi possível atualizar as impressões."
+            )
+
+            self.printings_sync_label.show()
+
+            print(
+                "[DETAILS] Nenhuma impressão adicional encontrada."
+            )
+
+            return
+
+        # =====================================================
+        # COMPARAR IMPRESSÕES LOCAIS X SCRYFALL
+        # =====================================================
+
+        local_ids = set()
+
+        for printing in self.printings:
+
+            if not isinstance(
+                    printing,
+                    dict,
+            ):
+                continue
+
+            printing_id = (
+                    printing.get("id")
+                    or printing.get("scryfall_id")
+            )
+
+            if printing_id:
+                local_ids.add(
+                    str(printing_id)
+                )
+
+        remote_ids = set()
+
+        for printing in printings:
+
+            if not isinstance(
+                    printing,
+                    dict,
+            ):
+                continue
+
+            printing_id = (
+                    printing.get("id")
+                    or printing.get("scryfall_id")
+            )
+
+            if printing_id:
+                remote_ids.add(
+                    str(printing_id)
+                )
+
+        # =====================================================
+        # DESCOBRIR O QUE MUDOU
+        # =====================================================
+
+        new_ids = remote_ids - local_ids
+        removed_ids = local_ids - remote_ids
+
+        changed = bool(
+            new_ids
+            or removed_ids
+            or len(local_ids) != len(remote_ids)
+        )
+
+        print(
+            "[DETAILS] Impressões locais:",
+            len(local_ids),
+        )
+
+        print(
+            "[DETAILS] Impressões no Scryfall:",
+            len(remote_ids),
+        )
+
+        if new_ids:
+
+            print(
+                "[DETAILS] Novas impressões encontradas:",
+                len(new_ids),
+            )
+
+        if removed_ids:
+
+            print(
+                "[DETAILS] Impressões removidas:",
+                len(removed_ids),
+            )
+
+        # =====================================================
+        # ATUALIZAR DADOS EM MEMÓRIA
+        # =====================================================
+
+        self.printings = printings
+        self.card["card_printings"] = printings
+
+        # =====================================================
+        # SALVAR CACHE NO BANCO
+        #
+        # IMPORTANTE:
+        # Isso salva somente as impressões.
+        # Não emitimos card_data_changed.
+        # =====================================================
+
+        local_id = self.card.get("id")
+
+        if local_id and changed:
+
+            try:
+
+                update_card_printing(
+                    local_id,
+                    self.card,
+                    printings=printings,
+                    preferred_language=self.card.get(
+                        "preferred_language"
+                    ),
+                    preferred_variant=self.card.get(
+                        "preferred_variant"
+                    ),
+                    preferred_finish=self.card.get(
+                        "preferred_finish"
+                    ),
+                    preferred_face=self.card.get(
+                        "preferred_face",
+                        self.current_face_index,
+                    ),
+                )
+
+                print(
+                    "[DETAILS] Cache de impressões salvo no banco:",
+                    local_id,
+                )
+
+            except Exception as error:
+
+                print(
+                    "[DETAILS] Erro ao salvar cache de impressões:",
+                    error,
+                )
+
+        # =====================================================
+        # GUARDAR SELEÇÃO ATUAL
+        # =====================================================
+
+        current_language = (
+            self.language_combo.currentData()
+        )
+
+        current_variant = (
+                self.card.get("preferred_variant")
+                or self.card.get("scryfall_id")
+        )
+
+        # =====================================================
+        # ATUALIZAR COMBOS SEM DISPARAR EVENTOS
+        # =====================================================
+
+        self._syncing_controls = True
+
+        try:
+
+            self._populate_selectors()
+
+            # -------------------------------------------------
+            # RESTAURAR IDIOMA
+            # -------------------------------------------------
+
+            if current_language:
+
+                language_index = (
+                    self.language_combo.findData(
+                        current_language
+                    )
+                )
+
+                if language_index >= 0:
+
+                    self.language_combo.setCurrentIndex(
+                        language_index
+                    )
+
+                    self._populate_variant_combo(
+                        current_language
+                    )
+
+            # -------------------------------------------------
+            # RESTAURAR IMPRESSÃO
+            # -------------------------------------------------
+
+            if current_variant:
+
+                for index in range(
+                        self.variant_combo.count()
+                ):
+
+                    printing = (
+                        self.variant_combo.itemData(
+                            index
+                        )
+                    )
+
+                    if not isinstance(
+                            printing,
+                            dict,
+                    ):
+                        continue
+
+                    printing_id = (
+                            printing.get("id")
+                            or printing.get("scryfall_id")
+                    )
+
+                    if (
+                            printing_id
+                            and str(printing_id)
+                            == str(current_variant)
+                    ):
+
+                        self.variant_combo.setCurrentIndex(
+                            index
+                        )
+
+                        break
+
+        finally:
+
+            self._syncing_controls = False
+
+        # =====================================================
+        # ATUALIZAR TEXTO DA INTERFACE
+        # =====================================================
+
+        if changed:
+
+            self.printings_sync_label.setText(
+                f"✓ Impressões atualizadas: "
+                f"{len(remote_ids)} disponíveis."
+            )
+
+            print(
+                "[DETAILS] Novas impressões sincronizadas."
+            )
+
+        else:
+
+            self.printings_sync_label.setText(
+                f"✓ Impressões verificadas: "
+                f"{len(remote_ids)} disponíveis."
+            )
+
+            print(
+                "[DETAILS] Impressões já estavam atualizadas."
+            )
+
+        self.printings_sync_label.show()
+
+        # =====================================================
+        # ATUALIZAR ABA "OUTRAS IMPRESSÕES"
+        # =====================================================
+
+        if hasattr(
+                self,
+                "printings_label",
+        ):
+
+            self.printings_label.setText(
+                f"{len(remote_ids)} impressões encontradas."
+            )
+
+    def _on_printings_error(self, error):
+
+        self.printings_sync_running = False
+
+        self.printings_sync_label.setText(
+            "⚠ Não foi possível verificar as impressões."
+        )
+
+        self.printings_sync_label.show()
+
+        print(
+            "[DETAILS] Sincronização de impressões falhou:",
+            error,
+        )
+
     def _build_main_tab(self):
-        tab = QWidget()
-        layout = QVBoxLayout(tab)
-        layout.setContentsMargins(12, 12, 12, 12)
+
+        content = QWidget()
+
+        layout = QVBoxLayout(
+            content
+        )
+
+        layout.setContentsMargins(
+            12,
+            12,
+            12,
+            12,
+        )
+
         layout.setSpacing(12)
 
         oracle_card = DetailCard("Oracle")
@@ -830,7 +1669,9 @@ class CardDetailsDialog(QDialog):
 
         layout.addStretch()
 
-        return tab
+        return self._make_scrollable_tab(
+            content
+        )
 
     def _update_market_value(self):
         """
@@ -921,7 +1762,7 @@ class CardDetailsDialog(QDialog):
         # COTAÇÃO USD → BRL
         # -------------------------------------------------
 
-        usd_brl = self._get_usd_brl_rate()
+        usd_brl = CACHED_USD_BRL
 
         # -------------------------------------------------
         # CÁLCULO
@@ -1073,21 +1914,45 @@ class CardDetailsDialog(QDialog):
         self._update_market_value()
 
     def _build_printings_tab(self):
+
         tab = QWidget()
+
         layout = QVBoxLayout(tab)
-        layout.setContentsMargins(12, 12, 12, 12)
-        self.printings_label = QLabel(
-            "A galeria de impressoes sera preenchida quando as variantes da carta forem sincronizadas."
+
+        layout.setContentsMargins(
+            12,
+            12,
+            12,
+            12,
         )
-        self.printings_label.setObjectName("CardDetailMuted")
-        self.printings_label.setWordWrap(True)
-        layout.addWidget(self.printings_label)
+
+        self.printings_label = QLabel(
+            "🔄 Verificando impressões disponíveis..."
+        )
+
+        self.printings_label.setObjectName(
+            "CardDetailMuted"
+        )
+
+        self.printings_label.setWordWrap(
+            True
+        )
+
+        layout.addWidget(
+            self.printings_label
+        )
+
         layout.addStretch()
+
         return tab
 
     def _build_extra_tab(self):
-        tab = QWidget()
-        layout = QGridLayout(tab)
+
+        content = QWidget()
+
+        layout = QGridLayout(
+            content
+        )
         layout.setContentsMargins(12, 12, 12, 12)
         layout.setSpacing(10)
         self.extra_cards = {}
@@ -1112,11 +1977,17 @@ class CardDetailsDialog(QDialog):
             self.extra_cards[key] = label
             layout.addWidget(card, index // 2, index % 2)
 
-        return tab
+        return self._make_scrollable_tab(
+            content
+        )
 
     def _build_history_tab(self):
-        tab = QWidget()
-        layout = QGridLayout(tab)
+
+        content = QWidget()
+
+        layout = QGridLayout(
+            content
+        )
         layout.setContentsMargins(12, 12, 12, 12)
         layout.setSpacing(10)
         self.history_cards = {}
@@ -1139,7 +2010,9 @@ class CardDetailsDialog(QDialog):
             self.history_cards[key] = label
             layout.addWidget(card, index // 2, index % 2)
 
-        return tab
+        return self._make_scrollable_tab(
+            content
+        )
 
     def _build_faces(self, card):
         faces = card.get("card_faces")
@@ -1155,23 +2028,11 @@ class CardDetailsDialog(QDialog):
         if printings:
             return printings
 
-        try:
-            printings = get_card_printings(
-                self.card
-            )
-        except Exception as error:
-            print(
-                "[DETAILS] Erro ao buscar impressoes:",
-                error,
-            )
-            printings = []
-
-        if not printings:
-            printings = [
-                self.card
-            ]
-
-        return printings
+        # Ainda não temos as variantes armazenadas.
+        # Usamos a própria carta para abrir imediatamente.
+        return [
+            self.card
+        ]
 
     def _populate_selectors(self):
         self._syncing_controls = True
@@ -1344,7 +2205,7 @@ class CardDetailsDialog(QDialog):
 
         self.apply_selected_printing()
 
-    def apply_selected_printing(self):
+    def apply_selected_printing(self, save_changes=True):
         printing = self.variant_combo.currentData()
 
         if not isinstance(printing, dict):
@@ -1508,13 +2369,19 @@ class CardDetailsDialog(QDialog):
             self.card.get("scryfall_id")
         )
 
-        if image_url and selected_scryfall_id:
+        if (
+                save_changes
+                and image_url
+                and selected_scryfall_id
+        ):
+
             saved_path = self._save_selected_image(
                 image_url,
                 selected_scryfall_id,
             )
 
             if saved_path:
+
                 self.card["image_path"] = str(
                     saved_path
                 )
@@ -1528,7 +2395,7 @@ class CardDetailsDialog(QDialog):
         if self.current_face_index >= len(self.faces):
             self.current_face_index = 0
 
-        if local_id:
+        if save_changes and local_id:
 
             update_card_printing(
                 local_id,
@@ -1548,6 +2415,9 @@ class CardDetailsDialog(QDialog):
 
             # =====================================================
             # AVISAR QUE OS DADOS DA CARTA MUDARAM
+            #
+            # Só acontece quando o usuário realmente alterou
+            # alguma coisa.
             # =====================================================
 
             try:
@@ -1567,12 +2437,12 @@ class CardDetailsDialog(QDialog):
                     "[DETAILS] Erro ao emitir card_data_changed:",
                     error,
                 )
-
         self.setWindowTitle(
             f"{self.card.get('name') or 'Carta'} - Magic Collection"
         )
         self.set_face(
-            self.current_face_index
+            self.current_face_index,
+            save_changes=save_changes,
         )
 
     def _face_value(self, face, key, fallback=True):
@@ -1601,7 +2471,7 @@ class CardDetailsDialog(QDialog):
                 return value
         return None
 
-    def set_face(self, face_index):
+    def set_face(self, face_index, save_changes=True):
         if face_index < 0 or face_index >= len(self.faces):
             return
 
@@ -1617,20 +2487,24 @@ class CardDetailsDialog(QDialog):
             face_button.setChecked(True)
 
         local_id = self.card.get("id")
-        if local_id:
+
+        if save_changes and local_id:
+
             update_card_printing(
                 local_id,
                 self.card,
                 printings=self.printings,
-                preferred_language=self.card.get("preferred_language"),
-                preferred_variant=self.card.get("preferred_variant"),
-                preferred_finish=self.card.get("preferred_finish"),
+                preferred_language=self.card.get(
+                    "preferred_language"
+                ),
+                preferred_variant=self.card.get(
+                    "preferred_variant"
+                ),
+                preferred_finish=self.card.get(
+                    "preferred_finish"
+                ),
                 preferred_face=face_index,
             )
-
-            # =================================================
-            # AVISAR COLLECTION / DECKS
-            # =================================================
 
             try:
 
@@ -2063,23 +2937,90 @@ class CardDetailsDialog(QDialog):
 
     def _set_face_image(self, face):
         card_lang = str(self.card.get("lang") or "en").casefold()
-        pixmap = _download_pixmap(_best_image_url(face))
+
+        # =====================================================
+        # PRIMEIRO: usar a imagem que já veio da coleção
+        # =====================================================
+        pixmap = None
 
         if (
-            (not pixmap or pixmap.isNull())
-            and card_lang == "en"
-            and self.current_face_index == 0
-            and self.initial_pixmap
+                self.current_face_index == 0
+                and self.initial_pixmap
+                and not self.initial_pixmap.isNull()
         ):
             pixmap = self.initial_pixmap
 
+        # =====================================================
+        # SEGUNDO: tentar imagem local da carta
+        # =====================================================
+        if pixmap is None or pixmap.isNull():
+            image_path = self.card.get("image_path")
+
+            if image_path:
+                try:
+                    path = Path(image_path)
+
+                    if path.exists() and path.stat().st_size > 0:
+                        local_pixmap = QPixmap(str(path))
+
+                        if not local_pixmap.isNull():
+                            pixmap = local_pixmap
+
+                except Exception as error:
+                    print(
+                        "[DETAILS] Erro ao carregar imagem local:",
+                        error,
+                    )
+
+        # =====================================================
+        # TERCEIRO: fallback para cache da face
+        #
+        # IMPORTANTE:
+        # NÃO baixar da internet ao abrir a janela.
+        # =====================================================
+        if (
+                (pixmap is None or pixmap.isNull())
+                and self.current_face_index != 0
+        ):
+            image_url = _best_image_url(face)
+
+            if image_url:
+                try:
+                    pixmap = _download_pixmap(image_url)
+                except Exception as error:
+                    print(
+                        "[DETAILS] Erro ao carregar imagem da face:",
+                        error,
+                    )
+
+        # =====================================================
+        # MOSTRAR IMAGEM
+        # =====================================================
         if pixmap and not pixmap.isNull():
             self.image_status_label.clear()
             self.image_status_label.hide()
+
+            target_size = self.image_label.size()
+
+            # Garantir um tamanho válido caso o layout ainda
+            # esteja sendo calculado.
+            if (
+                    target_size.width() <= 0
+                    or target_size.height() <= 0
+            ):
+
+                target_width = 360
+                target_height = 505
+
+            else:
+
+                target_width = target_size.width()
+                target_height = target_size.height()
+
             self.image_label.setPixmap(
                 pixmap.scaled(
-                    360,
-                    505,
+                    target_width,
+                    target_height,
                     Qt.AspectRatioMode.KeepAspectRatio,
                     Qt.TransformationMode.SmoothTransformation,
                 )
@@ -2087,35 +3028,12 @@ class CardDetailsDialog(QDialog):
             self.image_label.setText("")
             return
 
-        language_name = LANGUAGE_LABELS.get(card_lang, card_lang.upper())
-        status = str(
-            face.get("image_status")
-            or self.card.get("image_status")
-            or ""
-        ).casefold()
-
-        if status in ("missing", "placeholder"):
-            message = f"Sem arte disponível para {language_name}."
-        else:
-            message = f"Sem imagem desta impressão em {language_name}."
-
-        self.image_status_label.setText(message)
-        self.image_status_label.show()
-
-        if CARD_ICON_PATH.exists():
-            placeholder = QPixmap(str(CARD_ICON_PATH))
-            if not placeholder.isNull():
-                self.image_label.setPixmap(
-                    placeholder.scaled(
-                        280,
-                        390,
-                        Qt.AspectRatioMode.KeepAspectRatio,
-                        Qt.TransformationMode.SmoothTransformation,
-                    )
-                )
-                self.image_label.setText("")
-                return
-
+        # =====================================================
+        # SEM IMAGEM
+        # =====================================================
         self.image_label.clear()
-        self.image_label.setText("Imagem indisponivel")
 
+        self.image_status_label.setText(
+            "Imagem não disponível localmente."
+        )
+        sel
