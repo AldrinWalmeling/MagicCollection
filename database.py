@@ -269,9 +269,9 @@ def extract_image_url(card_data):
                 continue
 
             normal = normalize_image_url(
-                image_uris.get("png")
-                or image_uris.get("large")
-                or image_uris.get("normal")
+                face_image_uris.get("png")
+                or face_image_uris.get("large")
+                or face_image_uris.get("normal")
             )
 
             if normal:
@@ -285,7 +285,6 @@ def extract_image_url(card_data):
     return build_scryfall_image_url(
         scryfall_id
     )
-
 
 def get_card_image_path(scryfall_id):
     if not scryfall_id:
@@ -615,6 +614,10 @@ def initialize_database():
     repair_invalid_ids()
     fix_image_urls()
     rebuild_missing_image_paths()
+
+    init_collection_history_database()
+
+
 
 
 # =========================================================
@@ -1000,6 +1003,721 @@ def rebuild_missing_image_paths():
 # diretamente em um deck sem adicioná-la
 # à coleção.
 # =========================================================
+
+# =========================================================
+# HISTÓRICO DA COLEÇÃO
+#
+# Responsabilidade:
+#
+# - Criar a tabela collection_snapshots
+# - Criar a tabela collection_snapshot_items
+# - Criar índices necessários
+#
+# IMPORTANTE:
+#
+# Esta função NÃO cria snapshots.
+# Ela apenas garante que a estrutura do banco exista.
+# =========================================================
+
+def init_collection_history_database():
+
+    connection = get_connection()
+
+    try:
+
+        cursor = connection.cursor()
+
+        # =====================================================
+        # SNAPSHOTS
+        #
+        # Um snapshot representa um retrato da coleção
+        # em determinado momento.
+        # =====================================================
+
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS collection_snapshots (
+
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+                snapshot_date TEXT NOT NULL,
+
+                total_cards INTEGER NOT NULL DEFAULT 0,
+
+                unique_cards INTEGER NOT NULL DEFAULT 0,
+
+                total_sets INTEGER NOT NULL DEFAULT 0,
+
+                value_usd REAL NOT NULL DEFAULT 0,
+
+                usd_brl REAL,
+
+                value_brl REAL NOT NULL DEFAULT 0,
+
+                created_at TIMESTAMP
+                    DEFAULT CURRENT_TIMESTAMP
+            )
+            """
+        )
+
+        # =====================================================
+        # ITENS DO SNAPSHOT
+        #
+        # Guarda exatamente quais cartas faziam parte
+        # daquele retrato da coleção.
+        # =====================================================
+
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS
+            collection_snapshot_items (
+
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+                snapshot_id INTEGER NOT NULL,
+
+                card_id INTEGER NOT NULL,
+
+                quantity INTEGER NOT NULL DEFAULT 0,
+
+                finish TEXT NOT NULL DEFAULT 'nonfoil',
+
+                unit_price_usd REAL,
+
+                unit_price_brl REAL,
+
+                total_value_usd REAL
+                    NOT NULL DEFAULT 0,
+
+                total_value_brl REAL
+                    NOT NULL DEFAULT 0,
+
+                FOREIGN KEY (
+                    snapshot_id
+                )
+                REFERENCES collection_snapshots(id)
+                ON DELETE CASCADE,
+
+                FOREIGN KEY (
+                    card_id
+                )
+                REFERENCES cards(id)
+                ON DELETE CASCADE
+            )
+            """
+        )
+
+        # =====================================================
+        # ÍNDICES
+        # =====================================================
+
+        cursor.execute(
+            """
+            CREATE INDEX IF NOT EXISTS
+            idx_collection_snapshots_date
+
+            ON collection_snapshots(
+                snapshot_date
+            )
+            """
+        )
+
+        cursor.execute(
+            """
+            CREATE INDEX IF NOT EXISTS
+            idx_snapshot_items_snapshot
+
+            ON collection_snapshot_items(
+                snapshot_id
+            )
+            """
+        )
+
+        cursor.execute(
+            """
+            CREATE INDEX IF NOT EXISTS
+            idx_snapshot_items_card
+
+            ON collection_snapshot_items(
+                card_id
+            )
+            """
+        )
+
+        # =====================================================
+        # FINALIZAÇÃO
+        # =====================================================
+
+        connection.commit()
+
+        print(
+            "[DATABASE] Histórico da coleção inicializado."
+        )
+
+        return True
+
+    except Exception as error:
+
+        connection.rollback()
+
+        print(
+            "[DATABASE] Erro ao inicializar "
+            "histórico da coleção:",
+            error,
+        )
+
+        return False
+
+    finally:
+
+        connection.close()
+
+        # =========================================================
+        # CRIAR SNAPSHOT DA COLEÇÃO
+        #
+        # Responsabilidade:
+        #
+        # - Criar um retrato da coleção atual
+        # - Considerar somente cartas com quantity > 0
+        # - Calcular o valor atual baseado nos preços salvos
+        # - Salvar o resumo em collection_snapshots
+        # - Salvar cada carta em collection_snapshot_items
+        #
+        # IMPORTANTE:
+        #
+        # O snapshot representa o estado da coleção naquele dia.
+        #
+        # Depois que for criado, os valores ficam congelados.
+        # Se o preço da carta mudar amanhã, o snapshot antigo
+        # continua representando o valor que foi registrado naquele dia.
+        # =========================================================
+
+def create_collection_snapshot(
+        snapshot_date=None,
+        usd_brl=None,
+):
+    from datetime import date
+
+    connection = get_connection()
+
+    try:
+
+        cursor = connection.cursor()
+
+        # =====================================================
+        # DATA DO SNAPSHOT
+        #
+        # Se nenhuma data for informada, usamos o dia atual.
+        #
+        # Formato:
+        #
+        # YYYY-MM-DD
+        #
+        # Exemplo:
+        #
+        # 2026-08-15
+        # =====================================================
+
+        if snapshot_date is None:
+
+            snapshot_date = date.today().isoformat()
+
+        else:
+
+            snapshot_date = str(
+                snapshot_date
+            ).strip()
+
+        if not snapshot_date:
+            print(
+                "[SNAPSHOT] Data inválida."
+            )
+
+            return None
+
+        # =====================================================
+        # IMPEDIR DUPLICAÇÃO DO SNAPSHOT DO DIA
+        # =====================================================
+
+        cursor.execute(
+            """
+            SELECT
+                id
+            FROM collection_snapshots
+            WHERE snapshot_date = ?
+            LIMIT 1
+            """,
+            (
+                snapshot_date,
+            ),
+        )
+
+        existing_snapshot = (
+            cursor.fetchone()
+        )
+
+        if existing_snapshot:
+            print(
+                "[SNAPSHOT] Snapshot já existe:",
+                snapshot_date,
+                "| ID:",
+                existing_snapshot["id"],
+            )
+
+            return int(
+                existing_snapshot["id"]
+            )
+
+        # =====================================================
+        # BUSCAR CARTAS DA COLEÇÃO
+        #
+        # IMPORTANTE:
+        #
+        # quantity > 0
+        #
+        # Cartas que estão somente no catálogo e possuem
+        # quantity = 0 NÃO entram no patrimônio da coleção.
+        # =====================================================
+
+        cursor.execute(
+            """
+            SELECT
+
+                id,
+                name,
+
+                quantity,
+
+                price_usd,
+                price_usd_foil,
+                price_usd_etched
+
+            FROM cards
+
+            WHERE quantity > 0
+
+            ORDER BY id
+            """
+        )
+
+        cards = cursor.fetchall()
+
+        if not cards:
+            print(
+                "[SNAPSHOT] Nenhuma carta encontrada "
+                "na coleção."
+            )
+
+            return None
+
+        # =====================================================
+        # VARIÁVEIS DO SNAPSHOT
+        # =====================================================
+
+        total_cards = 0
+        unique_cards = 0
+
+        total_value_usd = 0.0
+
+        snapshot_items = []
+
+        # =====================================================
+        # PROCESSAR CADA CARTA
+        # =====================================================
+
+        for card in cards:
+
+            card_id = int(
+                card["id"]
+            )
+
+            quantity = int(
+                card["quantity"] or 0
+            )
+
+            if quantity <= 0:
+                continue
+
+            # =================================================
+            # PREÇO BASE
+            #
+            # Nesta primeira versão usamos o preço normal.
+            #
+            # Foil/Etched serão tratados na próxima etapa,
+            # quando ligarmos isso ao preferred_finish.
+            # =================================================
+
+            unit_price_usd = card[
+                "price_usd"
+            ]
+
+            if unit_price_usd is None:
+                unit_price_usd = 0.0
+
+            try:
+
+                unit_price_usd = float(
+                    unit_price_usd
+                )
+
+            except (
+                    TypeError,
+                    ValueError,
+            ):
+
+                unit_price_usd = 0.0
+
+            # =================================================
+            # VALOR TOTAL DA CARTA
+            # =================================================
+
+            total_card_value_usd = (
+                    unit_price_usd
+                    * quantity
+            )
+
+            # =================================================
+            # ACUMULAR ESTATÍSTICAS
+            # =================================================
+
+            total_cards += quantity
+
+            unique_cards += 1
+
+            total_value_usd += (
+                total_card_value_usd
+            )
+
+            # =================================================
+            # VALOR EM BRL
+            #
+            # Se usd_brl ainda não estiver disponível,
+            # deixamos como 0 por enquanto.
+            #
+            # Na próxima etapa vamos conectar uma cotação
+            # real e obrigatoriamente salvar a cotação usada.
+            # =================================================
+
+            if usd_brl is not None:
+
+                try:
+
+                    current_usd_brl = float(
+                        usd_brl
+                    )
+
+                except (
+                        TypeError,
+                        ValueError,
+                ):
+
+                    current_usd_brl = None
+
+            else:
+
+                current_usd_brl = None
+
+            if current_usd_brl is not None:
+
+                unit_price_brl = (
+                        unit_price_usd
+                        * current_usd_brl
+                )
+
+                total_card_value_brl = (
+                        total_card_value_usd
+                        * current_usd_brl
+                )
+
+            else:
+
+                unit_price_brl = None
+
+                total_card_value_brl = 0.0
+
+            # =================================================
+            # GUARDAR ITEM TEMPORÁRIO
+            # =================================================
+
+            snapshot_items.append(
+                {
+                    "card_id": card_id,
+
+                    "quantity": quantity,
+
+                    "finish": "nonfoil",
+
+                    "unit_price_usd":
+                        unit_price_usd,
+
+                    "unit_price_brl":
+                        unit_price_brl,
+
+                    "total_value_usd":
+                        total_card_value_usd,
+
+                    "total_value_brl":
+                        total_card_value_brl,
+                }
+            )
+
+        # =====================================================
+        # VALOR TOTAL EM BRL
+        # =====================================================
+
+        if current_usd_brl is not None:
+
+            total_value_brl = (
+                    total_value_usd
+                    * current_usd_brl
+            )
+
+        else:
+
+            total_value_brl = 0.0
+
+        # =====================================================
+        # TOTAL DE SETS
+        #
+        # Conta quantos set_name diferentes estão presentes
+        # na coleção.
+        # =====================================================
+
+        cursor.execute(
+            """
+            SELECT
+                COUNT(
+                    DISTINCT set_name
+                ) AS total_sets
+
+            FROM cards
+
+            WHERE quantity > 0
+
+            AND set_name IS NOT NULL
+
+            AND TRIM(set_name) != ''
+            """
+        )
+
+        sets_row = cursor.fetchone()
+
+        total_sets = int(
+            sets_row["total_sets"] or 0
+        )
+
+        # =====================================================
+        # CRIAR SNAPSHOT PRINCIPAL
+        # =====================================================
+
+        cursor.execute(
+            """
+            INSERT INTO collection_snapshots (
+
+                snapshot_date,
+
+                total_cards,
+
+                unique_cards,
+
+                total_sets,
+
+                value_usd,
+
+                usd_brl,
+
+                value_brl
+
+            )
+
+            VALUES (
+                ?, ?, ?, ?, ?, ?, ?
+            )
+            """,
+            (
+                snapshot_date,
+
+                total_cards,
+
+                unique_cards,
+
+                total_sets,
+
+                total_value_usd,
+
+                current_usd_brl,
+
+                total_value_brl,
+            ),
+        )
+
+        snapshot_id = int(
+            cursor.lastrowid
+        )
+
+        # =====================================================
+        # INSERIR ITENS DO SNAPSHOT
+        # =====================================================
+
+        for item in snapshot_items:
+            cursor.execute(
+                """
+                INSERT INTO
+                collection_snapshot_items (
+
+                    snapshot_id,
+
+                    card_id,
+
+                    quantity,
+
+                    finish,
+
+                    unit_price_usd,
+
+                    unit_price_brl,
+
+                    total_value_usd,
+
+                    total_value_brl
+
+                )
+
+                VALUES (
+                    ?, ?, ?, ?, ?, ?, ?, ?
+                )
+                """,
+                (
+                    snapshot_id,
+
+                    item["card_id"],
+
+                    item["quantity"],
+
+                    item["finish"],
+
+                    item["unit_price_usd"],
+
+                    item["unit_price_brl"],
+
+                    item["total_value_usd"],
+
+                    item["total_value_brl"],
+                ),
+            )
+
+        # =====================================================
+        # SALVAR TUDO
+        # =====================================================
+
+        connection.commit()
+
+        # =====================================================
+        # LOG
+        # =====================================================
+
+        print(
+            "[SNAPSHOT] Snapshot criado com sucesso."
+        )
+
+        print(
+            "[SNAPSHOT] ID:",
+            snapshot_id,
+        )
+
+        print(
+            "[SNAPSHOT] Data:",
+            snapshot_date,
+        )
+
+        print(
+            "[SNAPSHOT] Cartas:",
+            total_cards,
+        )
+
+        print(
+            "[SNAPSHOT] Únicas:",
+            unique_cards,
+        )
+
+        print(
+            "[SNAPSHOT] Sets:",
+            total_sets,
+        )
+
+        print(
+            "[SNAPSHOT] Valor USD:",
+            round(
+                total_value_usd,
+                2,
+            ),
+        )
+
+        if current_usd_brl is not None:
+
+            print(
+                "[SNAPSHOT] Cotação USD/BRL:",
+                current_usd_brl,
+            )
+
+            print(
+                "[SNAPSHOT] Valor BRL:",
+                round(
+                    total_value_brl,
+                    2,
+                ),
+            )
+
+        else:
+
+            print(
+                "[SNAPSHOT] Valor BRL:",
+                "aguardando cotação",
+            )
+
+        # =====================================================
+        # RETORNO
+        # =====================================================
+
+        return {
+            "id": snapshot_id,
+
+            "snapshot_date":
+                snapshot_date,
+
+            "total_cards":
+                total_cards,
+
+            "unique_cards":
+                unique_cards,
+
+            "total_sets":
+                total_sets,
+
+            "value_usd":
+                total_value_usd,
+
+            "usd_brl":
+                current_usd_brl,
+
+            "value_brl":
+                total_value_brl,
+        }
+
+    except Exception as error:
+
+        connection.rollback()
+
+        print(
+            "[SNAPSHOT] Erro ao criar snapshot:",
+            error,
+        )
+
+        return None
+
+    finally:
+
+        connection.close()
 
 def ensure_card_exists(card_data):
     if not card_data:
@@ -2055,7 +2773,8 @@ def get_all_cards():
                 preferred_face,
                 favorite,
                 custom_tags,
-                last_view
+                last_view,
+                rarity
             FROM cards
             WHERE quantity > 0
             ORDER BY
@@ -2122,7 +2841,8 @@ def search_cards(text):
                 preferred_face,
                 favorite,
                 custom_tags,
-                last_view
+                last_view,
+                rarity
             FROM cards
             WHERE
                 quantity > 0
@@ -2909,14 +3629,4 @@ def get_all_catalog_cards():
         connection.close()
 
 
-# =========================================================
-# GARANTIR BANCO PRONTO AO IMPORTAR
-# =========================================================
 
-try:
-    initialize_database()
-except Exception as error:
-    print(
-        "[DATABASE] Falha na inicialização automática:",
-        error,
-    )

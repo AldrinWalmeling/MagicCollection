@@ -32,14 +32,28 @@ from services.scryfall import (
     get_card_by_name,
     get_card_printings,
 )
-from services.scryfall_symbols import ManaSymbolsWidget
+from services.scryfall_symbols import (
+    ManaSymbolsWidget,
+)
+
+from services.app_events import (
+    app_events,
+)
+
 from ui.theme import DARK_THEME
+
 
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 CARD_ICON_PATH = BASE_DIR / "assets" / "icons" / "card_icon.png"
 FACE_CACHE_DIR = BASE_DIR / "cache" / "card_faces"
 FACE_CACHE_DIR.mkdir(parents=True, exist_ok=True)
+
+# =========================================================
+# COTAÇÃO USD → BRL
+# =========================================================
+
+DEFAULT_USD_BRL = 5.50
 
 
 LANGUAGE_LABELS = {
@@ -546,8 +560,517 @@ class CardDetailsDialog(QDialog):
             info_grid.addWidget(card, index // 2, index % 2)
 
         layout.addLayout(info_grid)
+        # =====================================================
+        # VALOR DA COLEÇÃO
+        # =====================================================
+
+        market_card = DetailCard(
+            "Valor da colecao"
+        )
+
+        market_card.setObjectName(
+            "MarketValueCard"
+        )
+
+        self.market_value_labels = {}
+
+        market_widget = QWidget()
+
+        market_widget.setAttribute(
+            Qt.WidgetAttribute.WA_TranslucentBackground
+        )
+
+        market_layout = QGridLayout(
+            market_widget
+        )
+
+        market_layout.setContentsMargins(
+            0,
+            0,
+            0,
+            0,
+        )
+
+        market_layout.setHorizontalSpacing(
+            18
+        )
+
+        market_layout.setVerticalSpacing(
+            8
+        )
+
+        # -----------------------------------------------------
+        # VALOR UNITÁRIO
+        # -----------------------------------------------------
+
+        unit_title = QLabel(
+            "Valor unitario"
+        )
+
+        unit_title.setObjectName(
+            "DetailPriceTitle"
+        )
+
+        unit_value = QLabel(
+            "-"
+        )
+
+        unit_value.setObjectName(
+            "DetailMarketValue"
+        )
+
+        unit_value.setAlignment(
+            Qt.AlignmentFlag.AlignRight
+            | Qt.AlignmentFlag.AlignVCenter
+        )
+
+        self.market_value_labels[
+            "unit"
+        ] = unit_value
+
+        market_layout.addWidget(
+            unit_title,
+            0,
+            0,
+        )
+
+        market_layout.addWidget(
+            unit_value,
+            0,
+            1,
+        )
+
+        # -----------------------------------------------------
+        # QUANTIDADE
+        # -----------------------------------------------------
+
+        quantity_title = QLabel(
+            "Quantidade"
+        )
+
+        quantity_title.setObjectName(
+            "DetailPriceTitle"
+        )
+
+        quantity_value = QLabel(
+            "0"
+        )
+
+        quantity_value.setObjectName(
+            "DetailPriceValue"
+        )
+
+        quantity_value.setAlignment(
+            Qt.AlignmentFlag.AlignRight
+            | Qt.AlignmentFlag.AlignVCenter
+        )
+
+        self.market_value_labels[
+            "quantity"
+        ] = quantity_value
+
+        market_layout.addWidget(
+            quantity_title,
+            1,
+            0,
+        )
+
+        market_layout.addWidget(
+            quantity_value,
+            1,
+            1,
+        )
+
+        # -----------------------------------------------------
+        # VALOR TOTAL
+        # -----------------------------------------------------
+
+        total_title = QLabel(
+            "Valor total"
+        )
+
+        total_title.setObjectName(
+            "DetailPriceTitle"
+        )
+
+        total_value = QLabel(
+            "-"
+        )
+
+        total_value.setObjectName(
+            "DetailMarketTotal"
+        )
+
+        total_value.setAlignment(
+            Qt.AlignmentFlag.AlignRight
+            | Qt.AlignmentFlag.AlignVCenter
+        )
+
+        self.market_value_labels[
+            "total"
+        ] = total_value
+
+        market_layout.addWidget(
+            total_title,
+            2,
+            0,
+        )
+
+        market_layout.addWidget(
+            total_value,
+            2,
+            1,
+        )
+
+        market_card.set_body(
+            market_widget
+        )
+
+        layout.addWidget(
+            market_card
+        )
+
+        # =====================================================
+        # PREÇOS ORIGINAIS
+        # =====================================================
+
+        price_card = DetailCard(
+            "Precos de mercado"
+        )
+
+        self.price_labels = {}
+
+        price_widget = QWidget()
+
+        price_widget.setAttribute(
+            Qt.WidgetAttribute.WA_TranslucentBackground
+        )
+
+        price_layout = QGridLayout(
+            price_widget
+        )
+
+        price_layout.setContentsMargins(
+            0,
+            0,
+            0,
+            0,
+        )
+
+        price_layout.setHorizontalSpacing(
+            18
+        )
+
+        price_layout.setVerticalSpacing(
+            6
+        )
+
+        price_fields = (
+            ("Normal", "price_usd"),
+            ("Foil", "price_usd_foil"),
+            ("Etched", "price_usd_etched"),
+            ("EUR", "price_eur"),
+            ("EUR Foil", "price_eur_foil"),
+            ("MTGO", "price_tix"),
+        )
+
+        for index, (
+                title,
+                key,
+        ) in enumerate(
+            price_fields
+        ):
+            title_label = QLabel(
+                title
+            )
+
+            title_label.setObjectName(
+                "DetailPriceTitle"
+            )
+
+            value_label = QLabel(
+                "-"
+            )
+
+            value_label.setObjectName(
+                "DetailPriceValue"
+            )
+
+            value_label.setAlignment(
+                Qt.AlignmentFlag.AlignRight
+                | Qt.AlignmentFlag.AlignVCenter
+            )
+
+            self.price_labels[
+                key
+            ] = value_label
+
+            row = index // 2
+            column = index % 2
+
+            price_layout.addWidget(
+                title_label,
+                row,
+                column * 2,
+            )
+
+            price_layout.addWidget(
+                value_label,
+                row,
+                column * 2 + 1,
+            )
+
+        price_card.set_body(
+            price_widget
+        )
+
+        layout.addWidget(
+            price_card
+        )
+
         layout.addStretch()
+
         return tab
+
+    def _update_market_value(self):
+        """
+        Calcula o valor estimado da carta em reais.
+
+        Fórmula:
+
+            preço USD × cotação USD/BRL = valor unitário
+
+            valor unitário × quantidade = valor total
+        """
+
+        # -------------------------------------------------
+        # VERIFICAR SE A INTERFACE JÁ FOI CRIADA
+        # -------------------------------------------------
+
+        if not hasattr(
+            self,
+            "market_value_labels",
+        ):
+            return
+
+        # -------------------------------------------------
+        # QUANTIDADE
+        # -------------------------------------------------
+
+        quantity = self.card.get(
+            "quantity",
+            0,
+        )
+
+        try:
+            quantity = int(
+                quantity or 0
+            )
+
+        except (
+            TypeError,
+            ValueError,
+        ):
+            quantity = 0
+
+        # -------------------------------------------------
+        # PREÇO NORMAL EM USD
+        # -------------------------------------------------
+
+        usd_price = self.card.get(
+            "price_usd"
+        )
+
+        try:
+            usd_price = float(
+                usd_price
+            )
+
+        except (
+            TypeError,
+            ValueError,
+        ):
+            usd_price = None
+
+        # -------------------------------------------------
+        # SEM PREÇO
+        # -------------------------------------------------
+
+        if usd_price is None:
+            self.market_value_labels[
+                "unit"
+            ].setText(
+                "Sem preço"
+            )
+
+            self.market_value_labels[
+                "quantity"
+            ].setText(
+                str(quantity)
+            )
+
+            self.market_value_labels[
+                "total"
+            ].setText(
+                "Sem preço"
+            )
+
+            return
+
+        # -------------------------------------------------
+        # COTAÇÃO USD → BRL
+        # -------------------------------------------------
+
+        usd_brl = self._get_usd_brl_rate()
+
+        # -------------------------------------------------
+        # CÁLCULO
+        # -------------------------------------------------
+
+        unit_brl = (
+            usd_price
+            * usd_brl
+        )
+
+        total_brl = (
+            unit_brl
+            * quantity
+        )
+
+        # -------------------------------------------------
+        # FORMATAÇÃO BRASILEIRA
+        # -------------------------------------------------
+
+        unit_text = (
+            f"R$ {unit_brl:,.2f}"
+            .replace(",", "X")
+            .replace(".", ",")
+            .replace("X", ".")
+        )
+
+        total_text = (
+            f"R$ {total_brl:,.2f}"
+            .replace(",", "X")
+            .replace(".", ",")
+            .replace("X", ".")
+        )
+
+        # -------------------------------------------------
+        # ATUALIZAR INTERFACE
+        # -------------------------------------------------
+
+        self.market_value_labels[
+            "unit"
+        ].setText(
+            unit_text
+        )
+
+        self.market_value_labels[
+            "quantity"
+        ].setText(
+            str(quantity)
+        )
+
+        self.market_value_labels[
+            "total"
+        ].setText(
+            total_text
+        )
+
+        print(
+            "[DETAILS] Valor de mercado:",
+            unit_text,
+            "| Quantidade:",
+            quantity,
+            "| Total:",
+            total_text,
+        )
+
+    def _update_price_labels(self):
+        """
+        Atualiza os preços da impressão atualmente exibida.
+        """
+
+        def format_usd(value):
+            if value in (
+                None,
+                "",
+            ):
+                return "-"
+
+            try:
+                return f"US$ {float(value):.2f}"
+            except (
+                TypeError,
+                ValueError,
+            ):
+                return "-"
+
+        def format_eur(value):
+            if value in (
+                None,
+                "",
+            ):
+                return "-"
+
+            try:
+                return f"€ {float(value):.2f}"
+            except (
+                TypeError,
+                ValueError,
+            ):
+                return "-"
+
+        def format_tix(value):
+            if value in (
+                None,
+                "",
+            ):
+                return "-"
+
+            try:
+                return f"{float(value):.2f} tix"
+            except (
+                TypeError,
+                ValueError,
+            ):
+                return "-"
+
+        values = {
+            "price_usd": format_usd(
+                self.card.get("price_usd")
+            ),
+
+            "price_usd_foil": format_usd(
+                self.card.get("price_usd_foil")
+            ),
+
+            "price_usd_etched": format_usd(
+                self.card.get("price_usd_etched")
+            ),
+
+            "price_eur": format_eur(
+                self.card.get("price_eur")
+            ),
+
+            "price_eur_foil": format_eur(
+                self.card.get("price_eur_foil")
+            ),
+
+            "price_tix": format_tix(
+                self.card.get("price_tix")
+            ),
+        }
+
+        for key, label in self.price_labels.items():
+            label.setText(
+                values.get(
+                    key,
+                    "-"
+                )
+            )
+
+        self._update_market_value()
 
     def _build_printings_tab(self):
         tab = QWidget()
@@ -832,7 +1355,105 @@ class CardDetailsDialog(QDialog):
         local_id = self.card.get("id")
 
         self.card.update(printing)
+
+        # =====================================================
+        # PREÇOS DA IMPRESSÃO SELECIONADA
+        # =====================================================
+
+        prices = (
+            printing.get("prices")
+            or {}
+        )
+
+        def parse_price(value):
+            try:
+                if value in (
+                    None,
+                    "",
+                ):
+                    return None
+
+                return float(value)
+
+            except (
+                TypeError,
+                ValueError,
+            ):
+                return None
+
+        self.card["price_usd"] = parse_price(
+            prices.get("usd")
+        )
+
+        self.card["price_usd_foil"] = parse_price(
+            prices.get("usd_foil")
+        )
+
+        self.card["price_usd_etched"] = parse_price(
+            prices.get("usd_etched")
+        )
+
+        self.card["price_eur"] = parse_price(
+            prices.get("eur")
+        )
+
+        self.card["price_eur_foil"] = parse_price(
+            prices.get("eur_foil")
+        )
+
+        self.card["price_tix"] = parse_price(
+            prices.get("tix")
+        )
+
         self.card["id"] = local_id
+        # =====================================================
+        # PREÇOS DA IMPRESSÃO SELECIONADA
+        # =====================================================
+
+        prices = (
+            printing.get("prices")
+            or {}
+        )
+
+        def parse_price(value):
+            try:
+                if value in (
+                    None,
+                    "",
+                ):
+                    return None
+
+                return float(value)
+
+            except (
+                TypeError,
+                ValueError,
+            ):
+                return None
+
+        self.card["price_usd"] = parse_price(
+            prices.get("usd")
+        )
+
+        self.card["price_usd_foil"] = parse_price(
+            prices.get("usd_foil")
+        )
+
+        self.card["price_usd_etched"] = parse_price(
+            prices.get("usd_etched")
+        )
+
+        self.card["price_eur"] = parse_price(
+            prices.get("eur")
+        )
+
+        self.card["price_eur_foil"] = parse_price(
+            prices.get("eur_foil")
+        )
+
+        self.card["price_tix"] = parse_price(
+            prices.get("tix")
+        )
         self.card["scryfall_id"] = (
             printing.get("id")
             or printing.get("scryfall_id")
@@ -908,15 +1529,44 @@ class CardDetailsDialog(QDialog):
             self.current_face_index = 0
 
         if local_id:
+
             update_card_printing(
                 local_id,
                 self.card,
                 printings=self.printings,
-                preferred_language=self.card.get("preferred_language"),
-                preferred_variant=self.card.get("preferred_variant"),
-                preferred_finish=self.card.get("preferred_finish"),
+                preferred_language=self.card.get(
+                    "preferred_language"
+                ),
+                preferred_variant=self.card.get(
+                    "preferred_variant"
+                ),
+                preferred_finish=self.card.get(
+                    "preferred_finish"
+                ),
                 preferred_face=self.current_face_index,
             )
+
+            # =====================================================
+            # AVISAR QUE OS DADOS DA CARTA MUDARAM
+            # =====================================================
+
+            try:
+
+                app_events.card_data_changed.emit(
+                    int(local_id)
+                )
+
+                print(
+                    "[DETAILS] Evento card_data_changed emitido:",
+                    local_id,
+                )
+
+            except Exception as error:
+
+                print(
+                    "[DETAILS] Erro ao emitir card_data_changed:",
+                    error,
+                )
 
         self.setWindowTitle(
             f"{self.card.get('name') or 'Carta'} - Magic Collection"
@@ -978,6 +1628,23 @@ class CardDetailsDialog(QDialog):
                 preferred_face=face_index,
             )
 
+            # =================================================
+            # AVISAR COLLECTION / DECKS
+            # =================================================
+
+            try:
+
+                app_events.card_data_changed.emit(
+                    int(local_id)
+                )
+
+            except Exception as error:
+
+                print(
+                    "[DETAILS] Erro ao emitir alteração da carta:",
+                    error,
+                )
+
         name = self._face_value(face, "name") or "Carta"
         printed_name = self._face_value(face, "printed_name", fallback=False)
 
@@ -1004,9 +1671,11 @@ class CardDetailsDialog(QDialog):
         )
 
         self._update_info_cards()
+        self._update_price_labels()
         self._update_extra_cards()
         self._update_history_cards()
         self._set_face_image(face)
+
 
     def _set_mana_cost(self, mana_cost):
         while self.mana_layout.count():
@@ -1044,6 +1713,204 @@ class CardDetailsDialog(QDialog):
             self.pt_label.clear()
             self.pt_label.hide()
 
+
+    def _get_usd_brl_rate(self):
+        """
+        Obtém a cotação atual do dólar em relação ao real.
+
+        Caso a consulta falhe, utiliza DEFAULT_USD_BRL
+        para que a interface continue funcionando.
+        """
+
+        try:
+            response = requests.get(
+                "https://economia.awesomeapi.com.br/json/last/USD-BRL",
+                timeout=5,
+            )
+
+            response.raise_for_status()
+
+            data = response.json()
+
+            rate_data = data.get(
+                "USDBRL",
+                {},
+            )
+
+            rate = rate_data.get(
+                "bid"
+            )
+
+            if rate in (
+                None,
+                "",
+            ):
+                raise ValueError(
+                    "Cotação USD/BRL não encontrada."
+                )
+
+            rate = float(rate)
+
+            if rate <= 0:
+                raise ValueError(
+                    "Cotação USD/BRL inválida."
+                )
+
+            print(
+                "[DETAILS] Cotação USD/BRL:",
+                rate,
+            )
+
+            return rate
+
+        except Exception as error:
+            print(
+                "[DETAILS] Falha ao obter cotação USD/BRL:",
+                error,
+            )
+
+            print(
+                "[DETAILS] Usando cotação padrão:",
+                DEFAULT_USD_BRL,
+            )
+
+            return DEFAULT_USD_BRL
+
+        def _update_market_value(self):
+            """
+            Calcula o valor estimado da carta em reais.
+
+            O cálculo utiliza:
+                preço USD × cotação USD/BRL × quantidade
+            """
+
+            if not hasattr(
+                    self,
+                    "market_value_labels",
+            ):
+                return
+
+            # -------------------------------------------------
+            # QUANTIDADE
+            # -------------------------------------------------
+
+            quantity = self.card.get(
+                "quantity",
+                0,
+            )
+
+            try:
+                quantity = int(
+                    quantity or 0
+                )
+            except (
+                    TypeError,
+                    ValueError,
+            ):
+                quantity = 0
+
+            # -------------------------------------------------
+            # PREÇO USD
+            # -------------------------------------------------
+
+            usd_price = self.card.get(
+                "price_usd"
+            )
+
+            try:
+                usd_price = float(
+                    usd_price
+                )
+            except (
+                    TypeError,
+                    ValueError,
+            ):
+                usd_price = None
+
+            # -------------------------------------------------
+            # SEM PREÇO
+            # -------------------------------------------------
+
+            if usd_price is None:
+                self.market_value_labels[
+                    "unit"
+                ].setText(
+                    "Sem preço"
+                )
+
+                self.market_value_labels[
+                    "quantity"
+                ].setText(
+                    str(quantity)
+                )
+
+                self.market_value_labels[
+                    "total"
+                ].setText(
+                    "Sem preço"
+                )
+
+                return
+
+            # -------------------------------------------------
+            # COTAÇÃO
+            # -------------------------------------------------
+
+            usd_brl = self._get_usd_brl_rate()
+
+            # -------------------------------------------------
+            # CÁLCULOS
+            # -------------------------------------------------
+
+            unit_brl = (
+                    usd_price
+                    * usd_brl
+            )
+
+            total_brl = (
+                    unit_brl
+                    * quantity
+            )
+
+            # -------------------------------------------------
+            # ATUALIZAR INTERFACE
+            # -------------------------------------------------
+
+            self.market_value_labels[
+                "unit"
+            ].setText(
+                f"R$ {unit_brl:,.2f}".replace(
+                    ",",
+                    "X",
+                ).replace(
+                    ".",
+                    ",",
+                ).replace(
+                    "X",
+                    ".",
+                )
+            )
+
+            self.market_value_labels[
+                "quantity"
+            ].setText(
+                str(quantity)
+            )
+
+            self.market_value_labels[
+                "total"
+            ].setText(
+                f"R$ {total_brl:,.2f}".replace(
+                    ",",
+                    "X",
+                ).replace(
+                    ".",
+                    ",",
+                ).replace(
+                    "X",
+                    ".",
+                )
+            )
     def _update_info_cards(self):
         values = {
             "set_name": self.card.get("set_name"),

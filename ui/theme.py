@@ -2482,6 +2482,49 @@ QLabel#DetailInfoValue {
     font-size: 13px;
 }
 
+/* =========================================================
+   VALORES DA CARTA
+========================================================= */
+
+QLabel#DetailPriceTitle {
+    background-color: transparent;
+    color: #858A94;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+QLabel#DetailPriceValue {
+    background-color: transparent;
+    color: #F1F3F6;
+    font-size: 13px;
+    font-weight: 500;
+}
+
+QLabel#DetailMarketValue {
+    background-color: transparent;
+    color: #C8CAD0;
+    font-size: 16px;
+    font-weight: 600;
+}
+
+QFrame#MarketValueCard {
+    background-color: #15171A;
+    border: 1px solid #383D46;
+    border-radius: 9px;
+}
+
+QFrame#MarketValueCard:hover {
+    background-color: #1C2026;
+    border: 1px solid #4A505A;
+}
+
+QLabel#DetailMarketTotal {
+    background-color: transparent;
+    color: #FFFFFF;
+    font-size: 22px;
+    font-weight: 800;
+}
+
 QTabWidget#CardDetailTabs::pane {
     background-color: transparent;
     border: none;

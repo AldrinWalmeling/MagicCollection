@@ -101,6 +101,13 @@ class MainWindow(QMainWindow):
         )
 
         # =================================================
+        # PÁGINAS
+        # =================================================
+
+        self.collection_page = None
+        self.decks_page = None
+
+        # =================================================
         # UI
         # =================================================
 
@@ -464,20 +471,41 @@ class MainWindow(QMainWindow):
             False
         )
 
-        self.clear_content()
+        # =================================================
+        # CRIAR A PÁGINA SOMENTE NA PRIMEIRA VEZ
+        # =================================================
 
-        self.collection_page = CollectionPage(
-            self
-        )
+        if self.collection_page is None:
+            self.collection_page = CollectionPage(
+                self
+            )
 
-        self.content_layout.addWidget(
-            self.collection_page
-        )
+            self.content_layout.addWidget(
+                self.collection_page
+            )
+
+        # =================================================
+        # MOSTRAR COLLECTION
+        # =================================================
+
+        self.collection_page.show()
+
+        self.collection_page.raise_()
+
+        # =================================================
+        # ESCONDER DECKS
+        # =================================================
+
+        if self.decks_page is not None:
+            self.decks_page.hide()
+
+        # =================================================
+        # STATUS
+        # =================================================
 
         self.sidebar_status.setText(
             "Coleção"
         )
-
 
     # =====================================================
     # DECKS
@@ -493,20 +521,41 @@ class MainWindow(QMainWindow):
             True
         )
 
-        self.clear_content()
+        # =================================================
+        # CRIAR A PÁGINA SOMENTE NA PRIMEIRA VEZ
+        # =================================================
 
-        self.decks_page = DecksPage(
-            self
-        )
+        if self.decks_page is None:
+            self.decks_page = DecksPage(
+                self
+            )
 
-        self.content_layout.addWidget(
-            self.decks_page
-        )
+            self.content_layout.addWidget(
+                self.decks_page
+            )
+
+        # =================================================
+        # MOSTRAR DECKS
+        # =================================================
+
+        self.decks_page.show()
+
+        self.decks_page.raise_()
+
+        # =================================================
+        # ESCONDER COLLECTION
+        # =================================================
+
+        if self.collection_page is not None:
+            self.collection_page.hide()
+
+        # =================================================
+        # STATUS
+        # =================================================
 
         self.sidebar_status.setText(
             "Decks"
         )
-
 
     # =====================================================
     # LIMPAR CONTEÚDO

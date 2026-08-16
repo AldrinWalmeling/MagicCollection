@@ -5,510 +5,18 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="14717f08-37a0-4c50-85ce-aa9bd2e175ab" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/services/app_events.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/test_card_metadata.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/test_database.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/test_scryfall_id.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/pages/dashboard_page.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/test_snapshot.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/test_snapshot_database.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/cache/card_faces/00212bd113f4208f29505eca1b7efc6e411c527a.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cache/card_faces/01fe4dffb33a9d10ae46f5d96acbf1f728dbfc18.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cache/card_faces/094b7692f3628954a7ee4045f3be4b474bbc0008.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cache/card_faces/0cca87d6220c70b70dfca2e54ce6705d3b8194a8.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cache/card_faces/141a0624ec495ec00860d838c3210f6a9e899523.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cache/card_faces/1d9e7e2a86b6227c5b0ff0649835b2d035f3c502.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cache/card_faces/1e763025c9a87f5cf979653878a3a07a4bf718cf.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cache/card_faces/1e925a1adbd55b4bd3ce6618b4f5f133e7de6d4f.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cache/card_faces/268e3218bebf14d57bc24cf2f02ed54edcc81afc.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cache/card_faces/2ad741fb433fe10b1ed93d18aacb6eda812487c6.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cache/card_faces/36410542c58d575281681a1b46ea748902a6bc9c.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cache/card_faces/36b750166fb7b5f1de942566ba6fa5448cc2a7c1.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cache/card_faces/39abd70e9dffa970e818682355ccfe7cbbfa904f.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cache/card_faces/3db860d86107bd12f4450b582e0955a44724a551.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cache/card_faces/543fb9225755c5cd73692e84042a83f77c130054.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cache/card_faces/5443ff65bfcd51336b8ff3232a919e5ba1da3e8a.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cache/card_faces/56a92592d1add43a371d3046c0c283a2f99599a4.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cache/card_faces/57687be8f70ff1a001a1e5b6e75ba4555e44e6b1.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cache/card_faces/62d376b5a3360afdf15e6b7678d30921bb7e309a.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cache/card_faces/6445712524e778d9cfee449f52fa5fca3f694920.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cache/card_faces/6975199f940d5455eb2e1e0daf97641862ba704c.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cache/card_faces/6d02c53b17cad7dab1c863d4045708d0d445dabc.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cache/card_faces/85905571f6b68c506687c527039902d3edf218c1.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cache/card_faces/8591b0851226c83a3e5e73715df01f00842d7185.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cache/card_faces/8b5cf58f2a8696a9751f06bac04c97a8bd817e5d.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cache/card_faces/95bac6f38fbcfba3e9b0ef09adee1c9be381700a.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cache/card_faces/970739863faee87d34759fc28e14ce7e5eca8ef2.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cache/card_faces/97635ca5ce3bc0f14ae4c3b05c76c776cc35d809.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cache/card_faces/9fe947fa320a37192769d0a52db8d10410fd5215.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cache/card_faces/a1cf5322739b55b8142f5df4bfbdfb0dad0ea527.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cache/card_faces/a24389342b2801d0930ab65a796534af19c8a6f4.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cache/card_faces/aebeb71269e9ea4a98d222c76aca51c01f043ee3.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cache/card_faces/af3f163b56d001aa1ebd90d3292dda8ebb8ea7b6.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cache/card_faces/af965a7ccbbe8775dac4245023f87228bb4c4725.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cache/card_faces/b0fd995a658f1789d95aee72985bfb08f8c605c7.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cache/card_faces/b3d496110e4ecba6e647e1b7ea32869e0f3c5394.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cache/card_faces/c4cc2edae02b738106f49334a6734f36a5631004.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cache/card_faces/c6f7536a9949c3328929b553d410b9b329da9b69.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cache/card_faces/c7154dff4d1423e723189495dfcab55a9482b8be.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cache/card_faces/c731b9120927ee57bbbb1514e3db0f4a75d0d998.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cache/card_faces/d7ad76e0f4eccbc5a055d1c8ded4b1bf477a4c13.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cache/card_faces/dad481048115f5a29672ff3ac5bab5be4afdb955.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cache/card_faces/dd89de188a2f7796c70c2740ed9a102d3fdaa66f.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cache/card_faces/e1ad43eb382cc7ac887e92f217b58ca05e544f0b.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cache/card_faces/e46443cf4e2f08cbab5a601719faf8b865174cd4.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cache/card_faces/ea1ff6740c4d3362aa2068b1ef48f18182c551f1.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cache/card_faces/eb6f38158fd44cef1d2bae360e6e92064f482705.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cache/card_faces/f374d06970ff412659d6d426ac35ea1000f11693.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cache/cards/1.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cache/cards/10.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cache/cards/11.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cache/cards/12.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cache/cards/13.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cache/cards/14.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cache/cards/15.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cache/cards/16.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cache/cards/17.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cache/cards/18.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cache/cards/2.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cache/cards/22.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cache/cards/23.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cache/cards/24.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cache/cards/27.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cache/cards/28.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cache/cards/29.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cache/cards/3.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cache/cards/30.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cache/cards/31.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cache/cards/32.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cache/cards/33.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cache/cards/34.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cache/cards/35.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cache/cards/36.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cache/cards/37.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cache/cards/38.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cache/cards/39.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cache/cards/4.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cache/cards/41.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cache/cards/42.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cache/cards/43.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cache/cards/44.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cache/cards/45.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cache/cards/46.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cache/cards/47.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cache/cards/48.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cache/cards/49.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cache/cards/5.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cache/cards/50.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cache/cards/51.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cache/cards/52.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cache/cards/53.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cache/cards/54.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cache/cards/55.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cache/cards/56.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cache/cards/57.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cache/cards/6.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cache/cards/7.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cache/cards/8.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cache/cards/9.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/019ba422-4837-400c-a913-b56d87b49e26.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/0217590f-319e-49f5-860c-4e1516e7d887.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/022ba6fc-6d6b-48c3-8df3-5abf58776d14.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/023b5e6f-10de-422d-8431-11f1fdeca246.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/02881e1b-dd24-4a9c-af98-d3fe97ccb09d.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/02bd24b4-05e9-4677-89bc-307613435654.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/0530b343-98c2-440a-b32e-d1566d318c3b.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/0592554e-d0fc-45a6-a34a-cac1c85b60f5.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/06dda49d-25a2-4fa3-80f2-0d784e1ad30f.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/074401a0-7d03-4499-98a7-91effdea83e7.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/07a2c7fa-7aea-4da4-b7d5-9c24f5024c74.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/0869c33a-726d-4263-95a0-9cea61ced7f5.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/09bcfd12-6b50-4fdf-9bda-6d52bba2f897.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/09de2b1c-ee61-4770-a774-a2dff3244cd5.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/0a297f84-8de5-4033-ad62-d9e57dff38d6.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/0a29c8a5-fd98-422c-9518-2db0993495e5.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/0c52bbe2-6cee-451e-98c4-438fcc8905b8.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/0cbec0d9-42b4-4aff-8d55-0721c8911de3.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/0d933aa6-39bf-4711-bee4-62556effd87f.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/0f3c501c-4e23-4e56-ad99-1803c8a877ca.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/0f85f1bf-854a-4e8c-923f-93833a97662f.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/0fc255fb-798b-481b-b5ba-44f7d13652c6.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/1009f965-f938-4ba2-849b-1929c8f98ab2.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/10f76043-038d-41ef-a261-0bef31c736d3.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/1173625c-3168-462c-8769-6dbe1f479a53.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/12ccd555-60d4-49a1-b022-1e119344172a.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/12ee2690-f464-4a38-81e1-6dd2053a3327.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/135da718-affc-46ba-be57-c12c23b54dad.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/13677100-0fc0-4d1b-9e01-1ba53bdfa52b.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/138.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/143.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/156b4cbe-dd61-475b-8b38-f18511bb0a39.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/158caa84-da2e-4c4c-b24d-0c035c900e20.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/15dc4322-5732-4647-9197-e0cd4a83320e.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/1699cd85-37f2-4126-be07-bd11a8153c10.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/177062a3-eac9-4a50-8a4d-bcd2607ce253.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/17d21cec-0503-47d7-a3a4-a371ed4b0073.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/18325889-4203-4f08-b83a-053ecfa24c6b.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/185d8f3e-04e8-4ebb-a89e-66eb380f4642.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/18c0b3b3-bb62-42c5-9869-386af0540a9b.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/19097800-e407-4822-b7d0-2b89d29a26cb.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/197773cd-35dc-4d33-8bf0-270feaa3d332.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/19e96521-b4ce-4a36-a887-200e05ccc804.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/1add1757-c1f8-448a-b279-c6940fb7ad5f.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/1b4dab03-abf1-4c8f-983e-77dffcfb1578.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/1b63c710-6af6-4866-97d0-0907782cc463.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/1c2e7843-9a87-46cb-be06-6db58649db85.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/1c967f12-7746-4539-9e28-ee2fea146fa2.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/1cb85894-f50e-4808-a68d-fb8e9d44343a.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/1e98cbc0-7d72-4b9f-8a63-c437c98becc9.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/1f3013bf-9647-4bdb-a638-d299ae00f88e.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/1f61b1a3-4b3b-4490-a9dc-17aac258cbda.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/1f9b8532-4f1a-4653-9cbb-befba8169e5a.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/1faff9e6-c385-448f-8aec-829154f4ccbe.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/1ff8671d-4da4-4dc2-a8c4-d695ff1aca0f.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/202125f5-9182-436f-86df-701cdc7e60ce.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/20ca8232-b783-4777-8b7a-794d47d17e46.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/20e0dba2-d15c-4d55-9b68-00648175e760.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/21892cbc-1af2-4ea1-8907-cec514b53004.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/21a8fde8-b7b1-4e99-a10a-26d5aaf0f383.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/21b1aebc-446a-4504-ae49-7810f8ce04da.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/22314b66-0daa-4d15-b0fd-8394f2977709.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/22620be3-6c4e-464a-a47b-1a68b00ba61d.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/23b91af8-eff9-402a-8ba8-ab470c5c1a44.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/23dddddb-5409-4c28-bf32-e6473f2cc620.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/24456083-0c76-46c5-9b18-8d468702df69.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/245e008c-e073-443f-9592-6f628c0026ec.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/249865c2-e6ec-45b8-b947-2cd85cc29a49.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/254fcc50-79a5-40cd-b028-e78dde3f8480.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/26a7e5f0-0d60-4118-ad10-b27c7382511a.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/26ab3311-3a96-42e3-8085-704a970b7a74.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/279.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/28f279c7-49c7-4d67-8701-0eb63a6fbcd0.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/2a02aabb-c464-4672-b37b-d5d713ef8939.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/2a11bdb2-a269-4038-85f3-69fbd02982e9.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/2a83882c-3e03-4e85-aaac-97fa1d08a772.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/2adf97b5-cec9-4fa9-920e-85ced65d3393.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/2af3fbbc-7209-471c-af1f-5cb801412cb4.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/2af445f4-35fa-4ff2-b7ed-e601dc36a4be.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/2b2cac9b-c45a-4c38-aff2-1ffccbb6eedd.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/2c00d755-4108-4205-a4a4-b5b561a624df.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/2dd69f2d-8c9c-41fc-93ea-48fc7a6d5272.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/2e0e27f9-dc2c-4366-b810-3e8d0bdff8c3.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/2e8a5e24-95af-4209-a9e1-eedd4d22fc96.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/2ecacdc2-b367-4893-b058-6b09a9668ec9.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/2edd7be9-9334-4684-b642-1aaf2000e054.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/2f33c2aa-f11e-4f7b-87c6-44d47504170e.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/30194ede-ec75-4a16-b9f8-1b1f093a0475.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/30c58f2d-abf5-4c74-bf0c-d5f507297682.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/318bc78c-65ef-4d1b-a710-cdf08636b572.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/31e5f74e-ebbc-455a-96d3-c42812ac5a8b.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/3300a93b-6081-4cf0-aad5-60d244c601a9.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/353824ad-65a5-4fbf-ad4f-5a74a0841bd4.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/3576b7b4-cbc9-4b9c-8883-4e9a18d45508.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/35bed71c-ac98-4e42-a611-9df1573d04c2.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/35d772a2-717d-4b82-a267-52efed584ae9.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/360f381b-2389-4ec0-8329-aef09acc986e.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/37f920f0-4dfc-477b-af7e-a17dfc9ba455.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/381065aa-8a0c-4c68-a5cd-99584c65aa12.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/3825d960-971a-44fa-923c-3f0309d42f2d.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/385d90e1-f0b1-4af9-b93d-b3fbac96d976.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/3877c32b-637d-4781-a664-4333316fb1d1.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/39346d19-7c3f-4b4b-80dc-a546852fbbf9.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/3956563b-bde3-4aec-93fe-e03bade49458.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/3a5781f5-a140-4f28-a9e4-ab53058b1f45.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/3b9905aa-14ea-4248-9937-624b162c5395.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/3ba16fbf-2d44-4337-87cb-6ff6b84a258a.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/3c7630eb-453c-4af7-b6a2-b64b656ef758.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/3d66f3c4-5a11-4e28-a4ae-673b3b36d3ec.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/3dc89a88-e7fb-4812-82bd-c47b54c63af8.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/3dca0007-42d3-4ee2-8e88-361d80a7103c.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/3e891e31-1193-44fd-b8b8-79860e19075e.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/3ed39bd7-d059-4a44-9f03-0f628dcdb119.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/3f43df88-aa2e-43ff-bc96-5c85a3569cb9.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/402666f8-c9cc-4e8f-abaa-6c38be90cdd2.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/40caa5e7-4024-4ea7-9588-6d6588ffc0be.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/425155bb-f1ab-47b6-9808-3e936ed366ea.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/4388ae8f-a2c4-4e0d-a6a1-0204ff3f469b.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/43972213-fb44-4d90-a08e-de3c9854ba50.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/43dc4ff6-c26c-4dba-ac7f-6dee7c9e5345.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/45e2c8c5-b039-42ed-90f8-95c80d124564.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/465857f2-df08-4f7b-b4fe-b16831ac0eb1.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/47a42cfc-e77f-4803-88cf-e0dcdbe3b004.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/48dd657d-8311-4332-800a-38b159561ed0.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/4928fea1-dc99-4184-b33c-6f59b2014cc3.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/49dd3963-a4d7-4992-b6f8-753996390bbf.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/4a3a65be-0ca1-437f-aafe-d96e8fe428ad.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/4a5a1dba-8f59-41ce-a7b8-e94e74d55bb8.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/4cda3aa2-5fac-4188-bdad-dc369a089d00.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/4d267ed8-e760-4f92-962b-f83dea822c45.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/4d83085d-5e9a-4f07-a9ec-938fea09c29b.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/4dfc9189-9bff-4a4f-a228-fd02b4e3aaf8.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/4edc7ab0-edfb-44fb-8b09-2d19993ca3cc.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/4f84799b-77fe-4763-b568-0f0f99fe0c5b.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/4fb0eb2d-9cb7-4e72-a970-5009b046df2a.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/50bae2ba-a6a0-4a6a-96e9-0e0372e55108.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/513da431-4f3a-4f4a-8be4-7e162dd93307.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/516b8aeb-a762-46bc-ab78-272a0a237860.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/52bc56f5-d0fa-40db-8078-b3ea68f1f8e4.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/54a702cd-ca49-4570-b47e-8b090452a3c3.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/56.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/56776d9d-41cb-4a92-881e-aa2274226e44.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/56ec432b-4f9a-4e23-a6cf-e3235889bb87.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/58302c19-370b-4592-8819-74947e5ab928.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/584774b5-640f-45e0-810b-f5faf119645b.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/59680c4e-c8a1-4c4e-b07d-8352bc61b3ec.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/59e9daee-46fa-4d3c-b90d-c395fccfef8d.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/5a020b2b-b11e-4d5d-acf6-cb6d18bbef57.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/5c5bdb8c-2a2e-47cf-a502-2d62f9ada3fa.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/5eca2391-ccb2-4042-9a40-28ae32866da2.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/5f363991-91f2-4675-b0ca-cc7fe230c4ff.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/61318be1-4e3a-4560-9600-4332af28713a.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/6193b89b-2670-461e-90a9-52561d1c4421.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/6243efd3-07c8-4f31-9b00-244e029bbbbc.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/62958fc3-55dc-4b97-a070-490d6ed27820.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/63056bb9-e825-418a-a8ff-692980aa65fe.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/63062154-fc6a-48d8-ac0d-f2ec53ac64c9.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/63e735b1-7643-48db-9731-aea0212d0e2b.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/66392b0e-8691-42a4-bc84-03b017174a73.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/66bfa176-14b5-4806-904a-6ba5dd2946ee.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/674ab3a8-5cb2-4293-8c31-dd93a01d775f.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/67d2d713-8acb-4e3d-bd1d-0416fe9b9ef6.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/685c6f9a-b266-4a3f-b3a2-5a1002c34c75.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/68e692a7-1776-4c34-bf27-fa484724c27d.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/6a6e50cb-dde3-4349-af1b-904e8aed81ea.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/6a99d2e0-bb36-4540-ad2e-6465680b3820.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/6ab06da7-5384-4fdd-8454-a56bb210214a.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/6b30243d-511b-47b8-bbed-0395d3de903d.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/6b7ff20a-8556-42a3-a826-1e3460cc6e2b.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/6c137a44-9ab6-4e59-8324-34d9dca8f5a6.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/6e8abee6-87e6-4d1a-a117-aeb8122c5199.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/6ed51c88-783c-40bb-ba10-18973af7ccf9.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/6ff2fd1d-24b1-4300-9273-69834fb4379a.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/70d7ad10-d310-4704-a292-2410d3ef6014.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/70d9ab99-ec8a-402e-ba1d-ffa6c4c84a3f.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/7102d6a4-a32e-4d46-b525-7d15cda37c7c.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/7114ef87-53ff-43e9-864c-9faa455d86ef.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/7186fb36-f865-42cf-8aba-8d48ddd91065.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/729d9aa8-a77c-4039-8d08-151b68f1d956.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/740f7645-6e3f-43a7-b39a-e58de9057445.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/74dfabfd-e13b-4512-a733-abe514be6404.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/7502ce01-b762-40fe-a064-c7b20b08a722.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/7577d5d7-0152-43e8-bee1-59570cfe2680.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/75af1cc6-cb40-48c8-818b-91e64bdbe691.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/75d9ef34-ae95-4465-a30c-372e231bd733.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/75fcd36e-c4b4-4f7f-8255-8909f7e0cd11.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/76.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/76bada76-9947-490d-aa2c-b94a3701eaa3.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/77.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/77d5bf3e-955c-4d09-8fd3-e7caf2d30461.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/7855528a-ede9-49a9-8749-795a004fd927.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/793d326a-f7b6-4659-96be-76feb91fe40d.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/797131cf-d80d-4050-bebd-2ce1d7fae5d0.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/798893df-e720-471d-822d-50284de23efd.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/798e500e-514d-43ec-ac35-ccc4198a5713.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/7a914416-effd-4eda-b609-2773c53a08ec.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/7a9fed65-9ee5-42c5-80de-bab2b499618f.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/7aa7a999-a5e0-4779-8491-8d129f85950b.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/7ae610ae-a26f-4aa9-b2f7-68574ad7b146.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/7b3c8dda-2405-4879-8dd1-e790a833c42d.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/7b3f19f1-b812-4df1-abe9-2f4edfcebc47.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/7cb8424b-a1f5-42ec-9005-fe4344fddafd.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/7d52acd5-cf32-424b-a2ba-4c4321deb742.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/7d9c1ed8-d5fd-4c6b-b45c-1897e2c62ff7.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/7dad40bf-2cd0-47f5-a878-9a289d1d58d0.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/7e676e8d-5007-4da3-abb7-60d41a937e7c.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/7f1fe849-b407-4252-b175-3f4afbbcea1b.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/7f2c74f5-1cfe-4918-a86b-0d58ac8b7469.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/80b59844-c9d4-4bc1-86e6-4cc596d9165d.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/80b722d9-be9d-463c-929e-78f7156af9c6.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/8110eb0a-63dc-43df-b55a-9241f45b1cc6.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/8184bb33-0c64-4c0f-bb39-507f3ed7fc07.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/821bdf81-646c-426d-b660-fe4b422c4f33.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/82b37c32-4e22-4d5f-b4b3-dac809e1d0ba.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/8325bb6a-53ae-451a-9368-c2ff3c4813b3.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/83be257c-8945-46be-8b58-fb2881084026.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/85cc170a-ecd2-4870-b675-7ece88813995.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/85da2e65-4e22-48b6-98ad-6969684d69e1.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/85fe17b1-5da9-4714-91bd-48e274361260.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/8603c493-afb0-47a1-b4e3-9848b3824840.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/87480ee0-022b-4fd6-8131-61e610d67feb.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/87636573-b7d5-44d5-a380-a5c6e21d5eb4.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/87851d68-e555-4baf-a2e8-640845aa360a.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/87da0084-a8b8-4cbd-a8d5-22dcc9e2013f.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/87de7f6b-fbe6-477e-bb47-a8fa96bd324a.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/8821c7b9-702b-416f-b006-941ad57f9e11.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/88e1c88c-ead7-4d73-ae20-b13aa4e907dc.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/89ccbd73-9414-48a3-bdcf-e838fcffc08f.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/8b28d368-f9a1-4f8c-be2d-b8a8cd4dfcc6.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/8b559815-de08-45b8-bbd8-94b97d117700.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/8bfd75fb-7985-42af-844d-476685ff635a.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/8c2bc68c-d66a-4e83-b029-3ad34d3bc720.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/8cce61d3-a25e-4785-95fb-2d98e9e77903.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/8deb5d3a-0762-4c4f-afef-fd86728914b4.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/8ebd7ce4-550d-41ab-8559-97efb234a0a1.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/8f6602cd-2785-4eb9-9f9a-3a9295e202cc.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/8f920f83-6380-4e4f-be68-6bf9df3110d8.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/903b4141-04a3-44c4-9d3e-aa2a773d9883.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/904ceb98-9b6e-45c0-aca4-d57b578b1471.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/90ff983c-da4b-46d7-8fbe-b10d6c748ce4.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/9317576b-37b0-432f-9f16-b37e8688011c.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/934bba31-3882-4d87-8aa3-d19a2d073a3d.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/947bb8f3-51f5-4fbe-9098-7e48f9fe1452.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/94b01286-1f65-48a2-b1fb-16985257e7bc.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/95ab275d-6011-440e-af43-5218d502bffa.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/95f3c85c-a80f-4604-b312-7b5cfcea7c6f.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/95fceb45-f7f3-4133-b590-7a8d6b3f1212.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/968651db-92fb-46cd-acda-9e097668b7c9.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/9696feed-e8e3-434d-b155-1f5734966b49.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/96e7263a-05f4-4c2b-b68f-d4e3f0853c53.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/9822c944-ba35-45a2-8416-c407fcb8f62e.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/9841213f-6323-4c1b-a49c-c5ff9c1fb973.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/9a7005d7-e3e3-4b4f-a8b5-809d22ddec4d.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/9aadf7d8-7a0c-4b79-a0c6-638cb84b9c34.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/9aae014f-8b05-43ad-9619-f02ea6064059.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/9af53a53-d30a-4289-a043-953cd81ee241.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/9afc6f10-cb78-4c9e-b627-3716762f2ade.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/9b13248b-5abb-4246-b639-1a8a6681a157.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/9b1d5b76-b07e-45c6-800d-4cfce085164f.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/9b255d34-04fa-4d3b-9fc1-8f980ef1f054.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/9ba6bfb5-ef88-49c7-9b57-f48e23897c26.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/9c82c5c2-89d1-4d48-a57e-464e05cb1466.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/9d11e3d4-769d-47aa-8d3a-ce1ac60b68b8.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/9dfb7ceb-c791-4c86-9b72-62f402db91be.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/9f827f92-1df6-4fd0-aa61-ec2e53476f9c.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/9f91e78e-9297-4ae3-b55f-d73e79d0d21a.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/a00b9b2f-4cd8-4c36-a2b2-40673dfb9f39.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/a01adcbd-0ebd-4f18-9942-4638fa0de358.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/a325f45f-dc43-4e1a-82fa-e8cdad0958f2.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/a4578576-de6b-4387-aad3-0ae9d91244d1.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/a489ad7a-c848-4bf4-9b20-0613ae7121f4.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/a4afac74-b8ed-4e04-a113-6b61343a75a9.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/a6547177-2a72-472a-8e35-66d9bbbd9f5d.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/a65cd601-af87-4543-8e82-16156a74012d.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/a6efad36-172b-4a84-aa0b-cd7eafad0790.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/a7257e91-5bd4-4935-aa56-973eff6a80aa.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/a74fd612-2890-4333-a379-5bf7650fbb87.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/a7d64600-84fc-42a5-a6a6-b26f98fac0a4.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/a86b54d3-f796-442e-9be7-c0e07d37d0d8.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/a954b0b4-8f92-4670-b5a7-3619eb66e614.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/a95f8df0-3490-47ad-b452-76fe60179242.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/a993986c-e8f1-41b1-86e6-c72021c53b87.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/a9d6e2e5-75a9-4e30-a409-63ae75d0e210.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/aa38db6c-9b16-4f8b-9f4d-8778238cbaaf.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/ab579c0e-2d9f-4d63-a4ba-ece47c8e3ade.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/ac0a1dc6-215f-4738-8ae4-7b6aa1c7d80b.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/ad03c22d-c957-441c-9be0-4ea6ee12ce2e.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/adaee1f8-d7e9-4959-b550-dc8ca121dce5.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/ade17824-60a0-4e8c-8d80-aa834a622d86.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/aea5c8fe-42ae-4c48-9ce3-c1981e75e008.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/af9988fd-72a0-42dc-9f10-85edd3133977.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/aff2d73b-cba9-4f76-97d7-8b6dd085e656.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/b044b2cf-4374-48ca-a1e6-3a43bf8b9445.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/b06f08fd-5760-4a1e-8794-2e0a7588cd71.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/b07b0657-ceb8-4a29-b6c8-ef6cd3a08fea.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/b0bc2e41-25d2-4060-a4eb-af00af1f7279.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/b108a2ba-ded4-4cc1-be19-4793806d78f7.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/b10e176e-11aa-47e3-8cf3-a80c1a3707b2.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/b192067c-7cdb-4d3c-95b7-819733e44678.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/b3c773f0-9e65-48de-a362-a9a943198693.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/b416f95e-6523-4080-82f4-62df12022657.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/b42b11c3-b8f3-40d9-8480-882d64f9f358.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/b4f49321-ca50-46e3-9ad8-ef55b31545f4.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/b56f7e2a-150c-4daa-811c-a0347ff850bf.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/b6263410-20c5-43b4-8183-3c02c10d07fb.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/b67cdb6e-9a3b-4887-924d-318faa3c443d.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/b742ea7f-937d-4cb0-abe6-ec5ad7d04cf4.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/b9e0bf63-0399-40d6-9162-4562d7bcdd0e.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/bd6e71a1-713e-4eca-bd65-9f0638c16794.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/bf747581-da73-4c34-b771-1084ecc1fc87.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/c0810651-0301-46d4-b9d7-c2283ef4031a.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/c0b34ecd-6dd4-49b0-ab49-3c11f70e0c4a.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/c1443735-5934-4209-8313-71c048edc650.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/c2930fb8-260f-4a55-9a0c-a46eb6fc7010.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/c3537e2f-bc7a-49e7-a649-32a6a3a96b9d.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/c3816758-2971-42a9-95f7-f8f06f4d14e4.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/c395921b-f749-4913-9400-61622a43de7b.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/c5620c22-910c-4d33-a5e9-4c4eac8c6304.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/c6596998-8602-4477-b097-45e6d3dcef82.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/c72245a8-6f5e-4564-804f-30407c1c4e57.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/c7818c58-47f1-4031-8f7f-80b4b8c75530.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/c781cc80-5f57-4677-a9da-3523191cc7c6.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/c87daca7-abf9-4afa-9486-2e6b0aeaa91f.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/c8bdd380-8198-4737-b1ee-c8019bf413aa.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/c96f9375-0133-4a71-b762-aa49bcd29201.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/caa836fc-f98e-4f5f-b957-d4e577a1890f.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/cccf7fb5-c043-4a1f-ad2f-edb280cb5037.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/cd02b8ff-ff65-4a38-b8fb-f8dd130edbf7.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/cdaab44c-4ce1-43fb-915c-c687fe8559ce.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/cdd1f534-0534-43fb-8955-aeac7858a28b.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/cdd47fc3-6ea7-4516-ad66-b73f545f8221.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/cf09797c-6c2f-43b7-a00c-0d11c63ded71.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/cf598741-c252-4388-979f-ad7392c8bf36.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/cfa6ed13-7bba-40c0-8e0e-4ffd3cea6241.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/cfee4434-e89f-4781-b0a4-3a65eeadb09a.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/d2c9e963-bb0c-4490-8238-9476b924abf7.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/d3de518c-48e7-4ecd-a36a-2f08f55e81c5.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/d49c5c7d-5a75-475c-8e2a-7e6bf2b9fa61.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/d4b4767b-edd1-4e36-b363-52114a9afe5e.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/d5806e68-1054-458e-866d-1f2470f682b2.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/d627082d-90e5-468b-8dad-11877e150703.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/d7033739-4cd8-4727-b9b5-099fb597006b.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/d785be23-da74-44a8-afba-bb796d68e0ba.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/d7cd85ac-e826-4b16-b9ab-864ae2cabed1.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/d9041d4d-cbd4-4c5b-8f81-ba5424018b03.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/d904440d-2bf3-4a6a-a161-6d6733f4ca24.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/d947b8bd-cb81-41d8-b1a9-7e7151402ce2.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/d99a9a7d-d9ca-4c11-80ab-e39d5943a315.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/da760f9e-d782-423a-8f1f-0229b249bb2e.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/dad7bd06-22e4-40f8-bda9-bcdbb2d8f632.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/de2de2bd-9ba7-4b6f-94c2-dafb2011a48e.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/de7a150b-1b0d-4928-a2cc-80a4b7412350.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/dea832ea-a2a4-4c73-a2e1-eeb73f7779b8.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/dfbaf597-6be2-4aa0-88ae-cc4c94878add.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/e1f2a587-443d-4626-a6f6-9a26838a42b1.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/e23abf47-22fa-4dca-bd42-fafa1c8b592f.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/e24635f9-eb21-4c0d-8361-004d4b698082.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/e2ef3bf9-8abe-4e16-9982-ac82f2987909.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/e3151960-cc0c-47b5-b476-295d7a17ae14.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/e50fbec2-a832-4e40-a684-21da8f9fd1c2.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/e5681da6-077f-4d5d-a480-6b11123e02b4.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/e64b9440-910e-4929-84ac-f2300f74f413.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/e7b3434b-a4cc-4f2b-bfaf-af7578ab9ff9.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/e86197c5-dca6-486a-8d32-5743ec3e3206.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/e882c9f9-bf30-46b6-bedc-379d2c80e5cb.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/e8bf55bf-ee38-4e68-81ca-0fdb8af779ef.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/e94e53f0-cfca-4b40-9867-94ea771463cd.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/ea008094-d995-4740-9b39-c61049356c55.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/ea1d684e-c4dd-481b-856e-8331d4f64be2.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/ebd45237-6775-4968-95a3-c637a8c4ce5f.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/ec0f04b6-d877-4791-b2e9-8944e84f3dbb.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/ec2b30e2-f134-4fd0-bb3b-0e319630fd77.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/ed6b34c6-f8a6-44f9-b480-11af3f29095c.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/ee21ecf8-6d88-474b-8679-84c9c4ab0d57.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/ee2d2de6-8bd6-49fb-89d6-8bb3be604848.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/ef46580c-a204-4b0b-8526-2310b1ca32b4.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/ef8a8ba7-f955-425d-9a16-816fc48a2a83.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/efc3b7b7-c056-4412-b550-ba6329deaf4e.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/f16d01ac-90ad-4ba8-9226-eb581b806f1f.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/f1c8da15-7e91-4adb-9c4f-521560cec254.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/f2ec1de4-084c-4e91-bb18-f8cee87e78c6.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/f369827d-e4cd-4bc7-8c5e-72882eff0908.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/f4c39749-77fa-4129-9a0b-f53287b6e37c.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/f4f680ad-30bd-4c63-acb2-fa3e14eddab4.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/f52c9488-fa9b-48d6-92b9-a8cab1a2689e.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/f77e378a-fa81-451a-81ef-a5ac16581411.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/f7fcce83-4378-405f-8007-dd0ed002be6b.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/fa178ed7-8f3a-45f0-817d-5fbc7993b04a.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/fb4ccc0a-3560-49b3-b055-97abecbd1b0f.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/fbad9449-d09c-4fd0-b2ad-2aa3a29e03bf.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/fd950ddc-28f4-47a5-8fc1-d6f70002fceb.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/fe1ab8db-3994-4b6d-9eaf-75243a78b715.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/fece5fb0-3f6b-4982-b68f-918cde16bea2.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/ff128110-b87e-451c-a51d-9f116892e482.jpg" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/components/card_details_dialog.py" beforeDir="false" afterPath="$PROJECT_DIR$/components/card_details_dialog.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/database.py" beforeDir="false" afterPath="$PROJECT_DIR$/database.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/pages/collection_page.py" beforeDir="false" afterPath="$PROJECT_DIR$/pages/collection_page.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/pages/decks_page.py" beforeDir="false" afterPath="$PROJECT_DIR$/pages/decks_page.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/save/save.db" beforeDir="false" afterPath="$PROJECT_DIR$/save/save_backup.db" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/save/save.db" beforeDir="false" afterPath="$PROJECT_DIR$/save/save.db" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/services/scryfall.py" beforeDir="false" afterPath="$PROJECT_DIR$/services/scryfall.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ui/main_window.py" beforeDir="false" afterPath="$PROJECT_DIR$/ui/main_window.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ui/theme.py" beforeDir="false" afterPath="$PROJECT_DIR$/ui/theme.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -541,19 +49,21 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent">{
-  &quot;keyToString&quot;: {
-    &quot;Python.main.executor&quot;: &quot;Run&quot;,
-    &quot;Python.main_window (1).executor&quot;: &quot;Run&quot;,
-    &quot;Python.main_window.executor&quot;: &quot;Run&quot;,
-    &quot;Python.test_card_metadata.executor&quot;: &quot;Run&quot;,
-    &quot;Python.test_database.executor&quot;: &quot;Run&quot;,
-    &quot;Python.test_scryfall_id.executor&quot;: &quot;Run&quot;,
-    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;git-widget-placeholder&quot;: &quot;main&quot;,
-    &quot;last_opened_file_path&quot;: &quot;C:/Users/aldri/Desktop/MagicCollection/cards/images/icons&quot;
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "Python.main.executor": "Run",
+    "Python.main_window (1).executor": "Run",
+    "Python.main_window.executor": "Run",
+    "Python.test_card_metadata.executor": "Run",
+    "Python.test_database.executor": "Run",
+    "Python.test_scryfall_id.executor": "Run",
+    "Python.test_snapshot.executor": "Run",
+    "Python.test_snapshot_database.executor": "Run",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "git-widget-placeholder": "main",
+    "last_opened_file_path": "C:/Users/aldri/Desktop/MagicCollection/cards/images/icons"
   }
-}</component>
+}]]></component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
       <recent name="C:\Users\aldri\Desktop\MagicCollection\cards\images\icons" />
@@ -580,28 +90,6 @@
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
       <option name="SCRIPT_NAME" value="$PROJECT_DIR$/main.py" />
-      <option name="PARAMETERS" value="" />
-      <option name="SHOW_COMMAND_LINE" value="false" />
-      <option name="EMULATE_TERMINAL" value="false" />
-      <option name="MODULE_MODE" value="false" />
-      <option name="REDIRECT_INPUT" value="false" />
-      <option name="INPUT_FILE" value="" />
-      <method v="2" />
-    </configuration>
-    <configuration name="main_window (1)" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
-      <module name="MagicCollection" />
-      <option name="ENV_FILES" value="" />
-      <option name="INTERPRETER_OPTIONS" value="" />
-      <option name="PARENT_ENVS" value="true" />
-      <envs>
-        <env name="PYTHONUNBUFFERED" value="1" />
-      </envs>
-      <option name="SDK_HOME" value="" />
-      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/ui" />
-      <option name="IS_MODULE_SDK" value="true" />
-      <option name="ADD_CONTENT_ROOTS" value="true" />
-      <option name="ADD_SOURCE_ROOTS" value="true" />
-      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/ui/main_window.py" />
       <option name="PARAMETERS" value="" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
@@ -654,7 +142,7 @@
       <option name="INPUT_FILE" value="" />
       <method v="2" />
     </configuration>
-    <configuration name="test_scryfall_id" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+    <configuration name="test_snapshot" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="MagicCollection" />
       <option name="ENV_FILES" value="" />
       <option name="INTERPRETER_OPTIONS" value="" />
@@ -667,7 +155,29 @@
       <option name="IS_MODULE_SDK" value="true" />
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
-      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/test_scryfall_id.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/test_snapshot.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration name="test_snapshot_database" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+      <module name="MagicCollection" />
+      <option name="ENV_FILES" value="" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/test_snapshot_database.py" />
       <option name="PARAMETERS" value="" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
@@ -679,10 +189,10 @@
     <recent_temporary>
       <list>
         <item itemvalue="Python.main" />
+        <item itemvalue="Python.test_snapshot_database" />
+        <item itemvalue="Python.test_snapshot" />
         <item itemvalue="Python.test_database" />
         <item itemvalue="Python.test_card_metadata" />
-        <item itemvalue="Python.test_scryfall_id" />
-        <item itemvalue="Python.main_window (1)" />
       </list>
     </recent_temporary>
   </component>

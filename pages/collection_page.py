@@ -116,6 +116,9 @@ from database import (
     get_collection_for_export,
     get_card_image_path,
     get_collection_stats,
+    initialize_database,
+    get_card_collection_value,
+    get_card_by_id,
 )
 
 from export import (
@@ -141,6 +144,8 @@ COLLECTION_RENDER_DELAY = 0  # Delay em ms antes de exibir cartas (0 = imediato)
 
 _IMAGE_PIXMAP_CACHE = {}
 _MAX_IMAGE_CACHE_SIZE = 500  # Limite de imagens em cache
+
+
 
 def _cleanup_image_cache():
     """Remove entradas mais antigas do cache se exceder o limite."""
@@ -1071,88 +1076,180 @@ class GridCardFrame(QFrame):
     # =====================================================
 
     def set_card_data(
-        self,
-        card_data,
-        face_index=0,
-        art_index=0,
+            self,
+            card_data,
+            face_index=0,
+            art_index=0,
     ):
+        if not isinstance(card_data, dict):
+            print(
+                "[GRID] set_card_data recebeu dados inválidos"
+            )
+            return
+
+        # -----------------------------------------------------
+        # ATUALIZAR DADOS DA CARTA
+        # -----------------------------------------------------
 
         self.card_data = card_data
         self.current_face_index = face_index
         self.current_art_index = art_index
 
+        print(
+            "[GRID] Dados da carta atualizados:",
+            self.card_data.get("name"),
+        )
+
+        print(
+            "[GRID] Novo image_path:",
+            self.card_data.get("image_path"),
+        )
+
+        # -----------------------------------------------------
+        # ATUALIZAR IMAGEM
+        # -----------------------------------------------------
+
         self.update_card_image()
-
     def update_card_image(self):
+        """
+        Atualiza somente a imagem desta carta no Grid.
 
-        if not self.card_data:
+        A imagem é obtida do image_path presente em self.card_data.
+        O cache da Collection é invalidado quando necessário para
+        garantir que uma imagem recém-substituída não continue
+        sendo exibida como a antiga.
+        """
+
+        if not isinstance(self.card_data, dict):
+            print("[GRID] card_data inválido")
             return
 
-        # Obter URL da imagem
-        face = self.card_data.get("card_faces", [self.card_data])[self.current_face_index] if self.card_data.get("card_faces") else self.card_data
-        image_uris = face.get("image_uris") or {}
+        image_path = (
+            self.card_data.get("image_path")
+        )
 
-        # Se houver arte selecionada
-        url = None
-        if self.current_art_index > 0 and "artworks" in face:
-            artworks = face.get("artworks") or []
-            if self.current_art_index <= len(artworks):
-                art = artworks[self.current_art_index - 1]
-                url = art.get("large") or art.get("image_uri") or art.get("normal")
-
-        if not url:
-            for key in ("png","large", "normal", "border_crop", "small"):
-                url = image_uris.get(key)
-                if url:
-                    break
-
-        if not url:
-            # Fallback para imagem padrão
-            scryfall_id = self.card_data.get("scryfall_id") or self.card_data.get("id")
-            if scryfall_id:
-                from database import build_scryfall_image_url
-                url = build_scryfall_image_url(scryfall_id)
-
-        if not url:
+        if not image_path:
+            print(
+                "[GRID] Carta sem image_path:",
+                self.card_data.get("name"),
+            )
             return
 
-        # Caminho local
-        scryfall_id = self.card_data.get("scryfall_id") or self.card_data.get("id")
-        if scryfall_id:
-            from database import get_card_image_path
-            local_path = get_card_image_path(
-                scryfall_id
+        image_path = Path(
+            str(image_path)
+        )
+
+        if not image_path.exists():
+            print(
+                "[GRID] Imagem não encontrada:",
+                image_path,
+            )
+            return
+
+        # =====================================================
+        # INVALIDAR CACHE LOCAL DA CARTA
+        # =====================================================
+
+        try:
+            cache_key = str(
+                image_path
             )
 
-            if local_path and Path(local_path).exists():
-                pixmap = QPixmap(
-                    str(local_path)
+            if hasattr(
+                    self,
+                    "image_cache",
+            ):
+                self.image_cache.pop(
+                    cache_key,
+                    None,
                 )
 
-                if not pixmap.isNull():
-                    width = max(
-                        120,
-                        self.card_width,
-                    )
+        except Exception as error:
+            print(
+                "[GRID] Erro ao invalidar cache local:",
+                error,
+            )
 
-                    height = round(
-                        width * 88 / 63
-                    )
+        # =====================================================
+        # CARREGAR IMAGEM NOVAMENTE
+        # =====================================================
 
-                    self.image_label.setPixmap(
-                        pixmap.scaled(
-                            width,
-                            height,
-                            Qt.AspectRatioMode.KeepAspectRatio,
-                            Qt.TransformationMode.SmoothTransformation,
-                        )
-                    )
+        pixmap = QPixmap()
 
-                    self.image_label.setText(
-                        ""
-                    )
+        try:
+            pixmap = QPixmap(
+                str(image_path)
+            )
 
+        except Exception as error:
+            print(
+                "[GRID] Erro ao carregar imagem:",
+                error,
+            )
+            return
 
+        if pixmap.isNull():
+            print(
+                "[GRID] QPixmap inválido:",
+                image_path,
+            )
+            return
+
+        print(
+            "[GRID] Nova imagem carregada:",
+            image_path,
+            "| válido:",
+            not pixmap.isNull(),
+        )
+
+        # =====================================================
+        # TAMANHO DO WIDGET
+        # =====================================================
+
+        width = self.image_label.width()
+        height = self.image_label.height()
+
+        if width <= 0:
+            width = self.width()
+
+        if height <= 0:
+            height = self.height()
+
+        if width <= 0 or height <= 0:
+            print(
+                "[GRID] Tamanho inválido para atualização:",
+                width,
+                height,
+            )
+            return
+
+        # =====================================================
+        # ESCALAR
+        # =====================================================
+
+        scaled_pixmap = pixmap.scaled(
+            width,
+            height,
+            Qt.AspectRatioMode.KeepAspectRatio,
+            Qt.TransformationMode.SmoothTransformation,
+        )
+
+        # =====================================================
+        # ATUALIZAR LABEL
+        # =====================================================
+
+        self.image_label.setPixmap(
+            scaled_pixmap
+        )
+
+        self.image_label.setText(
+            ""
+        )
+
+        print(
+            "[GRID] Imagem atualizada:",
+            self.card_data.get("name"),
+        )
     # =====================================================
     # COMEÇAR ZOOM
     # =====================================================
@@ -1821,6 +1918,55 @@ class CollectionPage(QWidget):
 
         filters_layout.addWidget(
             self.type_filter
+        )
+
+        # -------------------------------------------------
+        # RARIDADE
+        # -------------------------------------------------
+
+        self.rarity_filter = QComboBox()
+
+        self.rarity_filter.addItem(
+            "Todas as raridades",
+            "all",
+        )
+
+        self.rarity_filter.addItem(
+            "Comum",
+            "common",
+        )
+
+        self.rarity_filter.addItem(
+            "Incomum",
+            "uncommon",
+        )
+
+        self.rarity_filter.addItem(
+            "Rara",
+            "rare",
+        )
+
+        self.rarity_filter.addItem(
+            "Mítica",
+            "mythic",
+        )
+
+        self.rarity_filter.addItem(
+            "Especial",
+            "special",
+        )
+
+        self.rarity_filter.addItem(
+            "Bônus",
+            "bonus",
+        )
+
+        self.rarity_filter.currentIndexChanged.connect(
+            self.apply_collection_filters
+        )
+
+        filters_layout.addWidget(
+            self.rarity_filter
         )
 
         # -------------------------------------------------
@@ -2527,23 +2673,7 @@ class CollectionPage(QWidget):
             language,
             checked,
     ):
-        if checked:
-            self.selected_languages.add(
-                language
-            )
-        else:
-            self.selected_languages.discard(
-                language
-            )
 
-        self.update_language_button()
-
-        self.apply_collection_filters()
-    def on_language_toggled(
-            self,
-            language,
-            checked,
-    ):
         if checked:
 
             if language not in self.selected_languages:
@@ -2557,97 +2687,6 @@ class CollectionPage(QWidget):
                 self.selected_languages.remove(
                     language
                 )
-
-        def update_language_button(
-                self,
-        ):
-            languages = getattr(
-                self,
-                "selected_languages",
-                set(),
-            )
-
-            if not languages:
-                self.language_button.setText(
-                    "🌐"
-                )
-
-                return
-
-            flags = {
-                "br": "🇧🇷",
-                "us": "🇺🇸",
-                "es": "🇪🇸",
-                "fr": "🇫🇷",
-                "de": "🇩🇪",
-                "it": "🇮🇹",
-                "ja": "🇯🇵",
-                "ko": "🇰🇷",
-                "zhs": "🇨🇳",
-                "zht": "🇹🇼",
-                "ru": "🇷🇺",
-            }
-
-            selected_flags = []
-
-            for language in languages:
-                flag = flags.get(
-                    language,
-                    language.upper(),
-                )
-
-                selected_flags.append(
-                    flag
-                )
-
-            self.language_button.setText(
-                " ".join(
-                    selected_flags
-                )
-            )
-
-        def update_language_button(
-                self,
-        ):
-
-            if not self.selected_languages:
-                self.language_filter_button.setText(
-                    "🌐 Idioma"
-                )
-
-                return
-
-            language_flags = {
-                "br": "🇧🇷",
-                "us": "🇺🇸",
-                "es": "🇪🇸",
-                "fr": "🇫🇷",
-                "de": "🇩🇪",
-                "it": "🇮🇹",
-                "ja": "🇯🇵",
-                "ko": "🇰🇷",
-                "zhs": "🇨🇳",
-                "zht": "🇹🇼",
-                "ru": "🇷🇺",
-            }
-
-            flags = []
-
-            for language in sorted(
-                    self.selected_languages
-            ):
-                flag = language_flags.get(
-                    language,
-                    language,
-                )
-
-                flags.append(
-                    flag
-                )
-
-            self.language_button.setText(
-                " ".join(flags)
-            )
 
         # -------------------------------------------------
         # GARANTIR PELO MENOS UM IDIOMA
@@ -2675,7 +2714,6 @@ class CollectionPage(QWidget):
                 action.blockSignals(
                     False
                 )
-
 
         self.update_language_button()
 
@@ -2709,117 +2747,25 @@ class CollectionPage(QWidget):
         )
 
         self.search_timer.start()
-
-        print(
-            "[SCRYFALL] Idioma selecionado:",
-            self.selected_language,
-        )
-
-        # =========================================================
-        # ATUALIZAR TEXTO DO BOTÃO DE IDIOMAS
-        # =========================================================
-
-        def update_language_button(
-                self,
-        ):
-            language_labels = {
-                "en": "🇺🇸 Inglês",
-                "pt": " Português",
-                "es": "🇪🇸 Espanhol",
-                "fr": "🇫🇷 Francês",
-                "de": "🇩🇪 Alemão",
-                "it": "🇮🇹 Italiano",
-                "ja": "🇯🇵 Japonês",
-                "ko": "🇰🇷 Coreano",
-                "zhs": "🇨🇳 Chinês Simplificado",
-                "zht": "🇹🇼 Chinês Tradicional",
-                "ru": "🇷🇺 Russo",
-            }
-
-            selected = [
-                language_labels.get(
-                    language,
-                    language,
-                )
-                for language
-                in self.selected_languages
-            ]
-
-            if not selected:
-                self.language_button.setText(
-                    "Idioma"
-                )
-
-                return
-
-            if len(selected) == 1:
-                self.language_button.setText(
-                    selected[0]
-                )
-
-                return
-
-            self.language_button.setText(
-                f"{len(selected)} idiomas selecionados"
-            )
-
-        # =====================================================
-        # CANCELA PESQUISA ANTERIOR
-        # =====================================================
-
-        self.search_timer.stop()
-
-        self.pending_search = ""
-
-        # =====================================================
-        # LIMPA SUGESTÕES ANTIGAS
-        # =====================================================
-
-        self.suggestion_list.clear()
-
-        self.suggestion_list.hide()
-
-        self.search_status.clear()
-
-        # =====================================================
-        # REFAZ A PESQUISA NO NOVO IDIOMA
-        # =====================================================
-
-        current_text = (
-            self.add_input
-            .text()
-            .strip()
-        )
-
-        if len(current_text) < 2:
-            return
-
-        self.pending_search = current_text
-
-        self.search_status.setText(
-            "🔄"
-        )
-
-        self.search_timer.start()
     # =====================================================
     # AUTOCOMPLETE
     # =====================================================
-
     def update_language_button(
             self,
     ):
+
         language_labels = {
-            "en": "Ingles",
-            "pt": "Portugues",
-            "es": "Espanhol",
-            "fr": "Frances",
-            "de": "Alemao",
-            "it": "Italiano",
-            "ja": "Japones",
-            "ko": "Coreano",
-            "zhs": "Chines Simplificado",
-            "zht": "Chines Tradicional",
-            "ru": "Russo",
+            "en": "🇺🇸 Inglês",
+            "pt": "🇧🇷 Português",
+            "es": "🇪🇸 Espanhol",
+            "fr": "🇫🇷 Francês",
+            "de": "🇩🇪 Alemão",
+            "it": "🇮🇹 Italiano",
+            "ja": "🇯🇵 Japonês",
+            "ko": "🇰🇷 Coreano",
+            "zhs": "🇨🇳 Chinês Simplificado",
+            "zht": "🇹🇼 Chinês Tradicional",
+            "ru": "🇷🇺 Russo",
         }
 
         if not self.selected_languages:
@@ -2836,18 +2782,21 @@ class CollectionPage(QWidget):
                 language,
                 language,
             )
-            for language in self.selected_languages
+            for language
+            in self.selected_languages
         ]
 
         if len(selected) == 1:
             self.language_button.setText(
                 selected[0]
             )
+
             return
 
         self.language_button.setText(
             f"{len(selected)} idiomas"
         )
+
 
     def search_scryfall(self, text):
 
@@ -3162,7 +3111,6 @@ class CollectionPage(QWidget):
         )
 
         try:
-
             card_data = None
 
             languages = list(
@@ -3175,18 +3123,44 @@ class CollectionPage(QWidget):
                 ]
 
             # =================================================
-            # TENTAR CADA IDIOMA SELECIONADO
+            # PRIORIDADE 1 — INGLÊS
+            #
+            # O autocomplete do Scryfall normalmente retorna
+            # o nome canônico da carta.
+            #
+            # Isso é especialmente importante para cartas
+            # de duas faces:
+            #
+            # Accursed Witch // Infectious Curse
+            #
             # =================================================
 
-            for language in languages:
+            card_data = get_card_by_name(
+                name,
+                language="en",
+            )
 
-                card_data = get_card_by_name(
-                    name,
-                    language=language,
-                )
+            # =================================================
+            # PRIORIDADE 2 — IDIOMAS SELECIONADOS
+            #
+            # Se não encontrou em inglês, tenta os idiomas
+            # escolhidos pelo usuário.
+            # =================================================
 
-                if card_data:
-                    break
+            if not card_data:
+
+                for language in languages:
+
+                    if language == "en":
+                        continue
+
+                    card_data = get_card_by_name(
+                        name,
+                        language=language,
+                    )
+
+                    if card_data:
+                        break
 
 
         except requests.RequestException as error:
@@ -3258,10 +3232,24 @@ class CollectionPage(QWidget):
 
         except Exception as error:
 
+            import traceback
+
             print(
                 "[DATABASE] Erro:",
                 error,
             )
+
+            print(
+                "[DATABASE] Tipo de card_data:",
+                type(card_data),
+            )
+
+            print(
+                "[DATABASE] card_data:",
+                repr(card_data),
+            )
+
+            traceback.print_exc()
 
             success = False
 
@@ -3781,6 +3769,10 @@ class CollectionPage(QWidget):
             self.type_filter.currentData()
         )
 
+        rarity = (
+            self.rarity_filter.currentData()
+        )
+
         set_name = (
             self.set_filter.currentData()
         )
@@ -3795,6 +3787,9 @@ class CollectionPage(QWidget):
         if card_type is None:
             card_type = "all"
 
+        if rarity is None:
+            rarity = "all"
+
         if set_name is None:
             set_name = "all"
 
@@ -3807,6 +3802,7 @@ class CollectionPage(QWidget):
 
         self.active_color_filter = color
         self.active_type_filter = card_type
+        self.active_rarity_filter = rarity
         self.active_set_filter = set_name
         self.active_sort = sort_mode
 
@@ -4026,6 +4022,7 @@ class CollectionPage(QWidget):
 
         self.active_color_filter = "all"
         self.active_type_filter = "all"
+        self.active_rarity_filter = "all"
         self.active_set_filter = "all"
         self.active_sort = "name_asc"
 
@@ -4134,9 +4131,253 @@ class CollectionPage(QWidget):
             )
         )
 
-    # =====================================================
-    # LIMPAR LAYOUT
-    # =====================================================
+    # =========================================================
+    # ATUALIZAR WIDGET DE UMA CARTA
+    # =========================================================
+
+    def update_card_widget(
+            self,
+            card_id,
+            new_quantity,
+            card_data=None,
+    ):
+        try:
+
+            card_id = int(
+                card_id
+            )
+
+            new_quantity = int(
+                new_quantity
+            )
+
+        except (
+                TypeError,
+                ValueError,
+        ):
+            return False
+
+        row_data = self.card_rows.get(
+            card_id
+        )
+
+        if not row_data:
+            print(
+                "[COLLECTION] Widget não encontrado:",
+                card_id,
+            )
+            return False
+
+        frame = row_data.get(
+            "frame"
+        )
+
+        if frame is None:
+            print(
+                "[COLLECTION] Frame não encontrado:",
+                card_id,
+            )
+            return False
+
+        # =====================================================
+        # 1. ATUALIZAR QUANTIDADE
+        # =====================================================
+
+        if row_data.get("grid"):
+
+            if hasattr(
+                    frame,
+                    "set_quantity",
+            ):
+                frame.set_quantity(
+                    new_quantity
+                )
+
+        else:
+
+            quantity_widget = row_data.get(
+                "quantity_label"
+            )
+
+            if quantity_widget is not None:
+                quantity_widget.setText(
+                    str(new_quantity)
+                )
+
+        # =====================================================
+        # 2. ATUALIZAR DADOS DA CARTA
+        # =====================================================
+
+        if isinstance(
+                card_data,
+                dict,
+        ):
+
+            row_data["card"] = card_data
+
+            print(
+                "[COLLECTION] Atualizando imagem da carta:",
+                card_id,
+            )
+
+            # -------------------------------------------------
+            # FRAME DE GRADE
+            # -------------------------------------------------
+
+            if row_data.get("grid"):
+
+                if hasattr(
+                        frame,
+                        "set_card_data",
+                ):
+
+                    try:
+
+                        frame.set_card_data(
+                            card_data
+                        )
+
+                        print(
+                            "[COLLECTION] Dados do GridCardFrame atualizados:",
+                            card_id,
+                        )
+
+                    except Exception as error:
+
+                        print(
+                            "[COLLECTION] Erro ao atualizar GridCardFrame:",
+                            error,
+                        )
+
+            # -------------------------------------------------
+            # FRAME DE LISTA
+            # -------------------------------------------------
+
+            else:
+
+                self.update_card_image(
+                    card_id,
+                    card_data,
+                )
+
+        return True
+    def update_card_image(
+            self,
+            card_id,
+            updated_card,
+    ):
+        try:
+
+            card_id = int(
+                card_id
+            )
+
+        except (
+                TypeError,
+                ValueError,
+        ):
+            return False
+
+        if not isinstance(
+                updated_card,
+                dict,
+        ):
+            return False
+
+        row_data = self.card_rows.get(
+            card_id
+        )
+
+        if not row_data:
+            return False
+
+        frame = row_data.get(
+            "frame"
+        )
+
+        if frame is None:
+            return False
+
+        image_path = (
+            updated_card.get(
+                "image_path"
+            )
+        )
+
+        image_url = (
+            updated_card.get(
+                "image_url"
+            )
+        )
+
+        print(
+            "[COLLECTION] Atualizando widget da imagem:",
+            card_id,
+            image_path,
+        )
+
+        # -------------------------------------------------
+        # INVALIDAR CACHE DA CARTA
+        # -------------------------------------------------
+
+        if image_path:
+
+            _IMAGE_PIXMAP_CACHE.pop(
+                image_path,
+                None,
+            )
+
+        if image_url:
+
+            _IMAGE_PIXMAP_CACHE.pop(
+                image_url,
+                None,
+            )
+
+        # -------------------------------------------------
+        # ATUALIZAR DADOS GUARDADOS NO ROW
+        # -------------------------------------------------
+
+        row_data["card"] = updated_card
+
+        print(
+            "[COLLECTION] MÉTODOS DO FRAME:",
+            [
+                name
+                for name in dir(frame)
+                if "image" in name.lower()
+                or "pixmap" in name.lower()
+                or "thumbnail" in name.lower()
+            ],
+        )
+        # -------------------------------------------------
+        # TENTAR ATUALIZAR O WIDGET EXISTENTE
+        # -------------------------------------------------
+
+        if hasattr(
+                frame,
+                "set_card_image",
+        ):
+
+            frame.set_card_image(
+                image_path,
+                image_url,
+            )
+
+            return True
+
+        if hasattr(
+                frame,
+                "set_image",
+        ):
+
+            frame.set_image(
+                image_path,
+            )
+
+            return True
+
+        return False
 
     # =====================================================
     # LIMPAR LAYOUT
@@ -4180,14 +4421,24 @@ class CollectionPage(QWidget):
     # EVENTOS — CARTA DA COLEÇÃO ALTERADA
     # =========================================================
 
+    # =========================================================
+    # EVENTOS — CARTA DA COLEÇÃO ALTERADA
+    # =========================================================
+
     def _on_collection_card_changed(
             self,
             card_id,
             new_quantity,
     ):
         try:
-            card_id = int(card_id)
-            new_quantity = int(new_quantity)
+
+            card_id = int(
+                card_id
+            )
+
+            new_quantity = int(
+                new_quantity
+            )
 
         except (
                 TypeError,
@@ -4199,7 +4450,7 @@ class CollectionPage(QWidget):
             return
 
         # -----------------------------------------------------
-        # ATUALIZAR FONTES DE DADOS EM MEMÓRIA
+        # 1. ATUALIZAR DADOS EM MEMÓRIA
         # -----------------------------------------------------
 
         self.update_quantity_in_filter_sources(
@@ -4208,52 +4459,21 @@ class CollectionPage(QWidget):
         )
 
         # -----------------------------------------------------
-        # ATUALIZAR WIDGET EXISTENTE
+        # 2. ATUALIZAR SOMENTE O WIDGET DA CARTA
         # -----------------------------------------------------
 
-        row_data = self.card_rows.get(
-            card_id
+        self.update_card_widget(
+            card_id,
+            new_quantity,
         )
 
-        if row_data:
-
-            frame = row_data.get(
-                "frame"
-            )
-
-            if frame is not None:
-
-                if row_data.get("grid"):
-
-                    if hasattr(
-                            frame,
-                            "set_quantity",
-                    ):
-                        frame.set_quantity(
-                            new_quantity
-                        )
-
-                else:
-
-                    quantity_widget = (
-                        row_data.get(
-                            "quantity_label"
-                        )
-                    )
-
-                    if quantity_widget is not None:
-                        quantity_widget.setText(
-                            str(new_quantity)
-                        )
-
         # -----------------------------------------------------
-        # ATUALIZAR CONTADOR
+        # 3. ATUALIZAR CONTADOR
         # -----------------------------------------------------
 
         self.update_collection_count(
             self.current_cards
         )
-
     # =========================================================
     # EVENTOS — DADOS DA CARTA ALTERADOS
     # =========================================================
@@ -4263,7 +4483,9 @@ class CollectionPage(QWidget):
             card_id,
     ):
         try:
-            card_id = int(card_id)
+            card_id = int(
+                card_id
+            )
 
         except (
                 TypeError,
@@ -4274,14 +4496,55 @@ class CollectionPage(QWidget):
         if card_id <= 0:
             return
 
-        # Por enquanto NÃO reconstruímos a grade.
-        #
-        # Este evento será utilizado na próxima etapa
-        # para atualizar imagem / idioma / arte / face
-        # somente da carta afetada.
-        #
-        return
+        print(
+            "[COLLECTION] Dados da carta alterados:",
+            card_id,
+        )
 
+        try:
+
+            updated_card = get_card_by_id(
+                card_id
+            )
+
+        except Exception as error:
+
+            print(
+                "[COLLECTION] Erro ao recarregar carta:",
+                error,
+            )
+
+            return
+
+        if not updated_card:
+            return
+
+        print(
+            "[COLLECTION] IMAGEM ATUALIZADA:",
+            updated_card.get("image_path"),
+        )
+
+        print(
+            "[COLLECTION] URL ATUALIZADA:",
+            updated_card.get("image_url"),
+        )
+
+        self.update_quantity_in_filter_sources(
+            card_id,
+            updated_card.get(
+                "quantity",
+                0,
+            ),
+        )
+
+        self.update_card_widget(
+            card_id,
+            updated_card.get(
+                "quantity",
+                0,
+            ),
+            updated_card,
+        )
     # =====================================================
     # DISPLAY
     # =====================================================
@@ -4290,6 +4553,13 @@ class CollectionPage(QWidget):
             self,
             cards,
     ):
+
+        print(
+            "[COLLECTION DISPLAY]",
+            len(cards),
+            "layout=",
+            self.current_layout,
+        )
 
         if cards is None:
             cards = []
@@ -4653,6 +4923,31 @@ class CollectionPage(QWidget):
 
         return cards
 
+    def card_matches_rarity(
+            self,
+            card,
+            rarity_filter,
+    ):
+        if rarity_filter == "all":
+            return True
+
+        if not card:
+            return False
+
+        try:
+            rarity = str(
+                card[-1] or ""
+            ).strip().lower()
+        except (
+                TypeError,
+                IndexError,
+        ):
+            return False
+
+        return rarity == str(
+            rarity_filter or ""
+        ).strip().lower()
+
     def apply_collection_filters(
             self,
     ):
@@ -4672,6 +4967,11 @@ class CollectionPage(QWidget):
                 or "all"
         )
 
+        rarity = (
+                self.rarity_filter.currentData()
+                or "all"
+        )
+
         set_name = (
                 self.set_filter.currentData()
                 or "all"
@@ -4688,6 +4988,10 @@ class CollectionPage(QWidget):
 
         self.active_type_filter = (
             card_type
+        )
+
+        self.active_rarity_filter = (
+            rarity
         )
 
         self.active_set_filter = (
@@ -4731,17 +5035,39 @@ class CollectionPage(QWidget):
 
         for card in cards:
 
+            # -------------------------------------------------
+            # COR
+            # -------------------------------------------------
+
             if not self.card_matches_color(
                     card,
                     color,
             ):
                 continue
 
+            # -------------------------------------------------
+            # TIPO
+            # -------------------------------------------------
+
             if not self.card_matches_type(
                     card,
                     card_type,
             ):
                 continue
+
+            # -------------------------------------------------
+            # RARIDADE
+            # -------------------------------------------------
+
+            if not self.card_matches_rarity(
+                    card,
+                    rarity,
+            ):
+                continue
+
+            # -------------------------------------------------
+            # EDIÇÃO
+            # -------------------------------------------------
 
             if not self.card_matches_set(
                     card,
@@ -4783,7 +5109,6 @@ class CollectionPage(QWidget):
         self.display_cards(
             self.current_cards
         )
-
     def clear_collection_filters(
             self,
     ):
@@ -4793,6 +5118,10 @@ class CollectionPage(QWidget):
         )
 
         self.type_filter.blockSignals(
+            True
+        )
+
+        self.rarity_filter.blockSignals(
             True
         )
 
@@ -4812,6 +5141,10 @@ class CollectionPage(QWidget):
             0
         )
 
+        self.rarity_filter.setCurrentIndex(
+            0
+        )
+
         self.set_filter.setCurrentIndex(
             0
         )
@@ -4825,6 +5158,10 @@ class CollectionPage(QWidget):
         )
 
         self.type_filter.blockSignals(
+            False
+        )
+
+        self.rarity_filter.blockSignals(
             False
         )
 
@@ -6394,6 +6731,13 @@ class CollectionPage(QWidget):
             label.size(),
             Qt.AspectRatioMode.KeepAspectRatio,
             Qt.TransformationMode.SmoothTransformation,
+        )
+
+        print(
+            "[GRID] Aplicando pixmap:",
+            width,
+            "x",
+            height,
         )
 
         label.clear()

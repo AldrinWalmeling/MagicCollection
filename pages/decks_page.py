@@ -1,6 +1,7 @@
 from pathlib import Path
 import sqlite3
 import requests
+import traceback
 
 from PySide6.QtCore import (
     Qt,
@@ -5749,9 +5750,13 @@ class DecksPage(QWidget):
             DARK_THEME
         )
 
+
+
         print(
             "[DECKS PAGE] Inicializando DecksPage..."
         )
+
+
 
         initialize_decks_database()
 
@@ -5761,25 +5766,7 @@ class DecksPage(QWidget):
         self._ui_ready = False
         self._resize_refresh_pending = False
 
-        # =====================================================
-        # EVENTOS — CARTA DA COLEÇÃO ALTERADA
-        # =====================================================
 
-        self._collection_event_connected = False
-
-        try:
-            app_events.collection_card_changed.connect(
-                self._on_collection_card_changed
-            )
-
-            self._collection_event_connected = True
-
-        except Exception as error:
-
-            print(
-                "[DECKS PAGE] Erro ao conectar evento:",
-                error
-            )
 
         self.image_pool = QThreadPool()
 
@@ -5891,6 +5878,7 @@ class DecksPage(QWidget):
         title_area.addWidget(
             self.description_label
         )
+
 
         header.addLayout(
             title_area
@@ -6622,6 +6610,10 @@ class DecksPage(QWidget):
             self._panel_card_changed
         )
 
+        app_events.card_data_changed.connect(
+            self._on_card_data_changed
+        )
+
         self.deck_content_layout.addWidget(
             self.scryfall_panel,
             0,
@@ -6663,9 +6655,107 @@ class DecksPage(QWidget):
         self.refresh_current_deck(
             load_preview=load_preview
         )
+
+    # =====================================================
+    # EVENTO — CARTA DA COLEÇÃO ALTERADA
+    # =====================================================
+
+    def _on_collection_card_changed(
+            self,
+            card_id,
+            new_quantity,
+    ):
+
+        print(
+            "[DECKS PAGE] Carta da coleção alterada:",
+            card_id,
+            "quantidade:",
+            new_quantity,
+        )
+
+        if not self._ui_ready:
+            print(
+                "[DECKS PAGE] Evento ignorado: UI ainda não pronta."
+            )
+
+            return
+
+        self._pending_preview_refresh = True
+
+        if hasattr(
+                self,
+                "_refresh_timer",
+        ):
+            self._refresh_timer.start()
+
+            def _on_card_data_changed(
+                    self,
+                    card_id,
+            ):
+                try:
+                    card_id = int(
+                        card_id
+                    )
+
+                except (
+                        TypeError,
+                        ValueError,
+                ):
+                    return
+
+                if card_id <= 0:
+                    return
+
+                print(
+                    "[DECKS PAGE] Dados da carta alterados:",
+                    card_id,
+                )
+
+                # -----------------------------------------------------
+                # NÃO RECONSTRUIR A PÁGINA TODA
+                # -----------------------------------------------------
+
+                self.schedule_deck_refresh(
+                    load_preview=True
+                )
+
     # =====================================================
     # CALLBACK PAINEL
     # =====================================================
+
+    # =====================================================
+    # CALLBACK — DADOS DA CARTA ALTERADOS
+    # =====================================================
+
+    def _on_card_data_changed(
+            self,
+            card_id,
+    ):
+
+        try:
+
+            card_id = int(
+                card_id
+            )
+
+        except (
+                TypeError,
+                ValueError,
+        ):
+
+            return
+
+        if card_id <= 0:
+            return
+
+        print(
+            "[DECKS PAGE] Dados da carta alterados:",
+            card_id,
+        )
+
+        self.schedule_deck_refresh(
+            load_preview=True
+        )
 
     def _panel_card_changed(
         self,

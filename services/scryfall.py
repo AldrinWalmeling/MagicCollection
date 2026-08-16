@@ -800,13 +800,17 @@ def get_card_by_name(
     """
     Busca uma carta pelo nome.
 
-    Inglês:
-        /cards/named
+    Prioridade:
 
-    Outros idiomas:
-        /cards/search com lang:XX
+    1. Cache
+    2. /cards/named
+    3. /cards/search com nome exato
+    4. /cards/search sem exigir nome exato
 
-    Retorna o objeto completo da carta.
+    O fallback é importante para cartas de duas faces,
+    por exemplo:
+
+        Accursed Witch // Infectious Curse
     """
 
     name = str(
@@ -814,7 +818,6 @@ def get_card_by_name(
     ).strip()
 
     if not name:
-
         return None
 
     language = _normalize_language(
@@ -859,6 +862,12 @@ def get_card_by_name(
 
     if language == "en":
 
+        # -------------------------------------------------
+        # TENTATIVA 1
+        #
+        # Endpoint oficial de nome exato.
+        # -------------------------------------------------
+
         data = _request_json(
             "/cards/named",
             params={
@@ -866,20 +875,134 @@ def get_card_by_name(
             },
         )
 
-        if not data:
+        if isinstance(
+                data,
+                dict,
+        ):
 
-            return None
+            _CARD_CACHE[
+                cache_key
+            ] = (
+                time.monotonic(),
+                data,
+            )
 
-        _CARD_CACHE[
-            cache_key
-        ] = (
-            time.monotonic(),
-            data,
+            _cleanup_card_cache()
+
+            return data
+
+        # -------------------------------------------------
+        # TENTATIVA 2
+        #
+        # Busca pelo nome exato usando /cards/search.
+        #
+        # Não usamos search_cards() aqui porque queremos
+        # controlar explicitamente a query.
+        # -------------------------------------------------
+
+        search_data = _request_json(
+            "/cards/search",
+            params={
+                "q": f'!"{name}"',
+                "unique": "cards",
+                "order": "name",
+            },
         )
 
-        _cleanup_card_cache()
+        if isinstance(
+                search_data,
+                dict,
+        ):
 
-        return data
+            cards = search_data.get(
+                "data",
+                [],
+            )
+
+            if isinstance(
+                    cards,
+                    list,
+            ):
+
+                normalized_name = (
+                    name.casefold()
+                )
+
+                # -----------------------------------------
+                # Procurar correspondência exata
+                # -----------------------------------------
+
+                for card in cards:
+
+                    if not isinstance(
+                            card,
+                            dict,
+                    ):
+                        continue
+
+                    card_name = str(
+                        card.get(
+                            "name"
+                        )
+                        or ""
+                    ).strip()
+
+                    if (
+                        card_name.casefold()
+                        == normalized_name
+                    ):
+
+                        _CARD_CACHE[
+                            cache_key
+                        ] = (
+                            time.monotonic(),
+                            card,
+                        )
+
+                        _cleanup_card_cache()
+
+                        return card
+
+                # -----------------------------------------
+                # FALLBACK
+                #
+                # Se o Scryfall encontrou alguma carta,
+                # usa o primeiro resultado.
+                # -----------------------------------------
+
+                for card in cards:
+
+                    if isinstance(
+                            card,
+                            dict,
+                    ):
+
+                        _CARD_CACHE[
+                            cache_key
+                        ] = (
+                            time.monotonic(),
+                            card,
+                        )
+
+                        _cleanup_card_cache()
+
+                        return card
+
+        print(
+            "[SCRYFALL] Carta não encontrada:"
+        )
+
+        print(
+            "[SCRYFALL] Nome:",
+            repr(name),
+        )
+
+        print(
+            "[SCRYFALL] Idioma:",
+            language,
+        )
+
+        return None
 
     # =====================================================
     # OUTROS IDIOMAS
@@ -893,10 +1016,39 @@ def get_card_by_name(
                 f'name:"{name}"'
             ),
             "unique": "cards",
+            "order": "name",
         },
     )
 
-    if not data:
+    if not isinstance(
+            data,
+            dict,
+    ):
+
+        # -------------------------------------------------
+        # FALLBACK
+        #
+        # O nome retornado pelo autocomplete pode ser o
+        # nome em inglês, mesmo quando o usuário possui
+        # outros idiomas selecionados.
+        #
+        # Portanto, se a busca localizada falhar,
+        # tentamos novamente sem lang:XX.
+        # -------------------------------------------------
+
+        data = _request_json(
+            "/cards/search",
+            params={
+                "q": f'!"{name}"',
+                "unique": "cards",
+                "order": "name",
+            },
+        )
+
+    if not isinstance(
+            data,
+            dict,
+    ):
 
         return None
 
@@ -927,10 +1079,9 @@ def get_card_by_name(
     for card in cards:
 
         if not isinstance(
-            card,
-            dict,
+                card,
+                dict,
         ):
-
             continue
 
         printed_name = str(
@@ -990,16 +1141,12 @@ def get_card_by_name(
     # =====================================================
     # FALLBACK
     # =====================================================
-    #
-    # Se o Scryfall encontrou uma carta para a consulta,
-    # mas o nome não bateu exatamente, usa o primeiro
-    # resultado, mantendo o comportamento anterior.
 
     card = cards[0]
 
     if not isinstance(
-        card,
-        dict,
+            card,
+            dict,
     ):
 
         return None
@@ -1014,7 +1161,6 @@ def get_card_by_name(
     _cleanup_card_cache()
 
     return card
-
 # =========================================================
 # PESQUISA AVANÇADA
 # =========================================================
