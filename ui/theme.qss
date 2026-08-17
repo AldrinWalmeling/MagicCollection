@@ -310,6 +310,21 @@ QFrame#AddFrame:focus-within {
     border: 1px solid #d4a84b;
 }
 
+QLabel#SearchIcon {
+    background-color: transparent;
+    border: none;
+}
+
+/* CAMPO INTERNO — SEM SEGUNDA CAIXA */
+QFrame#SearchFrame QLineEdit,
+QFrame#AddFrame QLineEdit {
+    background-color: transparent;
+    border: none;
+    border-radius: 0;
+    padding: 10;
+    outline: none;
+}
+
 QLabel#SearchIcon,
 QLabel#AddIcon {
     background-color: transparent;

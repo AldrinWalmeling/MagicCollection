@@ -15,12 +15,15 @@ from PySide6.QtCore import (
     QSettings,
     QRect,
     Property,
+    QSize,
+
 )
 
 import shiboken6
 
 from PySide6.QtGui import (
     QPixmap,
+    QIcon,
     QAction,
     QIntValidator,
 )
@@ -43,6 +46,14 @@ ICONS_DIR = ASSETS_DIR / "icons"
 CARD_ICON_PATH = ICONS_DIR / "card_icon.png"
 
 COLLECTION_ICON_PATH = ICONS_DIR / "collection_icon.png"
+
+ALERTA_ICON_PATH = ICONS_DIR / "alerta.png"
+
+REFRESH_ICON_PATH = ICONS_DIR / "refresh.png"
+
+LUPA_ICON_PATH = ICONS_DIR / "lupa.png"
+
+EXPORTAR_ICON_PATH = ICONS_DIR / "exportar.png"
 
 SCRYFALL_LANGUAGES = {
     "Inglês": "en",
@@ -2265,6 +2276,14 @@ class CollectionPage(QWidget):
             "Exportar"
         )
 
+        self.export_button.setIcon(
+            QIcon(str(EXPORTAR_ICON_PATH))
+        )
+
+        self.export_button.setIconSize(
+            QSize(20, 20)
+        )
+
         self.export_button.setObjectName(
             "ExportButton"
         )
@@ -2356,8 +2375,15 @@ class CollectionPage(QWidget):
             0,
         )
 
-        search_icon = QLabel(
-            "🔎"
+        search_icon = QLabel()
+
+        search_icon.setPixmap(
+            QIcon(str(LUPA_ICON_PATH)).pixmap(20, 20)
+        )
+
+        search_icon.setFixedSize(
+            20,
+            20
         )
 
         search_icon.setObjectName(
@@ -2366,6 +2392,10 @@ class CollectionPage(QWidget):
 
         search_layout.addWidget(
             search_icon
+        )
+
+        search_layout.setSpacing(
+            8
         )
 
         self.search_input = QLineEdit()
@@ -3392,8 +3422,8 @@ class CollectionPage(QWidget):
 
         self.pending_search = current_text
 
-        self.search_status.setText(
-            "🔄"
+        self.search_status.setPixmap(
+            QIcon(str(REFRESH_ICON_PATH)).pixmap(20, 20)
         )
 
         self.search_timer.start()
@@ -3468,8 +3498,8 @@ class CollectionPage(QWidget):
 
         self.pending_search = text
 
-        self.search_status.setText(
-            "🔄"
+        self.search_status.setPixmap(
+            QIcon(str(REFRESH_ICON_PATH)).pixmap(20, 20)
         )
 
         self.search_timer.start()
@@ -3504,8 +3534,8 @@ class CollectionPage(QWidget):
 
         self.suggestion_list.clear()
 
-        self.search_status.setText(
-            "🔄"
+        self.search_status.setPixmap(
+            QIcon(str(REFRESH_ICON_PATH)).pixmap(20, 20)
         )
 
         # =====================================================
@@ -3746,14 +3776,14 @@ class CollectionPage(QWidget):
             return
 
         if len(name) > 200:
-            self.search_status.setText(
-                "!"
+            self.search_status.setPixmap(
+                QIcon(str(ALERTA_ICON_PATH)).pixmap(20, 20)
             )
 
             return
 
-        self.search_status.setText(
-            "🔄"
+        self.search_status.setPixmap(
+            QIcon(str(REFRESH_ICON_PATH)).pixmap(20, 20)
         )
 
         self.add_button.setEnabled(
@@ -3819,8 +3849,8 @@ class CollectionPage(QWidget):
                 error,
             )
 
-            self.search_status.setText(
-                "!"
+            self.search_status.setPixmap(
+                QIcon(str(ALERTA_ICON_PATH)).pixmap(20, 20)
             )
 
             self.add_button.setEnabled(
@@ -3835,8 +3865,8 @@ class CollectionPage(QWidget):
                 error,
             )
 
-            self.search_status.setText(
-                "!"
+            self.search_status.setPixmap(
+                QIcon(str(ALERTA_ICON_PATH)).pixmap(20, 20)
             )
 
             self.add_button.setEnabled(
@@ -3851,8 +3881,8 @@ class CollectionPage(QWidget):
                 error,
             )
 
-            self.search_status.setText(
-                "!"
+            self.search_status.setPixmap(
+                QIcon(str(ALERTA_ICON_PATH)).pixmap(20, 20)
             )
 
             self.add_button.setEnabled(
@@ -3862,9 +3892,8 @@ class CollectionPage(QWidget):
             return
 
         if not card_data:
-
-            self.search_status.setText(
-                "!"
+            self.search_status.setPixmap(
+                QIcon(str(ALERTA_ICON_PATH)).pixmap(20, 20)
             )
 
             self.add_button.setEnabled(
@@ -3904,8 +3933,8 @@ class CollectionPage(QWidget):
             success = False
 
         if not success:
-            self.search_status.setText(
-                "!"
+            self.search_status.setPixmap(
+                QIcon(str(ALERTA_ICON_PATH)).pixmap(20, 20)
             )
 
             self.add_button.setEnabled(

@@ -19,6 +19,7 @@ from PySide6.QtWidgets import (
 )
 
 from database import get_connection
+from services.scryfall_symbols import ManaSymbolsWidget
 
 # =========================================================
 # CARD DE DECK DO DASHBOARD
@@ -1023,8 +1024,8 @@ class DashboardPage(QWidget):
     # =====================================================
 
     def _create_colors_panel(
-        self,
-        values,
+            self,
+            values,
     ):
 
         panel = self._create_panel(
@@ -1048,6 +1049,15 @@ class DashboardPage(QWidget):
             "Multicolor": "Multi",
         }
 
+        mana_symbols = {
+            "Branco": "{W}",
+            "Azul": "{U}",
+            "Preto": "{B}",
+            "Vermelho": "{R}",
+            "Verde": "{G}",
+            "Incolor": "{C}",
+        }
+
         for name, value in values.items():
 
             row = QHBoxLayout()
@@ -1056,43 +1066,61 @@ class DashboardPage(QWidget):
                 9
             )
 
-            mana_symbols = {
-                "Branco": "W",
-                "Azul": "U",
-                "Preto": "B",
-                "Vermelho": "R",
-                "Verde": "G",
-                "Incolor": "C",
-                "Multicolor": "✦",
-            }
+            # =================================================
+            # SÍMBOLO DE MANA
+            # =================================================
 
-            mana_symbol = QLabel(
-                mana_symbols.get(
-                    name,
-                    "C"
+            if name in mana_symbols:
+
+                mana_symbol = ManaSymbolsWidget(
+                    mana_symbols[name],
+                    symbol_size=22
                 )
-            )
 
-            mana_symbol.setObjectName(
-                "DashboardManaSymbol"
-            )
-
-            mana_symbol.setProperty(
-                "color",
-                color_objects.get(
-                    name,
-                    "Colorless"
+                mana_symbol.setObjectName(
+                    "DashboardManaSymbol"
                 )
-            )
 
-            mana_symbol.setFixedSize(
-                22,
-                22
-            )
+                mana_symbol.setProperty(
+                    "color",
+                    color_objects.get(
+                        name,
+                        "Colorless"
+                    )
+                )
 
-            mana_symbol.setAlignment(
-                Qt.AlignmentFlag.AlignCenter
-            )
+                mana_symbol.setFixedSize(
+                    22,
+                    22
+                )
+
+            else:
+
+                mana_symbol = QLabel(
+                    "✦"
+                )
+
+                mana_symbol.setObjectName(
+                    "DashboardManaSymbol"
+                )
+
+                mana_symbol.setProperty(
+                    "color",
+                    "Multi"
+                )
+
+                mana_symbol.setFixedSize(
+                    22,
+                    22
+                )
+
+                mana_symbol.setAlignment(
+                    Qt.AlignmentFlag.AlignCenter
+                )
+
+            # =================================================
+            # NOME
+            # =================================================
 
             label = QLabel(
                 name
@@ -1105,6 +1133,10 @@ class DashboardPage(QWidget):
             label.setFixedWidth(
                 82
             )
+
+            # =================================================
+            # BARRA
+            # =================================================
 
             bar = QProgressBar()
 
@@ -1140,6 +1172,10 @@ class DashboardPage(QWidget):
                 8
             )
 
+            # =================================================
+            # QUANTIDADE
+            # =================================================
+
             count = QLabel(
                 self._format_number(
                     value
@@ -1157,6 +1193,10 @@ class DashboardPage(QWidget):
             count.setAlignment(
                 Qt.AlignmentFlag.AlignRight
             )
+
+            # =================================================
+            # LINHA
+            # =================================================
 
             row.addWidget(
                 mana_symbol
@@ -1182,7 +1222,6 @@ class DashboardPage(QWidget):
         layout.addStretch()
 
         return panel
-
 
     # =====================================================
     # RARITIES
@@ -1358,9 +1397,7 @@ class DashboardPage(QWidget):
         return panel
 
 
-    # =====================================================
-    # MANA CURVE
-    # =====================================================
+
 
     # =====================================================
     # MANA CURVE
@@ -1370,6 +1407,12 @@ class DashboardPage(QWidget):
             self,
             values,
     ):
+
+        values = {
+            mana_value: value
+            for mana_value, value in values.items()
+            if str(mana_value) != "0"
+        }
 
         panel = self._create_panel(
             "Curva de mana",

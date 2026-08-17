@@ -6,10 +6,10 @@
   <component name="ChangeListManager">
     <list default="true" id="14717f08-37a0-4c50-85ce-aa9bd2e175ab" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/assets/icons/analise.png" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/collection.db" beforeDir="false" afterPath="$PROJECT_DIR$/collection.db" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pages/decks_page.py" beforeDir="false" afterPath="$PROJECT_DIR$/pages/decks_page.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/profiles/Aldrin_1c2867d4/save.db" beforeDir="false" afterPath="$PROJECT_DIR$/profiles/Aldrin_1c2867d4/save.db" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/profiles/profiles.db" beforeDir="false" afterPath="$PROJECT_DIR$/profiles/profiles.db" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/collection_page.py" beforeDir="false" afterPath="$PROJECT_DIR$/pages/collection_page.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/dashboard_page.py" beforeDir="false" afterPath="$PROJECT_DIR$/pages/dashboard_page.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ui/theme.qss" beforeDir="false" afterPath="$PROJECT_DIR$/ui/theme.qss" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
