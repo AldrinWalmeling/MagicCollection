@@ -6,13 +6,9 @@
   <component name="ChangeListManager">
     <list default="true" id="14717f08-37a0-4c50-85ce-aa9bd2e175ab" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/22314b66-0daa-4d15-b0fd-8394f2977709.png" beforeDir="false" afterPath="$PROJECT_DIR$/cards/22314b66-0daa-4d15-b0fd-8394f2977709.png" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/7cb8424b-a1f5-42ec-9005-fe4344fddafd.png" beforeDir="false" afterPath="$PROJECT_DIR$/cards/7cb8424b-a1f5-42ec-9005-fe4344fddafd.png" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/b06f08fd-5760-4a1e-8794-2e0a7588cd71.png" beforeDir="false" afterPath="$PROJECT_DIR$/cards/b06f08fd-5760-4a1e-8794-2e0a7588cd71.png" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/d7033739-4cd8-4727-b9b5-099fb597006b.png" beforeDir="false" afterPath="$PROJECT_DIR$/cards/d7033739-4cd8-4727-b9b5-099fb597006b.png" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/cards/ebd45237-6775-4968-95a3-c637a8c4ce5f.png" beforeDir="false" afterPath="$PROJECT_DIR$/cards/ebd45237-6775-4968-95a3-c637a8c4ce5f.png" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/components/card_details_dialog.py" beforeDir="false" afterPath="$PROJECT_DIR$/components/card_details_dialog.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/collection_page.py" beforeDir="false" afterPath="$PROJECT_DIR$/pages/collection_page.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/save/save.db" beforeDir="false" afterPath="$PROJECT_DIR$/save/save.db" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ui/main_window.py" beforeDir="false" afterPath="$PROJECT_DIR$/ui/main_window.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -57,7 +53,8 @@
     &quot;Python.test_snapshot_database.executor&quot;: &quot;Run&quot;,
     &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
     &quot;git-widget-placeholder&quot;: &quot;main&quot;,
-    &quot;last_opened_file_path&quot;: &quot;C:/Users/aldri/Desktop/MagicCollection/cards/images/icons&quot;
+    &quot;last_opened_file_path&quot;: &quot;C:/Users/aldri/Desktop/MagicCollection/cards/images/icons&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;preferences.pluginManager&quot;
   }
 }</component>
   <component name="RecentsManager">

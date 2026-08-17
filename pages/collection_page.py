@@ -145,6 +145,151 @@ COLLECTION_RENDER_DELAY = 0  # Delay em ms antes de exibir cartas (0 = imediato)
 _IMAGE_PIXMAP_CACHE = {}
 _MAX_IMAGE_CACHE_SIZE = 500  # Limite de imagens em cache
 
+# =========================================================
+# PLACEHOLDER GLOBAL DA GRADE
+# =========================================================
+
+_GRID_PLACEHOLDER_PIXMAP = None
+
+# =========================================================
+# CACHE GLOBAL DE THUMBNAILS
+# =========================================================
+
+_GRID_THUMBNAIL_CACHE = {}
+
+_MAX_GRID_THUMBNAIL_CACHE_SIZE = 500
+
+def _get_grid_placeholder_pixmap(
+        width,
+        height,
+):
+    """
+    Retorna o placeholder da grade usando cache.
+
+    O arquivo card.png é carregado e redimensionado apenas
+    quando ainda não existe uma versão desse tamanho.
+    """
+
+    global _GRID_PLACEHOLDER_PIXMAP
+
+    if not CARD_ICON_PATH.exists():
+        return QPixmap()
+
+    # -----------------------------------------------------
+    # CARREGAR ORIGINAL UMA ÚNICA VEZ
+    # -----------------------------------------------------
+
+    if (
+        _GRID_PLACEHOLDER_PIXMAP is None
+        or _GRID_PLACEHOLDER_PIXMAP.isNull()
+    ):
+
+        _GRID_PLACEHOLDER_PIXMAP = QPixmap(
+            str(CARD_ICON_PATH)
+        )
+
+    if (
+        _GRID_PLACEHOLDER_PIXMAP is None
+        or _GRID_PLACEHOLDER_PIXMAP.isNull()
+    ):
+        return QPixmap()
+
+    # -----------------------------------------------------
+    # CACHE POR TAMANHO
+    # -----------------------------------------------------
+
+    cache_key = (
+        f"__grid_placeholder__"
+        f"{width}x{height}"
+    )
+
+    cached = (
+        _GRID_THUMBNAIL_CACHE.get(
+            cache_key
+        )
+        if "_GRID_THUMBNAIL_CACHE" in globals()
+        else None
+    )
+
+    if (
+        cached is not None
+        and not cached.isNull()
+    ):
+        return cached
+
+    # -----------------------------------------------------
+    # REDIMENSIONAR
+    # -----------------------------------------------------
+
+    scaled = _GRID_PLACEHOLDER_PIXMAP.scaled(
+        width,
+        height,
+        Qt.AspectRatioMode.KeepAspectRatio,
+        Qt.TransformationMode.SmoothTransformation,
+    )
+
+    # -----------------------------------------------------
+    # GUARDAR
+    # -----------------------------------------------------
+
+    if "_GRID_THUMBNAIL_CACHE" in globals():
+
+        _GRID_THUMBNAIL_CACHE[
+            cache_key
+        ] = scaled
+
+    return scaled
+
+def _cleanup_grid_thumbnail_cache():
+    """
+    Mantém o cache de thumbnails dentro do limite.
+    Remove as entradas mais antigas quando necessário.
+    """
+
+    global _GRID_THUMBNAIL_CACHE
+
+    if (
+        len(_GRID_THUMBNAIL_CACHE)
+        > _MAX_GRID_THUMBNAIL_CACHE_SIZE
+    ):
+
+        keys_to_remove = list(
+            _GRID_THUMBNAIL_CACHE.keys()
+        )[
+            :int(
+                _MAX_GRID_THUMBNAIL_CACHE_SIZE
+                * 0.2
+            )
+        ]
+
+        for key in keys_to_remove:
+            del _GRID_THUMBNAIL_CACHE[key]
+
+def _cleanup_grid_thumbnail_cache():
+    """
+    Mantém o cache de thumbnails dentro do limite.
+    Remove as entradas mais antigas quando necessário.
+    """
+
+    global _GRID_THUMBNAIL_CACHE
+
+    if (
+        len(_GRID_THUMBNAIL_CACHE)
+        > _MAX_GRID_THUMBNAIL_CACHE_SIZE
+    ):
+
+        keys_to_remove = list(
+            _GRID_THUMBNAIL_CACHE.keys()
+        )[
+            :int(
+                _MAX_GRID_THUMBNAIL_CACHE_SIZE
+                * 0.2
+            )
+        ]
+
+        for key in keys_to_remove:
+            del _GRID_THUMBNAIL_CACHE[key]
+
 
 
 def _cleanup_image_cache():
@@ -698,25 +843,22 @@ class GridCardFrame(QFrame):
         )
 
         # Placeholder
-        if CARD_ICON_PATH.exists():
+        # =========================================================
+        # PLACEHOLDER
+        # =========================================================
 
-            pixmap = QPixmap(
-                str(CARD_ICON_PATH)
+        placeholder = _get_grid_placeholder_pixmap(
+            self._base_width,
+            self._base_height,
+        )
+
+        if (
+                placeholder is not None
+                and not placeholder.isNull()
+        ):
+            self.image_label.setPixmap(
+                placeholder
             )
-
-            if not pixmap.isNull():
-
-                scaled = pixmap.scaled(
-                    self._base_width,
-                    self._base_height,
-                    Qt.AspectRatioMode.KeepAspectRatio,
-                    Qt.TransformationMode.SmoothTransformation,
-                )
-
-                self.image_label.setPixmap(
-                    scaled
-                )
-
         self.image_label.doubleClicked.connect(
             self.doubleClicked.emit
         )
@@ -1005,6 +1147,7 @@ class GridCardFrame(QFrame):
         )
 
         self._update_overlays()
+
 
     # =====================================================
     # QUANTIDADE
@@ -1436,6 +1579,7 @@ class CollectionPage(QWidget):
 
         self.active_color_filter = "all"
         self.active_type_filter = "all"
+        self.active_supertype_filter = "all"
         self.active_set_filter = "all"
         self.active_sort = "name_asc"
 
@@ -1447,6 +1591,55 @@ class CollectionPage(QWidget):
         self._grid_columns = None
 
         self._grid_generation = 0
+
+        # =========================================================
+        # RENDERIZAÇÃO INCREMENTAL DA GRADE
+        # =========================================================
+        # A coleção não será mais construída inteira de uma vez.
+        #
+        # Em vez de:
+        #   500 cartas -> criar 500 widgets imediatamente
+        #
+        # faremos:
+        #   30 cartas -> pausa -> 30 -> pausa -> 30...
+        #
+        # Isso mantém a interface responsiva durante a abertura.
+        self._grid_render_batch_size = 6
+        # =========================================================
+        # VIRTUALIZAÇÃO DA GRADE
+        # =========================================================
+
+        self._virtual_grid_enabled = True
+
+        # Quantidade aproximada de linhas extras mantidas
+        # acima/abaixo da área visível.
+        self._virtual_grid_buffer_rows = 2
+
+        # Widgets atualmente utilizados pela grade.
+        self._virtual_grid_widgets = []
+
+        # Número de colunas atual.
+        self._virtual_grid_columns = 1
+
+        # Primeira linha atualmente renderizada.
+        self._virtual_grid_first_row = -1
+
+        # Último conjunto de cartas utilizado.
+        self._virtual_grid_cards = []
+
+        # Evita chamadas repetidas durante o mesmo evento.
+        self._virtual_grid_update_pending = False
+
+        # Guarda a última posição vertical conhecida.
+        self._virtual_grid_last_scroll_value = -1
+
+        self._grid_render_timer = QTimer(self)
+        self._grid_render_timer.setSingleShot(True)
+        self._grid_rendering_pending = False
+        self._grid_render_cards = []
+        self._grid_render_index = 0
+        self._grid_render_generation = 0
+        self._grid_render_layout = None
 
         # =========================================================
         # EVENTOS DA APLICAÇÃO
@@ -1483,8 +1676,13 @@ class CollectionPage(QWidget):
             self
         )
 
+        # =========================================================
+        # DOWNLOADS DE IMAGEM
+        # =========================================================
+        # Mantemos poucos downloads simultâneos para evitar que
+        # a abertura da coleção dispute CPU/disco/rede com a GUI.
         self.image_pool.setMaxThreadCount(
-            8
+            4
         )
 
         # =================================================
@@ -1539,14 +1737,299 @@ class CollectionPage(QWidget):
 
         self.setup_ui()
 
+        self._show_collection_loading(
+            "Preparando suas cartas..."
+        )
+
         QTimer.singleShot(
             0,
             self.load_cards
         )
+    # =========================================================
+    # LOADING DA COLLECTION
+    # =========================================================
+
+    def _create_collection_loading_overlay(self):
+        """
+        Cria o overlay exibido enquanto a grade da coleção
+        está sendo construída.
+
+        O overlay fica por cima da área de cartas e não
+        interfere na estrutura do QGridLayout.
+        """
+
+        # Evita criar duas vezes.
+        if hasattr(
+                self,
+                "_collection_loading_overlay",
+        ):
+            return
+
+        # =====================================================
+        # OVERLAY
+        # =====================================================
+
+        overlay = QFrame(
+            self.scroll_area.viewport()
+        )
 
 
+        overlay.setObjectName(
+            "collectionLoadingOverlay"
+        )
 
+        overlay.setFrameShape(
+            QFrame.Shape.NoFrame
+        )
 
+        overlay.setStyleSheet(
+            """
+            QFrame#collectionLoadingOverlay {
+
+            }
+
+            QLabel#collectionLoadingTitle {
+                color: #f2f2f2;
+                font-size: 18px;
+                font-weight: 600;
+            }
+
+            QLabel#collectionLoadingSubtitle {
+                color: #9299a8;
+                font-size: 13px;
+            }
+
+            QLabel#collectionLoadingSpinner {
+                color: #d8b56a;
+                font-size: 28px;
+                font-weight: 400;
+            }
+            """
+        )
+
+        # =====================================================
+        # CONTAINER CENTRAL
+        # =====================================================
+
+        container = QFrame(
+            overlay
+        )
+
+        container.setObjectName(
+            "collectionLoadingContainer"
+        )
+
+        container.setStyleSheet(
+            """
+            QFrame#collectionLoadingContainer {
+                background: transparent;
+            }
+            """
+        )
+
+        layout = QVBoxLayout(
+            container
+        )
+
+        layout.setContentsMargins(
+            20,
+            20,
+            20,
+            20,
+        )
+
+        layout.setSpacing(
+            6
+        )
+
+        layout.setAlignment(
+            Qt.AlignmentFlag.AlignCenter
+        )
+
+        # =====================================================
+        # INDICADOR
+        # =====================================================
+
+        spinner = QLabel(
+            "✦"
+        )
+
+        spinner.setObjectName(
+            "collectionLoadingSpinner"
+        )
+
+        spinner.setAlignment(
+            Qt.AlignmentFlag.AlignCenter
+        )
+
+        # =====================================================
+        # TÍTULO
+        # =====================================================
+
+        title = QLabel(
+            "Carregando coleção"
+        )
+
+        title.setObjectName(
+            "collectionLoadingTitle"
+        )
+
+        title.setAlignment(
+            Qt.AlignmentFlag.AlignCenter
+        )
+
+        # =====================================================
+        # SUBTÍTULO
+        # =====================================================
+
+        subtitle = QLabel(
+            "Preparando suas cartas..."
+        )
+
+        subtitle.setObjectName(
+            "collectionLoadingSubtitle"
+        )
+
+        subtitle.setAlignment(
+            Qt.AlignmentFlag.AlignCenter
+        )
+
+        # =====================================================
+        # ADICIONAR
+        # =====================================================
+
+        layout.addWidget(
+            spinner
+        )
+
+        layout.addWidget(
+            title
+        )
+
+        layout.addWidget(
+            subtitle
+        )
+
+        # =====================================================
+        # GUARDAR REFERÊNCIAS
+        # =====================================================
+
+        self._collection_loading_overlay = overlay
+        self._collection_loading_container = container
+        self._collection_loading_spinner = spinner
+        self._collection_loading_title = title
+        self._collection_loading_subtitle = subtitle
+
+        # =====================================================
+        # POSICIONAR
+        # =====================================================
+
+        self._resize_collection_loading_overlay()
+
+        overlay.hide()
+
+    # =========================================================
+    # REDIMENSIONAR LOADING
+    # =========================================================
+
+    def _resize_collection_loading_overlay(self):
+        """
+        Mantém o overlay exatamente sobre o viewport
+        do scroll da coleção.
+        """
+
+        overlay = getattr(
+            self,
+            "_collection_loading_overlay",
+            None,
+        )
+
+        if overlay is None:
+            return
+
+        viewport = self.scroll_area.viewport()
+
+        if viewport is None:
+            return
+
+        overlay.setGeometry(
+            viewport.rect()
+        )
+
+        container = getattr(
+            self,
+            "_collection_loading_container",
+            None,
+        )
+
+        if container is not None:
+            container.adjustSize()
+
+            container.move(
+                int(
+                    (
+                            overlay.width()
+                            - container.width()
+                    )
+                    / 2
+                ),
+                int(
+                    (
+                            overlay.height()
+                            - container.height()
+                    )
+                    / 2
+                ),
+            )
+
+    # =========================================================
+    # MOSTRAR LOADING
+    # =========================================================
+
+    def _show_collection_loading(
+            self,
+            message="Preparando suas cartas...",
+    ):
+        """
+        Mostra o overlay de carregamento.
+        """
+
+        if not hasattr(
+                self,
+                "_collection_loading_overlay",
+        ):
+            self._create_collection_loading_overlay()
+
+        self._collection_loading_subtitle.setText(
+            message
+        )
+
+        self._resize_collection_loading_overlay()
+
+        self._collection_loading_overlay.raise_()
+        self._collection_loading_overlay.show()
+
+        self._collection_loading_overlay.update()
+
+    # =========================================================
+    # ESCONDER LOADING
+    # =========================================================
+
+    def _hide_collection_loading(self):
+        """
+        Esconde o overlay após a grade terminar.
+        """
+
+        overlay = getattr(
+            self,
+            "_collection_loading_overlay",
+            None,
+        )
+
+        if overlay is None:
+            return
+
+        overlay.hide()
 
     # =====================================================
     # SETUP
@@ -1918,6 +2401,30 @@ class CollectionPage(QWidget):
 
         filters_layout.addWidget(
             self.type_filter
+        )
+
+        # -------------------------------------------------
+        # SUPERTIPO
+        # -------------------------------------------------
+
+        self.supertype_filter = QComboBox()
+
+        self.supertype_filter.addItem(
+            "Todos os supertipos",
+            "all",
+        )
+
+        self.supertype_filter.addItem(
+            "Lendária",
+            "legendary",
+        )
+
+        self.supertype_filter.currentIndexChanged.connect(
+            self.apply_collection_filters
+        )
+
+        filters_layout.addWidget(
+            self.supertype_filter
         )
 
         # -------------------------------------------------
@@ -2322,6 +2829,14 @@ class CollectionPage(QWidget):
             True
         )
 
+        self.scroll_area.setVerticalScrollBarPolicy(
+            Qt.ScrollBarPolicy.ScrollBarAlwaysOff
+        )
+
+        self.scroll_area.setHorizontalScrollBarPolicy(
+            Qt.ScrollBarPolicy.ScrollBarAlwaysOff
+        )
+
         self.scroll_area.setObjectName(
             "CardsScrollArea"
         )
@@ -2331,11 +2846,10 @@ class CollectionPage(QWidget):
         )
 
         self.scroll_area.setVerticalScrollBarPolicy(
-            Qt.ScrollBarPolicy.ScrollBarAsNeeded
+            Qt.ScrollBarPolicy.ScrollBarAlwaysOff
         )
         
-        # Importante: desabilitar scroll durante o carregamento inicial
-        self.scroll_area.setUpdatesEnabled(False)
+
 
         self.cards_container = CardsContainer()
 
@@ -2377,6 +2891,14 @@ class CollectionPage(QWidget):
         self.scroll_area.setSizePolicy(
             QSizePolicy.Policy.Expanding,
             QSizePolicy.Policy.Expanding,
+        )
+
+        # =========================================================
+        # SCROLL — ATUALIZAÇÃO DA GRADE VIRTUAL
+        # =========================================================
+
+        self.scroll_area.verticalScrollBar().valueChanged.connect(
+            self._on_virtual_grid_scroll
         )
 
     # =====================================================
@@ -2606,6 +3128,8 @@ class CollectionPage(QWidget):
     # =====================================================
 
     def handle_container_resize(self):
+
+        self._resize_collection_loading_overlay()
 
         if self.current_layout != "grid":
             return
@@ -4564,9 +5088,22 @@ class CollectionPage(QWidget):
         if cards is None:
             cards = []
 
+        # =========================================================
+        # INVALIDAR RENDERIZAÇÃO ANTERIOR
+        # =========================================================
+
         self._grid_generation += 1
 
         generation = self._grid_generation
+
+        # Cancela qualquer continuação pendente da grade anterior.
+        self._grid_render_timer.stop()
+
+        self._grid_rendering_pending = False
+        self._grid_render_cards = []
+        self._grid_render_index = 0
+        self._grid_render_layout = None
+        self._grid_render_generation = generation
 
         self.current_cards = list(
             cards
@@ -4574,13 +5111,20 @@ class CollectionPage(QWidget):
 
         self.card_rows.clear()
 
+        # =========================================================
+        # MOSTRAR LOADING
+        # =========================================================
+
+        self._show_collection_loading(
+            "Preparando suas cartas..."
+        )
+
         self.rebuilding_grid = True
 
-        self.setUpdatesEnabled(
+
+        self.cards_container.setUpdatesEnabled(
             False
         )
-        
-        self.scroll_area.setUpdatesEnabled(True)
 
         try:
 
@@ -4603,16 +5147,10 @@ class CollectionPage(QWidget):
 
             self.rebuilding_grid = False
 
-            # Aplicar delay configurável antes de mostrar as cartas
-            if COLLECTION_RENDER_DELAY > 0:
-                QTimer.singleShot(
-                    COLLECTION_RENDER_DELAY,
-                    lambda: self.setUpdatesEnabled(True)
+            if not self._grid_rendering_pending:
+                self.cards_container.setUpdatesEnabled(
+                    True
                 )
-            else:
-                self.setUpdatesEnabled(True)
-            
-            self.scroll_area.setUpdatesEnabled(True)
 
     # =====================================================
     # DISPLAY — LISTA
@@ -4842,6 +5380,49 @@ class CollectionPage(QWidget):
             == str(set_filter or "").lower()
         )
 
+    def card_matches_supertype(
+            self,
+            card,
+            supertype_filter,
+    ):
+        if (
+                not supertype_filter
+                or supertype_filter == "all"
+        ):
+            return True
+
+        if not card:
+            return False
+
+        try:
+            type_line = str(
+                card[7]
+                if len(card) > 7
+                else ""
+            ).strip().lower()
+
+        except (
+                IndexError,
+                TypeError,
+        ):
+            return False
+
+        if not type_line:
+            return False
+
+        # -------------------------------------------------
+        # LENDÁRIA
+        # -------------------------------------------------
+
+        if supertype_filter == "legendary":
+            return (
+                    "lendária" in type_line
+                    or
+                    "legendary" in type_line
+            )
+
+        return False
+
     def sort_collection_cards(
             self,
             cards,
@@ -4957,6 +5538,36 @@ class CollectionPage(QWidget):
         ):
             return
 
+        if not hasattr(
+                self,
+                "type_filter",
+        ):
+            return
+
+        if not hasattr(
+                self,
+                "supertype_filter",
+        ):
+            return
+
+        if not hasattr(
+                self,
+                "rarity_filter",
+        ):
+            return
+
+        if not hasattr(
+                self,
+                "set_filter",
+        ):
+            return
+
+        if not hasattr(
+                self,
+                "sort_filter",
+        ):
+            return
+
         color = (
                 self.color_filter.currentData()
                 or "all"
@@ -4964,6 +5575,11 @@ class CollectionPage(QWidget):
 
         card_type = (
                 self.type_filter.currentData()
+                or "all"
+        )
+
+        supertype = (
+                self.supertype_filter.currentData()
                 or "all"
         )
 
@@ -4988,6 +5604,10 @@ class CollectionPage(QWidget):
 
         self.active_type_filter = (
             card_type
+        )
+
+        self.active_supertype_filter = (
+            supertype
         )
 
         self.active_rarity_filter = (
@@ -5052,6 +5672,16 @@ class CollectionPage(QWidget):
             if not self.card_matches_type(
                     card,
                     card_type,
+            ):
+                continue
+
+            # -------------------------------------------------
+            # SUPERTIPO
+            # -------------------------------------------------
+
+            if not self.card_matches_supertype(
+                    card,
+                    supertype,
             ):
                 continue
 
@@ -5121,6 +5751,10 @@ class CollectionPage(QWidget):
             True
         )
 
+        self.supertype_filter.blockSignals(
+            True
+        )
+
         self.rarity_filter.blockSignals(
             True
         )
@@ -5141,6 +5775,10 @@ class CollectionPage(QWidget):
             0
         )
 
+        self.supertype_filter.setCurrentIndex(
+            0
+        )
+
         self.rarity_filter.setCurrentIndex(
             0
         )
@@ -5158,6 +5796,10 @@ class CollectionPage(QWidget):
         )
 
         self.type_filter.blockSignals(
+            False
+        )
+
+        self.supertype_filter.blockSignals(
             False
         )
 
@@ -5250,6 +5892,11 @@ class CollectionPage(QWidget):
         )
 
         self.settings.setValue(
+            "collection/supertype_filter",
+            self.active_supertype_filter,
+        )
+
+        self.settings.setValue(
             "collection/set_filter",
             self.active_set_filter,
         )
@@ -5275,6 +5922,12 @@ class CollectionPage(QWidget):
             type=str,
         )
 
+        supertype = self.settings.value(
+            "collection/supertype_filter",
+            "all",
+            type=str,
+        )
+
         set_name = self.settings.value(
             "collection/set_filter",
             "all",
@@ -5292,6 +5945,10 @@ class CollectionPage(QWidget):
         )
 
         self.type_filter.blockSignals(
+            True
+        )
+
+        self.supertype_filter.blockSignals(
             True
         )
 
@@ -5327,6 +5984,17 @@ class CollectionPage(QWidget):
                 type_index
             )
 
+        supertype_index = (
+            self.supertype_filter.findData(
+                supertype
+            )
+        )
+
+        if supertype_index >= 0:
+            self.supertype_filter.setCurrentIndex(
+                supertype_index
+            )
+
         set_index = (
             self.set_filter.findData(
                 set_name
@@ -5359,6 +6027,10 @@ class CollectionPage(QWidget):
             False
         )
 
+        self.supertype_filter.blockSignals(
+            False
+        )
+
         self.set_filter.blockSignals(
             False
         )
@@ -5377,6 +6049,11 @@ class CollectionPage(QWidget):
             or "all"
         )
 
+        self.active_supertype_filter = (
+                self.supertype_filter.currentData()
+                or "all"
+        )
+
         self.active_set_filter = (
             self.set_filter.currentData()
             or "all"
@@ -5387,32 +6064,425 @@ class CollectionPage(QWidget):
             or "name_asc"
         )
 
-    # =====================================================
-    # DISPLAY — GRADE
-    # =====================================================
+    # =========================================================
+    # VIRTUALIZAÇÃO — SCROLL
+    # =========================================================
 
-    def display_cards_grid(
+    def _on_virtual_grid_scroll(
             self,
-            cards,
-            generation,
+            value,
     ):
+        """
+        Atualiza a grade virtual quando o usuário rola.
 
-        grid_layout = QGridLayout()
+        Não reconstruímos imediatamente a cada pequeno evento.
+        Usamos um QTimer de 0 ms para deixar o Qt terminar
+        o evento atual antes de atualizar os cards.
+        """
 
-        grid_layout.setContentsMargins(
+        if not self._virtual_grid_enabled:
+            return
+
+        if self.current_layout != "grid":
+            return
+
+        if not self._virtual_grid_cards:
+            return
+
+        if value == self._virtual_grid_last_scroll_value:
+            return
+
+        self._virtual_grid_last_scroll_value = value
+
+        if self._virtual_grid_update_pending:
+            return
+
+        self._virtual_grid_update_pending = True
+
+        QTimer.singleShot(
             0,
-            0,
-            0,
-            0,
+            self._update_virtual_grid,
         )
 
-        grid_layout.setHorizontalSpacing(
-            12
+
+
+    # =========================================================
+    # VIRTUALIZAÇÃO — ATUALIZAR GRADE
+    # =========================================================
+
+    def _update_virtual_grid(
+            self,
+    ):
+        """
+        Calcula quais linhas estão visíveis e atualiza
+        somente os widgets necessários.
+        """
+
+        self._virtual_grid_update_pending = False
+
+        if not self._virtual_grid_enabled:
+            return
+
+        if self.current_layout != "grid":
+            return
+
+        cards = self._virtual_grid_cards
+
+        if not cards:
+            return
+
+        viewport = (
+            self.scroll_area.viewport()
         )
 
-        grid_layout.setVerticalSpacing(
-            12
+        viewport_height = viewport.height()
+
+        if viewport_height <= 0:
+            return
+
+        # -----------------------------------------------------
+        # ALTURA APROXIMADA DE UMA CARTA
+        # -----------------------------------------------------
+
+        card_height = 300
+        vertical_spacing = 12
+
+        row_height = (
+                card_height
+                + vertical_spacing
         )
+
+        # -----------------------------------------------------
+        # POSIÇÃO DO SCROLL
+        # -----------------------------------------------------
+
+        scroll_value = (
+            self.scroll_area
+            .verticalScrollBar()
+            .value()
+        )
+
+        # -----------------------------------------------------
+        # PRIMEIRA LINHA VISÍVEL
+        # -----------------------------------------------------
+
+        first_visible_row = max(
+            0,
+            int(
+                scroll_value
+                / row_height
+            ),
+        )
+
+        # -----------------------------------------------------
+        # ÚLTIMA LINHA VISÍVEL
+        # -----------------------------------------------------
+
+        visible_rows = max(
+            1,
+            int(
+                viewport_height
+                / row_height
+            )
+            + 1,
+        )
+
+        first_row = max(
+            0,
+            first_visible_row
+            - self._virtual_grid_buffer_rows,
+        )
+
+        last_row = (
+                first_visible_row
+                + visible_rows
+                + self._virtual_grid_buffer_rows
+        )
+
+        # -----------------------------------------------------
+        # LIMITAR
+        # -----------------------------------------------------
+
+        total_cards = len(cards)
+
+        total_rows = int(
+            (
+                    total_cards
+                    + self._virtual_grid_columns
+                    - 1
+            )
+            /
+            self._virtual_grid_columns
+        )
+
+        last_row = min(
+            last_row,
+            total_rows,
+        )
+
+        # -----------------------------------------------------
+        # SE A LINHA NÃO MUDOU, NÃO FAZER NADA
+        # -----------------------------------------------------
+
+        if (
+                first_row
+                == self._virtual_grid_first_row
+        ):
+            return
+
+        self._virtual_grid_first_row = (
+            first_row
+        )
+
+        # -----------------------------------------------------
+        # CARTAS QUE DEVEM EXISTIR
+        # -----------------------------------------------------
+
+        start_index = (
+                first_row
+                * self._virtual_grid_columns
+        )
+
+        end_index = min(
+            last_row
+            * self._virtual_grid_columns,
+            total_cards,
+        )
+
+        visible_cards = cards[
+                        start_index:end_index
+                        ]
+
+        # -----------------------------------------------------
+        # RENDERIZAR
+        # -----------------------------------------------------
+
+        self._render_virtual_grid_cards(
+            visible_cards,
+            start_index,
+        )
+
+    # =========================================================
+    # VIRTUALIZAÇÃO — CONFIGURAR CARD
+    # =========================================================
+
+    def _configure_virtual_card(
+            self,
+            frame,
+            card,
+    ):
+        """
+        Reutiliza um GridCardFrame existente para representar
+        uma nova carta.
+        """
+
+        if frame is None:
+            return
+
+        if not card:
+            frame.hide()
+            return
+
+        try:
+
+            card_id = int(
+                card[0]
+            )
+
+        except (
+                TypeError,
+                ValueError,
+        ):
+
+            frame.hide()
+            return
+
+        if card_id <= 0:
+            frame.hide()
+            return
+
+        name = (
+            card[1]
+            if len(card) > 1
+            else ""
+        )
+
+        printed_name = (
+            card[2]
+            if len(card) > 2
+            else None
+        )
+
+        lang = (
+            card[3]
+            if len(card) > 3
+            else None
+        )
+
+        set_name = (
+            card[4]
+            if len(card) > 4
+            else None
+        )
+
+        collector_number = (
+            card[5]
+            if len(card) > 5
+            else None
+        )
+
+        mana_cost = (
+            card[6]
+            if len(card) > 6
+            else None
+        )
+
+        type_line = (
+            card[7]
+            if len(card) > 7
+            else None
+        )
+
+        oracle_text = (
+            card[8]
+            if len(card) > 8
+            else None
+        )
+
+        image_url = (
+            card[9]
+            if len(card) > 9
+            else None
+        )
+
+        quantity = (
+            card[10]
+            if len(card) > 10
+            else 0
+        )
+
+        image_path = (
+            card[11]
+            if len(card) > 11
+            else None
+        )
+
+        power = (
+            card[12]
+            if len(card) > 12
+            else None
+        )
+
+        toughness = (
+            card[13]
+            if len(card) > 13
+            else None
+        )
+
+        created_at = (
+            card[14]
+            if len(card) > 14
+            else None
+        )
+
+        card_faces = (
+            card[15]
+            if len(card) > 15
+            else None
+        )
+
+        card_printings = (
+            card[16]
+            if len(card) > 16
+            else None
+        )
+
+        preferred_language = (
+            card[17]
+            if len(card) > 17
+            else None
+        )
+
+        preferred_variant = (
+            card[18]
+            if len(card) > 18
+            else None
+        )
+
+        preferred_finish = (
+            card[19]
+            if len(card) > 19
+            else None
+        )
+
+        preferred_image = (
+            card[20]
+            if len(card) > 20
+            else None
+        )
+
+        preferred_face = (
+            card[21]
+            if len(card) > 21
+            else 0
+        )
+
+        favorite = (
+            card[22]
+            if len(card) > 22
+            else 0
+        )
+
+        custom_tags = (
+            card[23]
+            if len(card) > 23
+            else None
+        )
+
+        last_view = (
+            card[24]
+            if len(card) > 24
+            else None
+        )
+
+        card_data = {
+            "id": card_id,
+            "name": name,
+            "printed_name": printed_name,
+            "lang": lang,
+            "set_name": set_name,
+            "collector_number": collector_number,
+            "mana_cost": mana_cost,
+            "type_line": type_line,
+            "oracle_text": oracle_text,
+            "image_url": image_url,
+            "image_path": image_path,
+            "quantity": quantity,
+            "power": power,
+            "toughness": toughness,
+            "created_at": created_at,
+            "card_faces": card_faces,
+            "card_printings": card_printings,
+            "preferred_language": preferred_language,
+            "preferred_variant": preferred_variant,
+            "preferred_finish": preferred_finish,
+            "preferred_image": preferred_image,
+            "preferred_face": preferred_face,
+            "favorite": favorite,
+            "custom_tags": custom_tags,
+            "last_view": last_view,
+        }
+
+        # -----------------------------------------------------
+        # DADOS ASSOCIADOS AO WIDGET
+        # -----------------------------------------------------
+
+        frame._virtual_card_id = card_id
+        frame._virtual_card_data = card_data
+
+        # -----------------------------------------------------
+        # TAMANHO
+        # -----------------------------------------------------
 
         available_width = (
             self.scroll_area
@@ -5421,13 +6491,6 @@ class CollectionPage(QWidget):
         )
 
         if available_width <= 0:
-
-            available_width = (
-                self.cards_container.width()
-            )
-
-        if available_width <= 0:
-
             available_width = 800
 
         spacing = 14
@@ -5437,26 +6500,373 @@ class CollectionPage(QWidget):
             1,
             int(
                 (
-                    available_width
-                    + spacing
+                        available_width
+                        + spacing
                 )
                 /
                 (
-                    min_card_width
-                    + spacing
+                        min_card_width
+                        + spacing
                 )
             ),
         )
 
         total_spacing = (
-            (columns - 1)
-            * spacing
+                (columns - 1)
+                * spacing
         )
 
         card_width = int(
             (
-                available_width
-                - total_spacing
+                    available_width
+                    - total_spacing
+            )
+            /
+            columns
+        )
+
+        card_width = max(
+            min_card_width,
+            card_width,
+        )
+
+        card_width = min(
+            card_width,
+            500,
+        )
+
+        frame.set_card_width(
+            card_width
+        )
+
+        frame.setToolTip(
+            name or ""
+        )
+
+        frame.set_quantity(
+            quantity
+        )
+
+        # -----------------------------------------------------
+        # IMAGEM
+        # -----------------------------------------------------
+
+        pixmap = None
+
+        if image_path:
+
+            local_path = Path(
+                image_path
+            )
+
+            if local_path.exists():
+
+                cache_key = str(
+                    local_path
+                )
+
+                pixmap = (
+                    self.image_cache.get(
+                        cache_key
+                    )
+                )
+
+                if (
+                        pixmap is None
+                        or pixmap.isNull()
+                ):
+
+                    try:
+
+                        pixmap = QPixmap(
+                            str(local_path)
+                        )
+
+                        if not pixmap.isNull():
+                            self.image_cache[
+                                cache_key
+                            ] = pixmap
+
+                            _cleanup_image_cache()
+
+                    except Exception:
+                        pixmap = None
+
+        if (
+                pixmap
+                and not pixmap.isNull()
+        ):
+
+            self.set_grid_thumbnail(
+                frame.image_label,
+                pixmap,
+            )
+
+        else:
+
+            self.set_grid_thumbnail(
+                frame.image_label,
+                None,
+            )
+
+        # -----------------------------------------------------
+        # MOSTRAR
+        # -----------------------------------------------------
+
+        frame.show()
+
+    # =========================================================
+    # VIRTUALIZAÇÃO — CRIAR WIDGETS
+    # =========================================================
+
+    def _create_virtual_grid_widgets(
+            self,
+            count,
+            card_width,
+    ):
+        """
+        Cria somente a quantidade de widgets necessária
+        para a área visível da grade.
+        """
+
+        # -----------------------------------------------------
+        # NÃO CRIAR NOVAMENTE SE JÁ TEMOS O SUFICIENTE
+        # -----------------------------------------------------
+
+        while len(
+                self._virtual_grid_widgets
+        ) < count:
+            frame = GridCardFrame()
+
+            frame.set_card_width(
+                card_width
+            )
+
+            frame._virtual_card_id = None
+            frame._virtual_card_data = None
+
+            # -------------------------------------------------
+            # CLIQUE
+            # -------------------------------------------------
+
+            frame.clicked.connect(
+                lambda
+                    cid=None,
+                    widget=frame:
+                self._virtual_card_clicked(
+                    widget
+                )
+            )
+
+            # -------------------------------------------------
+            # DUPLO CLIQUE
+            # -------------------------------------------------
+
+            frame.doubleClicked.connect(
+                lambda
+                    widget=frame:
+                self._virtual_card_double_clicked(
+                    widget
+                )
+            )
+
+            # -------------------------------------------------
+            # QUANTIDADE +
+            # -------------------------------------------------
+
+            frame.plus_button.clicked.connect(
+                lambda
+                    checked=False,
+                    widget=frame:
+                self._virtual_change_quantity(
+                    widget,
+                    1,
+                )
+            )
+
+            # -------------------------------------------------
+            # QUANTIDADE -
+            # -------------------------------------------------
+
+            frame.minus_button.clicked.connect(
+                lambda
+                    checked=False,
+                    widget=frame:
+                self._virtual_change_quantity(
+                    widget,
+                    -1,
+                )
+            )
+
+            # -------------------------------------------------
+            # QUANTIDADE MANUAL
+            # -------------------------------------------------
+
+            frame.control_quantity.editingFinished.connect(
+                lambda
+                    widget=frame:
+                self._virtual_set_quantity(
+                    widget
+                )
+            )
+
+            self._virtual_grid_widgets.append(
+                frame
+            )
+
+    # =========================================================
+    # DISPLAY — GRADE
+    # =========================================================
+
+    def display_cards_grid(
+            self,
+            cards,
+            generation,
+            start_index=0,
+            grid_layout=None,
+    ):
+
+        # =====================================================
+        # VALIDAR GERAÇÃO
+        # =====================================================
+
+        if generation != self._grid_generation:
+            return
+        # =====================================================
+        # GARANTIR QUE A GRADE CONTINUE OCULTA DURANTE O LOTE
+        # =====================================================
+
+        self.cards_container.setUpdatesEnabled(
+            False
+        )
+
+        # =====================================================
+        # PREPARAR LISTA
+        # =====================================================
+
+        if cards is None:
+            cards = []
+
+        if start_index == 0:
+            cards = list(cards)
+
+        # =====================================================
+        # PRIMEIRA EXECUÇÃO
+        # =====================================================
+
+        if start_index == 0:
+            self._grid_render_cards = cards
+            self._grid_render_index = 0
+            self._grid_render_generation = generation
+            self._grid_rendering_pending = True
+
+        # =====================================================
+        # VALIDAR ESTADO
+        # =====================================================
+
+        if (
+                self._grid_render_generation
+                != generation
+        ):
+            return
+
+        cards = self._grid_render_cards
+
+        # =========================================================
+        # COLEÇÃO VAZIA
+        # =========================================================
+
+        if not cards:
+            self._grid_render_index = 0
+
+            self._grid_rendering_pending = False
+
+            self._grid_render_layout = None
+
+            self.cards_container.setUpdatesEnabled(
+                True
+            )
+
+            self.cards_container.update()
+
+            self.scroll_area.viewport().update()
+
+            self._hide_collection_loading()
+
+            self.scroll_area.setVerticalScrollBarPolicy(
+                Qt.ScrollBarPolicy.ScrollBarAsNeeded
+            )
+
+            return
+        # =====================================================
+        # CRIAR GRID
+        # =====================================================
+
+        if grid_layout is None:
+            grid_layout = QGridLayout()
+
+            grid_layout.setContentsMargins(
+                0,
+                0,
+                0,
+                0,
+            )
+
+            grid_layout.setHorizontalSpacing(
+                12
+            )
+
+            grid_layout.setVerticalSpacing(
+                12
+            )
+
+            self._grid_render_layout = grid_layout
+
+        # =====================================================
+        # CALCULAR TAMANHO
+        # =====================================================
+
+        available_width = (
+            self.scroll_area
+            .viewport()
+            .width()
+        )
+
+        if available_width <= 0:
+            available_width = (
+                self.cards_container.width()
+            )
+
+        if available_width <= 0:
+            available_width = 800
+
+        spacing = 14
+        min_card_width = 160
+
+        columns = max(
+            1,
+            int(
+                (
+                        available_width
+                        + spacing
+                )
+                /
+                (
+                        min_card_width
+                        + spacing
+                )
+            ),
+        )
+
+        total_spacing = (
+                (columns - 1)
+                * spacing
+        )
+
+        card_width = int(
+            (
+                    available_width
+                    - total_spacing
             )
             /
             columns
@@ -5474,36 +6884,191 @@ class CollectionPage(QWidget):
 
         self._grid_columns = columns
 
-        for index, card in enumerate(cards):
+        # =====================================================
+        # DEFINIR LOTE
+        # =====================================================
+
+        batch_size = (
+            self._grid_render_batch_size
+        )
+
+        end_index = min(
+            start_index + batch_size,
+            len(cards),
+        )
+
+        # =====================================================
+        # RENDERIZAR LOTE
+        # =====================================================
+
+        for index in range(
+                start_index,
+                end_index,
+        ):
+
+            card = cards[index]
 
             try:
-                card_id = card[0] if len(card) > 0 else None
-                name = card[1] if len(card) > 1 else ""
-                printed_name = card[2] if len(card) > 2 else None
-                lang = card[3] if len(card) > 3 else None
-                set_name = card[4] if len(card) > 4 else None
-                collector_number = card[5] if len(card) > 5 else None
-                mana_cost = card[6] if len(card) > 6 else None
-                type_line = card[7] if len(card) > 7 else None
-                oracle_text = card[8] if len(card) > 8 else None
-                image_url = card[9] if len(card) > 9 else None
-                quantity = card[10] if len(card) > 10 else 0
-                image_path = card[11] if len(card) > 11 else None
-                power = card[12] if len(card) > 12 else None
-                toughness = card[13] if len(card) > 13 else None
-                created_at = card[14] if len(card) > 14 else None
-                card_faces = card[15] if len(card) > 15 else None
-                card_printings = card[16] if len(card) > 16 else None
-                preferred_language = card[17] if len(card) > 17 else None
-                preferred_variant = card[18] if len(card) > 18 else None
-                preferred_finish = card[19] if len(card) > 19 else None
-                preferred_image = card[20] if len(card) > 20 else None
-                preferred_face = card[21] if len(card) > 21 else 0
-                favorite = card[22] if len(card) > 22 else 0
-                custom_tags = card[23] if len(card) > 23 else None
-                last_view = card[24] if len(card) > 24 else None
-            except (IndexError, TypeError):
+
+                card_id = (
+                    card[0]
+                    if len(card) > 0
+                    else None
+                )
+
+                name = (
+                    card[1]
+                    if len(card) > 1
+                    else ""
+                )
+
+                printed_name = (
+                    card[2]
+                    if len(card) > 2
+                    else None
+                )
+
+                lang = (
+                    card[3]
+                    if len(card) > 3
+                    else None
+                )
+
+                set_name = (
+                    card[4]
+                    if len(card) > 4
+                    else None
+                )
+
+                collector_number = (
+                    card[5]
+                    if len(card) > 5
+                    else None
+                )
+
+                mana_cost = (
+                    card[6]
+                    if len(card) > 6
+                    else None
+                )
+
+                type_line = (
+                    card[7]
+                    if len(card) > 7
+                    else None
+                )
+
+                oracle_text = (
+                    card[8]
+                    if len(card) > 8
+                    else None
+                )
+
+                image_url = (
+                    card[9]
+                    if len(card) > 9
+                    else None
+                )
+
+                quantity = (
+                    card[10]
+                    if len(card) > 10
+                    else 0
+                )
+
+                image_path = (
+                    card[11]
+                    if len(card) > 11
+                    else None
+                )
+
+                power = (
+                    card[12]
+                    if len(card) > 12
+                    else None
+                )
+
+                toughness = (
+                    card[13]
+                    if len(card) > 13
+                    else None
+                )
+
+                created_at = (
+                    card[14]
+                    if len(card) > 14
+                    else None
+                )
+
+                card_faces = (
+                    card[15]
+                    if len(card) > 15
+                    else None
+                )
+
+                card_printings = (
+                    card[16]
+                    if len(card) > 16
+                    else None
+                )
+
+                preferred_language = (
+                    card[17]
+                    if len(card) > 17
+                    else None
+                )
+
+                preferred_variant = (
+                    card[18]
+                    if len(card) > 18
+                    else None
+                )
+
+                preferred_finish = (
+                    card[19]
+                    if len(card) > 19
+                    else None
+                )
+
+                preferred_image = (
+                    card[20]
+                    if len(card) > 20
+                    else None
+                )
+
+                preferred_face = (
+                    card[21]
+                    if len(card) > 21
+                    else 0
+                )
+
+                favorite = (
+                    card[22]
+                    if len(card) > 22
+                    else 0
+                )
+
+                custom_tags = (
+                    card[23]
+                    if len(card) > 23
+                    else None
+                )
+
+                last_view = (
+                    card[24]
+                    if len(card) > 24
+                    else None
+                )
+
+            except (
+                    IndexError,
+                    TypeError,
+            ):
                 continue
+
+            # =================================================
+            # VALIDAR ID
+            # =================================================
 
             try:
 
@@ -5512,14 +7077,17 @@ class CollectionPage(QWidget):
                 )
 
             except (
-                TypeError,
-                ValueError,
+                    TypeError,
+                    ValueError,
             ):
-
                 continue
 
             if card_id <= 0:
                 continue
+
+            # =================================================
+            # DADOS DA CARTA
+            # =================================================
 
             card_data = {
                 "id": card_id,
@@ -5549,6 +7117,10 @@ class CollectionPage(QWidget):
                 "last_view": last_view,
             }
 
+            # =================================================
+            # CRIAR FRAME
+            # =================================================
+
             frame = GridCardFrame()
 
             frame.set_card_width(
@@ -5559,6 +7131,10 @@ class CollectionPage(QWidget):
                 name or ""
             )
 
+            # =================================================
+            # DUPLO CLIQUE
+            # =================================================
+
             frame.doubleClicked.connect(
                 lambda card=card_data:
                 self.show_card_details(
@@ -5566,12 +7142,20 @@ class CollectionPage(QWidget):
                 )
             )
 
+            # =================================================
+            # CLIQUE
+            # =================================================
+
             frame.clicked.connect(
                 lambda cid=card_id:
                 self.select_collection_card(
                     cid
                 )
             )
+
+            # =================================================
+            # MENU DE CONTEXTO
+            # =================================================
 
             frame.setContextMenuPolicy(
                 Qt.ContextMenuPolicy.CustomContextMenu
@@ -5589,6 +7173,10 @@ class CollectionPage(QWidget):
                     position,
                 )
             )
+
+            # =================================================
+            # QUANTIDADE
+            # =================================================
 
             frame.set_quantity(
                 quantity
@@ -5621,64 +7209,97 @@ class CollectionPage(QWidget):
                 )
             )
 
+            # =================================================
+            # REGISTRAR CARD
+            # =================================================
+
             self.card_rows[card_id] = {
                 "frame": frame,
                 "grid": True,
             }
 
-            # -------------------------------------------------
-            # IMAGEM - CARREGAR ANTES DE ADICIONAR AO GRID
-            # -------------------------------------------------
+            # =================================================
+            # IMAGEM LOCAL
+            # =================================================
 
             local_path = None
             pixmap = None
 
             if image_path:
+
                 local_path = Path(
                     image_path
                 )
 
                 if local_path.exists():
-                    # Carregar imagem síncrona como nos Decks
-                    cache_key = str(local_path)
-                    pixmap = self.image_cache.get(cache_key)
-                    
-                    if pixmap is None or pixmap.isNull():
+
+                    cache_key = str(
+                        local_path
+                    )
+
+                    pixmap = (
+                        self.image_cache.get(
+                            cache_key
+                        )
+                    )
+
+                    if (
+                            pixmap is None
+                            or pixmap.isNull()
+                    ):
+
                         try:
-                            pixmap = QPixmap(str(local_path))
+
+                            pixmap = QPixmap(
+                                str(local_path)
+                            )
+
                             if not pixmap.isNull():
-                                self.image_cache[cache_key] = pixmap
+                                self.image_cache[
+                                    cache_key
+                                ] = pixmap
+
                                 _cleanup_image_cache()
+
                         except Exception:
                             pixmap = None
 
-            # Definir imagem no frame antes de adicionar ao grid
-            if pixmap and not pixmap.isNull():
-                self.set_grid_thumbnail(frame.image_label, pixmap)
+            # =================================================
+            # APLICAR IMAGEM
+            # =================================================
+
+            if (
+                    pixmap
+                    and not pixmap.isNull()
+            ):
+
+                self.set_grid_thumbnail(
+                    frame.image_label,
+                    pixmap,
+                )
+
             else:
-                # Usa card.png como placeholder
-                if CARD_ICON_PATH.exists():
-                    placeholder = QPixmap(str(CARD_ICON_PATH))
-                    if not placeholder.isNull():
-                        width = card_width
-                        height = round(width * 88 / 63)
-                        scaled = placeholder.scaled(
-                            width,
-                            height,
-                            Qt.AspectRatioMode.KeepAspectRatio,
-                            Qt.TransformationMode.SmoothTransformation,
-                        )
-                        frame.image_label.setPixmap(scaled)
-                        frame.image_label.setText("")
+
+                # -------------------------------------------------
+                # PLACEHOLDER
+                # -------------------------------------------------
+
+                self.set_grid_thumbnail(
+                    frame.image_label,
+                    None,
+                )
+            # =================================================
+            # POSIÇÃO NO GRID
+            # =================================================
 
             row = (
-                index
-                // columns
+                    index
+                    // columns
             )
 
             column = (
-                index
-                % columns
+                    index
+                    % columns
             )
 
             grid_layout.addWidget(
@@ -5690,12 +7311,18 @@ class CollectionPage(QWidget):
                 Qt.AlignmentFlag.AlignLeft,
             )
 
-            # -------------------------------------------------
-            # DOWNLOAD ASSÍNCRONO SE NECESSÁRIO
-            # -------------------------------------------------
+            # =================================================
+            # DOWNLOAD ASSÍNCRONO
+            # =================================================
 
-            # Se não tem imagem local e tem URL, baixa assíncrono
-            if not (pixmap and not pixmap.isNull()) and image_url:
+            if (
+                    not (
+                            pixmap
+                            and not pixmap.isNull()
+                    )
+                    and image_url
+            ):
+
                 if not image_path:
                     scryfall_id = (
                         self.get_scryfall_id_from_url(
@@ -5730,19 +7357,93 @@ class CollectionPage(QWidget):
                         task
                     )
 
-        for column in range(
-            columns
-        ):
+        # =====================================================
+        # CONFIGURAR COLUNAS DO GRID
+        # =====================================================
+        #
+        # Só precisamos configurar as colunas uma vez,
+        # quando o QGridLayout é criado.
+        #
 
-            grid_layout.setColumnStretch(
-                column,
-                1,
+        if start_index == 0:
+
+            for column in range(
+                    columns
+            ):
+                grid_layout.setColumnStretch(
+                    column,
+                    1,
+                )
+
+        # =====================================================
+        # PRIMEIRO LOTE
+        # =====================================================
+
+        if start_index == 0:
+            self.cards_layout.addLayout(
+                grid_layout
             )
 
-        self.cards_layout.addLayout(
-            grid_layout
-        )
+        # =====================================================
+        # VERIFICAR SE TERMINOU
+        # =====================================================
 
+        if end_index >= len(cards):
+            self._grid_render_index = end_index
+
+            self._grid_rendering_pending = False
+
+            self._grid_render_layout = None
+
+            # =====================================================
+            # GRADE TERMINOU
+            # =====================================================
+
+            self.cards_container.setUpdatesEnabled(
+                True
+            )
+
+            # =====================================================
+            # ATUALIZAÇÃO FINAL DA GRADE
+            # =====================================================
+
+            self.cards_container.update()
+
+            self.scroll_area.viewport().update()
+
+            # =====================================================
+            # LOADING TERMINOU
+            # =====================================================
+
+            self._hide_collection_loading()
+
+            # =====================================================
+            # LIBERAR SCROLL
+            # =====================================================
+
+            self.scroll_area.setVerticalScrollBarPolicy(
+                Qt.ScrollBarPolicy.ScrollBarAsNeeded
+            )
+
+            return        # =====================================================
+        # AGENDAR PRÓXIMO LOTE
+        # =====================================================
+
+        self._grid_render_index = end_index
+        self._grid_rendering_pending = True
+
+        next_index = end_index
+
+        QTimer.singleShot(
+            0,
+            lambda:
+            self.display_cards_grid(
+                self._grid_render_cards,
+                generation,
+                next_index,
+                grid_layout,
+            )
+        )
     # =====================================================
     # CRIAR LINHA DA CARTA
     # =====================================================
@@ -6351,7 +8052,7 @@ class CollectionPage(QWidget):
         if image_path:
             local_path = Path(image_path)
             
-            if local_path.exists() and local_path.stat().st_size > 0:
+            if local_path.exists() and local_path.stat().st_size > 2:
                 # Carregar imagem síncrona como nos Decks
                 cache_key = str(local_path)
                 pixmap = self.image_cache.get(cache_key)
@@ -6635,27 +8336,7 @@ class CollectionPage(QWidget):
         # FORÇAR ATUALIZAÇÃO VISUAL
         # -------------------------------------------------
 
-        label.clear()
-
-        if (
-                label.objectName()
-                == "GridCardImage"
-        ):
-
-            self.set_grid_thumbnail(
-                label,
-                pixmap,
-            )
-
-        else:
-
-            self.set_thumbnail(
-                label,
-                pixmap,
-            )
-
         label.update()
-        label.repaint()
 
         try:
 
@@ -6747,67 +8428,154 @@ class CollectionPage(QWidget):
     # MINIATURA — GRADE
     # =====================================================
 
+    # =====================================================
+    # MINIATURA — GRADE
+    # =====================================================
+
     def set_grid_thumbnail(
-        self,
-        label,
-        pixmap,
+            self,
+            label,
+            pixmap,
     ):
+        """
+        Aplica uma imagem na grade usando cache de thumbnails.
+
+        O QPixmap original continua no cache de imagens.
+        A versão reduzida para a grade fica em um segundo cache.
+        """
+
+        # =====================================================
+        # VALIDAR PIXMAP
+        # =====================================================
 
         if (
-            not pixmap
-            or pixmap.isNull()
+                pixmap is None
+                or pixmap.isNull()
         ):
 
-            label.setText(
-                ""
-            )
-            
-            # Usar card.png como placeholder
+            label.setText("")
+
             if CARD_ICON_PATH.exists():
-                pixmap = QPixmap(str(CARD_ICON_PATH))
-                if not pixmap.isNull():
+
+                placeholder = QPixmap(
+                    str(CARD_ICON_PATH)
+                )
+
+                if not placeholder.isNull():
+
                     width = label.width()
+
                     height = label.height()
+
                     if width <= 0:
                         width = 160
+
                     if height <= 0:
-                        height = round(width * 88 / 63)
-                    scaled = pixmap.scaled(
-                        width,
-                        height,
-                        Qt.AspectRatioMode.KeepAspectRatio,
-                        Qt.TransformationMode.SmoothTransformation,
+                        height = round(
+                            width * 88 / 63
+                        )
+
+                    cache_key = (
+                        "__placeholder__"
+                        f"_{width}"
+                        f"x{height}"
                     )
-                    label.setPixmap(scaled)
+
+                    cached = (
+                        _GRID_THUMBNAIL_CACHE.get(
+                            cache_key
+                        )
+                    )
+
+                    if (
+                            cached is None
+                            or cached.isNull()
+                    ):
+                        cached = placeholder.scaled(
+                            width,
+                            height,
+                            Qt.AspectRatioMode.KeepAspectRatio,
+                            Qt.TransformationMode.SmoothTransformation,
+                        )
+
+                        _GRID_THUMBNAIL_CACHE[
+                            cache_key
+                        ] = cached
+
+                        _cleanup_grid_thumbnail_cache()
+
+                    label.setPixmap(
+                        cached
+                    )
 
             return
 
+        # =====================================================
+        # DIMENSÕES
+        # =====================================================
+
         width = label.width()
+
         height = label.height()
 
         if width <= 0:
             width = 160
 
         if height <= 0:
-
             height = round(
                 width * 88 / 63
             )
 
-        scaled = pixmap.scaled(
-            label.size(),
-            Qt.AspectRatioMode.KeepAspectRatio,
-            Qt.TransformationMode.SmoothTransformation,
+        # =====================================================
+        # CHAVE DO CACHE
+        # =====================================================
+
+        cache_key = (
+            f"{id(pixmap)}"
+            f"_{width}"
+            f"x{height}"
         )
 
-        label.setText(
-            ""
+        # =====================================================
+        # PROCURAR THUMBNAIL
+        # =====================================================
+
+        scaled = (
+            _GRID_THUMBNAIL_CACHE.get(
+                cache_key
+            )
         )
+
+        # =====================================================
+        # GERAR SOMENTE SE NÃO EXISTIR
+        # =====================================================
+
+        if (
+                scaled is None
+                or scaled.isNull()
+        ):
+            scaled = pixmap.scaled(
+                width,
+                height,
+                Qt.AspectRatioMode.KeepAspectRatio,
+                Qt.TransformationMode.SmoothTransformation,
+            )
+
+            _GRID_THUMBNAIL_CACHE[
+                cache_key
+            ] = scaled
+
+            _cleanup_grid_thumbnail_cache()
+
+        # =====================================================
+        # APLICAR
+        # =====================================================
+
+        label.setText("")
 
         label.setPixmap(
             scaled
         )
-
     # =====================================================
     # DETALHES DA CARTA
     # =====================================================

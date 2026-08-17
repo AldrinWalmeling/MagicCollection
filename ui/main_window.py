@@ -71,7 +71,7 @@ class MainWindow(QMainWindow):
         )
 
         self.resize(
-            1400,
+            1440,
             920
         )
 
