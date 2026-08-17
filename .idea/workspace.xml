@@ -5,10 +5,25 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="14717f08-37a0-4c50-85ce-aa9bd2e175ab" name="Changes" comment="">
+      <change afterPath="$PROJECT_DIR$/pages/profiles_page.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/profile_manager.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/assets/icons/collection_icon.ico" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/assets/icons/collection_icon.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/assets/icons/deck_icon.ico" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/assets/icons/deck_icon.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/assets/icons/decks_icon.ico" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/assets/icons/decks_icon.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/cards/b192067c-7cdb-4d3c-95b7-819733e44678.png" beforeDir="false" afterPath="$PROJECT_DIR$/cards/b192067c-7cdb-4d3c-95b7-819733e44678.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/collection.db" beforeDir="false" afterPath="$PROJECT_DIR$/collection.db" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/database.py" beforeDir="false" afterPath="$PROJECT_DIR$/database.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/pages/collection_page.py" beforeDir="false" afterPath="$PROJECT_DIR$/pages/collection_page.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/dashboard_page.py" beforeDir="false" afterPath="$PROJECT_DIR$/pages/dashboard_page.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/decks_page.py" beforeDir="false" afterPath="$PROJECT_DIR$/pages/decks_page.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/settings_page.py" beforeDir="false" afterPath="$PROJECT_DIR$/pages/settings_page.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/save/save.db" beforeDir="false" afterPath="$PROJECT_DIR$/save/save.db" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ui/main_window.py" beforeDir="false" afterPath="$PROJECT_DIR$/ui/main_window.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ui/theme.py" beforeDir="false" afterPath="$PROJECT_DIR$/ui/theme.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -62,8 +77,8 @@
       <recent name="C:\Users\aldri\Desktop\MagicCollection\cards\images\icons" />
     </key>
     <key name="MoveFile.RECENT_KEYS">
-      <recent name="C:\Users\aldri\Desktop\MagicCollection\services" />
       <recent name="C:\Users\aldri\Desktop\MagicCollection" />
+      <recent name="C:\Users\aldri\Desktop\MagicCollection\services" />
       <recent name="C:\Users\aldri\Desktop\MagicCollection\assets\icons" />
       <recent name="C:\Users\aldri\Desktop\MagicCollection\assets" />
     </key>

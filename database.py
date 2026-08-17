@@ -34,12 +34,64 @@ CARDS_DIR.mkdir(
 # CONEXÃO
 # =========================================================
 
+def get_active_database_file():
+    """
+    Retorna o banco que deve ser utilizado pela aplicação.
+
+    Prioridade:
+
+    1. Banco do perfil ativo.
+    2. Save antigo/default.
+
+    Isso mantém compatibilidade com instalações
+    antigas que ainda não possuem perfis.
+    """
+
+    try:
+
+        from profile_manager import (
+            profile_manager,
+        )
+
+        active_database = (
+            profile_manager
+            .get_active_database_path()
+        )
+
+        if (
+            active_database is not None
+            and active_database.exists()
+        ):
+            return active_database
+
+    except Exception as error:
+
+        print(
+            "[DATABASE] "
+            "Não foi possível obter banco "
+            f"do perfil ativo: {error}"
+        )
+
+    # -------------------------------------------------
+    # Compatibilidade com save antigo
+    # -------------------------------------------------
+
+    return DATABASE_FILE
+
+
 def get_connection():
-    connection = sqlite3.connect(
-        str(DATABASE_FILE)
+
+    database_file = (
+        get_active_database_file()
     )
 
-    connection.row_factory = sqlite3.Row
+    connection = sqlite3.connect(
+        str(database_file)
+    )
+
+    connection.row_factory = (
+        sqlite3.Row
+    )
 
     connection.execute(
         "PRAGMA foreign_keys = ON"

@@ -1549,6 +1549,7 @@ class CollectionPage(QWidget):
             DARK_THEME
         )
 
+
         # =================================================
         # DADOS
         # =================================================
@@ -1609,7 +1610,7 @@ class CollectionPage(QWidget):
         # VIRTUALIZAÇÃO DA GRADE
         # =========================================================
 
-        self._virtual_grid_enabled = True
+        self._virtual_grid_enabled = False
 
         # Quantidade aproximada de linhas extras mantidas
         # acima/abaixo da área visível.
@@ -1932,10 +1933,20 @@ class CollectionPage(QWidget):
     # REDIMENSIONAR LOADING
     # =========================================================
 
-    def _resize_collection_loading_overlay(self):
+    # =========================================================
+    # REDIMENSIONAR LOADING
+    # =========================================================
+
+    def _resize_collection_loading_overlay(
+            self,
+    ):
         """
         Mantém o overlay exatamente sobre o viewport
-        do scroll da coleção.
+        da coleção.
+
+        O cálculo é feito usando o tamanho REAL do viewport,
+        evitando o problema de o loading aparecer deslocado
+        no primeiro carregamento da página.
         """
 
         overlay = getattr(
@@ -1952,9 +1963,33 @@ class CollectionPage(QWidget):
         if viewport is None:
             return
 
+        # -----------------------------------------------------
+        # Garantir que o viewport já possui geometria válida
+        # -----------------------------------------------------
+
+        viewport_width = viewport.width()
+        viewport_height = viewport.height()
+
+        if (
+                viewport_width <= 0
+                or viewport_height <= 0
+        ):
+            return
+
+        # -----------------------------------------------------
+        # Overlay ocupa exatamente o viewport
+        # -----------------------------------------------------
+
         overlay.setGeometry(
-            viewport.rect()
+            0,
+            0,
+            viewport_width,
+            viewport_height,
         )
+
+        # -----------------------------------------------------
+        # Container central
+        # -----------------------------------------------------
 
         container = getattr(
             self,
@@ -1962,25 +1997,37 @@ class CollectionPage(QWidget):
             None,
         )
 
-        if container is not None:
-            container.adjustSize()
+        if container is None:
+            return
 
-            container.move(
-                int(
-                    (
-                            overlay.width()
-                            - container.width()
-                    )
-                    / 2
-                ),
-                int(
-                    (
-                            overlay.height()
-                            - container.height()
-                    )
-                    / 2
-                ),
-            )
+        container.adjustSize()
+
+        container_width = container.sizeHint().width()
+        container_height = container.sizeHint().height()
+
+        # -----------------------------------------------------
+        # Centralizar
+        # -----------------------------------------------------
+
+        x = (
+                    viewport_width
+                    - container_width
+            ) // 2
+
+        y = (
+                    viewport_height
+                    - container_height
+            ) // 2
+
+        container.setGeometry(
+            x,
+            y,
+            container_width,
+            container_height,
+        )
+    # =========================================================
+    # MOSTRAR LOADING
+    # =========================================================
 
     # =========================================================
     # MOSTRAR LOADING
@@ -1992,6 +2039,9 @@ class CollectionPage(QWidget):
     ):
         """
         Mostra o overlay de carregamento.
+
+        O posicionamento é recalculado depois que o Qt
+        processa o layout da página.
         """
 
         if not hasattr(
@@ -2000,17 +2050,41 @@ class CollectionPage(QWidget):
         ):
             self._create_collection_loading_overlay()
 
+        # -----------------------------------------------------
+        # Texto
+        # -----------------------------------------------------
+
         self._collection_loading_subtitle.setText(
             message
         )
 
-        self._resize_collection_loading_overlay()
+        # -----------------------------------------------------
+        # Mostrar primeiro
+        # -----------------------------------------------------
 
-        self._collection_loading_overlay.raise_()
         self._collection_loading_overlay.show()
 
-        self._collection_loading_overlay.update()
+        self._collection_loading_overlay.raise_()
 
+        # -----------------------------------------------------
+        # Forçar atualização de layout
+        # -----------------------------------------------------
+
+        self.scroll_area.viewport().update()
+
+        # -----------------------------------------------------
+        # PRIMEIRO POSICIONAMENTO
+        #
+        # singleShot(0) espera o Qt terminar o ciclo atual
+        # de layout antes de calcular a geometria.
+        # -----------------------------------------------------
+
+        QTimer.singleShot(
+            0,
+            self._resize_collection_loading_overlay,
+        )
+
+        self._collection_loading_overlay.update()
     # =========================================================
     # ESCONDER LOADING
     # =========================================================
@@ -2030,6 +2104,50 @@ class CollectionPage(QWidget):
             return
 
         overlay.hide()
+
+    # =========================================================
+    # RESIZE DA PÁGINA
+    # =========================================================
+
+    def resizeEvent(
+            self,
+            event,
+    ):
+        """
+        Reposiciona o loading sempre que a página
+        muda de tamanho.
+        """
+
+        super().resizeEvent(
+            event
+        )
+
+        QTimer.singleShot(
+            0,
+            self._resize_collection_loading_overlay,
+        )
+
+        # =========================================================
+        # SHOW EVENT
+        # =========================================================
+
+        def showEvent(
+                self,
+                event,
+        ):
+            """
+            Garante que a geometria do loading seja calculada
+            novamente quando a CollectionPage aparece.
+            """
+
+            super().showEvent(
+                event
+            )
+
+            QTimer.singleShot(
+                0,
+                self._resize_collection_loading_overlay,
+            )
 
     # =====================================================
     # SETUP
@@ -2857,6 +2975,14 @@ class CollectionPage(QWidget):
             "CardsContainer"
         )
 
+        self.cards_container.setSizePolicy(
+            QSizePolicy.Policy.Expanding,
+            QSizePolicy.Policy.Preferred,
+        )
+
+        self.cards_container.setMinimumWidth(0)
+        self.cards_container.setMinimumHeight(0)
+
         self.cards_layout = QVBoxLayout(
             self.cards_container
         )
@@ -3127,7 +3253,17 @@ class CollectionPage(QWidget):
     # RESIZE
     # =====================================================
 
-    def handle_container_resize(self):
+    def handle_container_resize(
+            self,
+    ):
+        """
+        Recalcula a geometria da grade somente quando
+        a quantidade de colunas realmente muda.
+
+        O tamanho das cartas e a quantidade de colunas
+        são determinados exclusivamente por
+        _calculate_grid_geometry().
+        """
 
         self._resize_collection_loading_overlay()
 
@@ -3140,41 +3276,26 @@ class CollectionPage(QWidget):
         if not self.current_cards:
             return
 
-        viewport_width = (
-            self.scroll_area
-            .viewport()
-            .width()
+        columns, card_width = (
+            self._calculate_grid_geometry()
         )
 
-        if viewport_width <= 0:
-            return
-
-        min_card_width = 160
-        spacing = 14
-
-        columns = max(
-            1,
-            int(
-                (
-                    viewport_width
-                    + spacing
-                )
-                /
-                (
-                    min_card_width
-                    + spacing
-                )
-            ),
-        )
-
-        if self._grid_columns == columns:
+        if columns == self._grid_columns:
             return
 
         self._grid_columns = columns
 
         self._grid_resize_timer.start()
 
-    def rebuild_grid_after_resize(self):
+    def rebuild_grid_after_resize(
+            self,
+    ):
+        """
+        Reconstrói a grade após o resize.
+
+        O timer impede múltiplos rebuilds durante
+        o redimensionamento contínuo da janela.
+        """
 
         if self.current_layout != "grid":
             return
@@ -3185,10 +3306,15 @@ class CollectionPage(QWidget):
         if not self.current_cards:
             return
 
+        columns, card_width = (
+            self._calculate_grid_geometry()
+        )
+
+        self._grid_columns = columns
+
         self.display_cards(
             self.current_cards
         )
-
     # =========================================================
     # ALTERAR IDIOMAS
     # =========================================================
@@ -6714,6 +6840,125 @@ class CollectionPage(QWidget):
                 frame
             )
 
+    # =====================================================
+    # CALCULAR GEOMETRIA DA GRADE
+    # =====================================================
+
+    def _calculate_grid_geometry(
+            self,
+    ):
+        """
+        Calcula uma grade que sempre cabe dentro
+        da largura disponível do viewport.
+
+        Retorna:
+
+            (quantidade_de_colunas, largura_da_carta)
+        """
+
+        viewport = (
+            self.scroll_area.viewport()
+        )
+
+        if viewport is None:
+            return (
+                1,
+                180,
+            )
+
+        available_width = (
+            viewport.width()
+        )
+
+        if available_width <= 0:
+            return (
+                1,
+                180,
+            )
+
+        # =====================================================
+        # CONFIGURAÇÃO
+        # =====================================================
+
+        spacing = 12
+
+        min_card_width = 160
+        max_card_width = 210
+
+        # =====================================================
+        # CALCULAR MÁXIMO DE COLUNAS
+        # =====================================================
+
+        columns = max(
+            1,
+            int(
+                (
+                        available_width
+                        + spacing
+                )
+                /
+                (
+                        min_card_width
+                        + spacing
+                )
+            ),
+        )
+
+        # =====================================================
+        # GARANTIR QUE A LARGURA REAL CABE
+        # =====================================================
+
+        while columns > 1:
+
+            total_spacing = (
+                                    columns - 1
+                            ) * spacing
+
+            card_width = int(
+                (
+                        available_width
+                        - total_spacing
+                )
+                /
+                columns
+            )
+
+            if card_width >= min_card_width:
+                break
+
+            columns -= 1
+
+        # =====================================================
+        # LARGURA FINAL
+        # =====================================================
+
+        total_spacing = (
+                                columns - 1
+                        ) * spacing
+
+        card_width = int(
+            (
+                    available_width
+                    - total_spacing
+            )
+            /
+            columns
+        )
+
+        card_width = max(
+            min_card_width,
+            card_width,
+        )
+
+        card_width = min(
+            max_card_width,
+            card_width,
+        )
+
+        return (
+            columns,
+            card_width,
+        )
     # =========================================================
     # DISPLAY — GRADE
     # =========================================================
@@ -6826,61 +7071,11 @@ class CollectionPage(QWidget):
         # CALCULAR TAMANHO
         # =====================================================
 
-        available_width = (
-            self.scroll_area
-            .viewport()
-            .width()
+        columns, card_width = (
+            self._calculate_grid_geometry()
         )
 
-        if available_width <= 0:
-            available_width = (
-                self.cards_container.width()
-            )
-
-        if available_width <= 0:
-            available_width = 800
-
-        spacing = 14
-        min_card_width = 160
-
-        columns = max(
-            1,
-            int(
-                (
-                        available_width
-                        + spacing
-                )
-                /
-                (
-                        min_card_width
-                        + spacing
-                )
-            ),
-        )
-
-        total_spacing = (
-                (columns - 1)
-                * spacing
-        )
-
-        card_width = int(
-            (
-                    available_width
-                    - total_spacing
-            )
-            /
-            columns
-        )
-
-        card_width = max(
-            min_card_width,
-            card_width,
-        )
-
-        card_width = min(
-            card_width,
-            500,
-        )
+        spacing = 12
 
         self._grid_columns = columns
 
@@ -7308,7 +7503,7 @@ class CollectionPage(QWidget):
                 column,
                 Qt.AlignmentFlag.AlignTop
                 |
-                Qt.AlignmentFlag.AlignLeft,
+                Qt.AlignmentFlag.AlignCenter,
             )
 
             # =================================================
@@ -7360,20 +7555,20 @@ class CollectionPage(QWidget):
         # =====================================================
         # CONFIGURAR COLUNAS DO GRID
         # =====================================================
-        #
-        # Só precisamos configurar as colunas uma vez,
-        # quando o QGridLayout é criado.
-        #
 
         if start_index == 0:
 
-            for column in range(
-                    columns
-            ):
+            for column in range(columns):
                 grid_layout.setColumnStretch(
                     column,
-                    1,
+                    0,
                 )
+
+            grid_layout.setAlignment(
+                Qt.AlignmentFlag.AlignTop
+                |
+                Qt.AlignmentFlag.AlignLeft
+            )
 
         # =====================================================
         # PRIMEIRO LOTE

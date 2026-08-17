@@ -1,0 +1,3095 @@
+/* =========================================================
+   MAGIC COLLECTION — TEMA ESCURO (OURO)
+   bg #0f1117 · painéis #1a1d27 · ouro #d4a84b
+========================================================= */
+
+* {
+    font-family: "Segoe UI";
+    outline: none;
+}
+
+QMainWindow,
+QWidget {
+    background-color: #0f1117;
+    color: #f2f4f8;
+    font-size: 14px;
+}
+
+QWidget#ContentWidget {
+    background-color: #0f1117;
+}
+
+/* =========================================================
+   SIDEBAR
+========================================================= */
+
+QFrame#Sidebar {
+    background-color: #151821;
+    border-right: 1px solid #232936;
+}
+
+QWidget#AppHeader {
+    background-color: transparent;
+    border: none;
+}
+
+QLabel#AppIcon {
+    background-color: #1f2330;
+    border: 1px solid #2d3442;
+    border-radius: 10px;
+    padding: 4px;
+}
+
+QLabel#AppTitle {
+    background-color: transparent;
+    color: #ffffff;
+    font-size: 18px;
+    font-weight: 700;
+}
+
+QLabel#SidebarSectionLabel {
+    background-color: transparent;
+    color: #5c6474;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    padding: 14px 10px 4px 10px;
+}
+
+QFrame#SidebarDivider {
+    background-color: #232936;
+    border: none;
+    max-height: 1px;
+    margin: 6px 10px;
+}
+
+QPushButton#SidebarButton {
+    background-color: transparent;
+    border: 1px solid transparent;
+    border-radius: 9px;
+    color: #a6adbd;
+    font-size: 14px;
+    font-weight: 600;
+    text-align: left;
+    padding: 9px 14px;
+    margin: 1px 6px;
+    min-height: 40px;
+    max-height: 40px;
+}
+
+QPushButton#SidebarButton:hover {
+    background-color: #1e2330;
+    color: #e8ebf2;
+}
+
+QPushButton#SidebarButton:checked {
+    background-color: #292f3d;
+    color: #ffffff;
+    border: 1px solid #3a4253;
+    font-weight: 700;
+}
+
+QPushButton#SidebarButton:pressed {
+    background-color: #232936;
+}
+
+QFrame#SidebarProfile {
+    background-color: #1a1e29;
+    border: 1px solid #2a3040;
+    border-radius: 12px;
+}
+
+QLabel#SidebarAvatar {
+    background-color: #d4a84b;
+    color: #14161d;
+    border-radius: 18px;
+    font-size: 17px;
+    font-weight: 800;
+}
+
+QLabel#SidebarProfileName {
+    background-color: transparent;
+    color: #f2f4f8;
+    font-size: 14px;
+    font-weight: 700;
+}
+
+QLabel#SidebarProfileHint {
+    background-color: transparent;
+    color: #7b8394;
+    font-size: 12px;
+}
+
+QLabel#SidebarStatus {
+    background-color: transparent;
+    color: #5c6474;
+    font-size: 11px;
+    padding: 5px;
+}
+
+/* =========================================================
+   TÍTULOS
+========================================================= */
+
+QLabel#SectionTitle {
+    background-color: transparent;
+    color: #f7f8fa;
+    font-size: 26px;
+    font-weight: 700;
+}
+
+QLabel#SectionDescription {
+    background-color: transparent;
+    color: #737c8d;
+    font-size: 13px;
+}
+
+QLabel#PageTitle {
+    background-color: transparent;
+    color: #f7f8fa;
+    font-size: 24px;
+    font-weight: 700;
+}
+
+QLabel#PageDescription {
+    background-color: transparent;
+    color: #737c8d;
+    font-size: 13px;
+}
+
+/* =========================================================
+   BOTÕES
+========================================================= */
+
+QPushButton {
+    background-color: #232936;
+    color: #d6dae3;
+    border: 1px solid #2f3646;
+    border-radius: 8px;
+    padding: 8px 14px;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+QPushButton:hover {
+    background-color: #2c3444;
+    border: 1px solid #3d4557;
+    color: #ffffff;
+}
+
+QPushButton:pressed {
+    background-color: #1c212c;
+    border: 1px solid #333b4c;
+}
+
+QPushButton:disabled {
+    background-color: #181c25;
+    color: #4a5160;
+    border: 1px solid #232936;
+}
+
+QPushButton#DeckHeaderAction,
+QPushButton#AddButton,
+QPushButton#NewDeckButton,
+QPushButton#AddCardsButton {
+    background-color: #d4a84b;
+    color: #14161d;
+    border: none;
+    border-radius: 9px;
+    padding: 9px 18px;
+    font-weight: 700;
+}
+
+QPushButton#DeckHeaderAction:hover,
+QPushButton#AddButton:hover,
+QPushButton#NewDeckButton:hover,
+QPushButton#AddCardsButton:hover {
+    background-color: #e6c77b;
+}
+
+QPushButton#DeckHeaderAction:pressed,
+QPushButton#AddButton:pressed,
+QPushButton#NewDeckButton:pressed,
+QPushButton#AddCardsButton:pressed {
+    background-color: #b08a35;
+}
+
+QPushButton#DeckHeaderAction:disabled,
+QPushButton#AddButton:disabled,
+QPushButton#NewDeckButton:disabled,
+QPushButton#AddCardsButton:disabled {
+    background-color: #4a4434;
+    color: #8a8068;
+}
+
+QPushButton#DeckToolbarButton,
+QPushButton#ToolbarButton,
+QPushButton#ExportButton {
+    background-color: #232936;
+    color: #cdd2dd;
+    border: 1px solid #2f3646;
+    border-radius: 8px;
+    padding: 7px 14px;
+    font-weight: 600;
+}
+
+QPushButton#DeckToolbarButton:hover,
+QPushButton#ToolbarButton:hover,
+QPushButton#ExportButton:hover {
+    background-color: #2c3444;
+    border: 1px solid #455068;
+    color: #ffffff;
+}
+
+QPushButton#DeckDeleteButton {
+    background-color: transparent;
+    color: #8a93a3;
+    border: 1px solid #2f3646;
+    border-radius: 8px;
+    padding: 7px 14px;
+    font-weight: 600;
+}
+
+QPushButton#DeckDeleteButton:hover {
+    background-color: #2b1d20;
+    border: 1px solid #5a3540;
+    color: #e8a2aa;
+}
+
+QPushButton#DeckDeleteButton:pressed {
+    background-color: #221619;
+}
+
+/* =========================================================
+   CAMPOS
+========================================================= */
+
+QLineEdit {
+    background-color: #161a23;
+    border: 1px solid #2a3040;
+    border-radius: 9px;
+    padding: 9px 13px;
+    color: #f2f4f8;
+    selection-background-color: #3a4253;
+    selection-color: #ffffff;
+    font-size: 13px;
+}
+
+QLineEdit:hover {
+    border: 1px solid #38405a;
+}
+
+QLineEdit:focus {
+    border: 1px solid #d4a84b;
+    background-color: #181d28;
+}
+
+QLineEdit:disabled {
+    background-color: #12151d;
+    color: #4a5160;
+    border: 1px solid #232936;
+}
+
+QFrame#DeckPanelSearchFrame,
+QFrame#SearchFrame,
+QFrame#AddFrame {
+    background-color: #161a23;
+    border: 1px solid #2a3040;
+    border-radius: 10px;
+}
+
+QFrame#DeckPanelSearchFrame:hover,
+QFrame#SearchFrame:hover,
+QFrame#AddFrame:hover {
+    border: 1px solid #38405a;
+}
+
+QFrame#DeckPanelSearchFrame:focus-within,
+QFrame#SearchFrame:focus-within,
+QFrame#AddFrame:focus-within {
+    border: 1px solid #d4a84b;
+}
+
+QLabel#SearchIcon,
+QLabel#AddIcon {
+    background-color: transparent;
+    color: #6b7486;
+    font-size: 15px;
+}
+
+/* =========================================================
+   SEARCH BAR (DECKS)
+========================================================= */
+
+QFrame#DeckSearchBar {
+    background-color: #161a23;
+    border: 1px solid #2a3040;
+    border-radius: 10px;
+}
+
+QFrame#DeckSearchBar:focus-within {
+    border: 1px solid #d4a84b;
+}
+
+QFrame#DeckSearchBar QLineEdit {
+    background-color: transparent;
+    border: none;
+    padding: 8px 4px;
+}
+
+QFrame#DeckSearchBar QLineEdit:focus {
+    border: none;
+    background-color: transparent;
+}
+
+/* =========================================================
+   ABAS DE FILTRO (DECKS)
+========================================================= */
+
+QFrame#DeckFilterBar {
+    background-color: #161a23;
+    border: 1px solid #232936;
+    border-radius: 10px;
+    padding: 3px;
+}
+
+QPushButton#DeckFilterTab {
+    background-color: transparent;
+    color: #8b93a3;
+    border: none;
+    border-radius: 7px;
+    padding: 7px 16px;
+    font-weight: 600;
+}
+
+QPushButton#DeckFilterTab:hover {
+    background-color: #1e2330;
+    color: #d6dae3;
+}
+
+QPushButton#DeckFilterTab:checked {
+    background-color: #292f3d;
+    color: #f2f4f8;
+    border: 1px solid #3a4253;
+}
+
+/* =========================================================
+   COMBOBOX
+========================================================= */
+
+QComboBox {
+    background-color: #161a23;
+    color: #d6dae3;
+    border: 1px solid #2a3040;
+    border-radius: 8px;
+    padding: 7px 12px;
+    min-height: 18px;
+    font-size: 13px;
+}
+
+QComboBox:hover {
+    background-color: #1a1f2a;
+    border: 1px solid #38405a;
+}
+
+QComboBox:focus {
+    border: 1px solid #d4a84b;
+}
+
+QComboBox::drop-down {
+    border: none;
+    width: 24px;
+}
+
+QComboBox::down-arrow {
+    image: none;
+    border: none;
+    width: 7px;
+    height: 7px;
+    background-color: #8b93a3;
+    border-radius: 2px;
+}
+
+QComboBox QAbstractItemView {
+    background-color: #1a1e29;
+    color: #e8ebf2;
+    border: 1px solid #2f3646;
+    selection-background-color: #292f3d;
+    selection-color: #ffffff;
+    padding: 4px;
+    outline: none;
+}
+
+/* =========================================================
+   MENUS
+========================================================= */
+
+QMenu {
+    background-color: #1a1e29;
+    color: #e8ebf2;
+    border: 1px solid #2f3646;
+    border-radius: 8px;
+    padding: 5px;
+}
+
+QMenu::item {
+    padding: 7px 22px 7px 12px;
+    border-radius: 6px;
+    color: #cfd4df;
+}
+
+QMenu::item:selected {
+    background-color: #292f3d;
+    color: #ffffff;
+}
+
+QMenu::item:disabled {
+    color: #4a5160;
+}
+
+QMenu::separator {
+    height: 1px;
+    background-color: #2c3342;
+    margin: 4px 8px;
+}
+
+/* =========================================================
+   SCROLL AREAS
+========================================================= */
+
+QScrollArea {
+    background-color: transparent;
+    border: none;
+}
+
+QScrollArea#CardsScrollArea,
+QScrollArea#DecksScrollArea {
+    background-color: transparent;
+    border: none;
+    padding: 0;
+}
+
+QScrollArea#CardsScrollArea > QWidget,
+QScrollArea#DecksScrollArea > QWidget,
+QScrollArea#CardsScrollArea > QWidget > QWidget,
+QScrollArea#DecksScrollArea > QWidget > QWidget {
+    background-color: transparent;
+    border: none;
+}
+
+/* =========================================================
+   SCROLLBAR
+========================================================= */
+
+QScrollBar:vertical {
+    background-color: transparent;
+    width: 10px;
+    border: none;
+    margin: 2px 1px 2px 2px;
+}
+
+QScrollBar::handle:vertical {
+    background-color: #2c3342;
+    border: none;
+    border-radius: 5px;
+    min-height: 40px;
+}
+
+QScrollBar::handle:vertical:hover {
+    background-color: #3d4557;
+}
+
+QScrollBar::add-line:vertical,
+QScrollBar::sub-line:vertical {
+    background: none;
+    border: none;
+    height: 0;
+    width: 0;
+}
+
+QScrollBar::add-page:vertical,
+QScrollBar::sub-page:vertical {
+    background: transparent;
+}
+
+QScrollBar:horizontal {
+    background-color: transparent;
+    height: 10px;
+    border: none;
+    margin: 1px 2px;
+}
+
+QScrollBar::handle:horizontal {
+    background-color: #2c3342;
+    border: none;
+    border-radius: 5px;
+    min-width: 40px;
+}
+
+QScrollBar::handle:horizontal:hover {
+    background-color: #3d4557;
+}
+
+QScrollBar::add-line:horizontal,
+QScrollBar::sub-line:horizontal {
+    background: none;
+    border: none;
+    width: 0;
+    height: 0;
+}
+
+QScrollBar::add-page:horizontal,
+QScrollBar::sub-page:horizontal {
+    background: transparent;
+}
+
+/* =========================================================
+   DECKS — GRID
+========================================================= */
+
+QFrame#DeckPreviewFrame {
+    background-color: #181c26;
+    border: 1px solid #272e3d;
+    border-radius: 14px;
+}
+
+QFrame#DeckPreviewFrame:hover {
+    background-color: #1d2230;
+    border: 1px solid #d4a84b;
+}
+
+QFrame#DeckPreviewFrame[hover="true"] {
+    background-color: #1d2230;
+    border: 1px solid #d4a84b;
+}
+
+QFrame#DeckPreviewImageArea {
+    background-color: #12161f;
+    border: 1px solid #262d3b;
+    border-radius: 10px;
+}
+
+QLabel#DeckPreviewCard {
+    background-color: transparent;
+    border: none;
+}
+
+QLabel#DeckPreviewName {
+    background-color: transparent;
+    color: #eef0f5;
+    font-size: 14px;
+    font-weight: 700;
+}
+
+QLabel#DeckPreviewTotal {
+    background-color: transparent;
+    color: #8b93a3;
+    font-size: 12px;
+}
+
+QFrame#DeckPreviewFrame:hover QLabel#DeckPreviewName {
+    color: #e6c77b;
+}
+
+QFrame#DeckPreviewFrame:hover QLabel#DeckPreviewTotal {
+    color: #aeb5c2;
+}
+
+QFrame#NewDeckFrame,
+QFrame#NewDeckCard {
+    background-color: transparent;
+    border: 1px dashed #3d4557;
+    border-radius: 14px;
+}
+
+QFrame#NewDeckFrame:hover,
+QFrame#NewDeckCard:hover {
+    background-color: #171b25;
+    border: 1px solid #d4a84b;
+}
+
+QLabel#NewDeckPlus {
+    background-color: transparent;
+    color: #6b7486;
+    font-size: 48px;
+    font-weight: 300;
+}
+
+QLabel#NewDeckText {
+    background-color: transparent;
+    color: #8b93a3;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+QFrame#NewDeckFrame:hover QLabel#NewDeckPlus {
+    color: #d4a84b;
+}
+
+QFrame#NewDeckFrame:hover QLabel#NewDeckText {
+    color: #e6e8ee;
+}
+
+/* =========================================================
+   PAGINAÇÃO
+========================================================= */
+
+QWidget#PaginationBar QLabel {
+    background-color: transparent;
+    color: #737c8d;
+    font-size: 12px;
+}
+
+QPushButton#PageButton {
+    background-color: transparent;
+    color: #9aa2b1;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    min-width: 28px;
+    max-width: 28px;
+    min-height: 28px;
+    max-height: 28px;
+    padding: 0;
+    font-weight: 600;
+}
+
+QPushButton#PageButton:hover {
+    background-color: #232936;
+    color: #ffffff;
+}
+
+QPushButton#PageButton:checked {
+    background-color: #d4a84b;
+    color: #14161d;
+    border: none;
+    font-weight: 700;
+}
+
+/* =========================================================
+   EDITOR DO DECK — TOOLBAR
+========================================================= */
+
+QPushButton#DeckBackButton {
+    background-color: #232936;
+    color: #cdd2dd;
+    border: 1px solid #2f3646;
+    border-radius: 8px;
+    padding: 7px 14px;
+    font-weight: 600;
+}
+
+QPushButton#DeckBackButton:hover {
+    background-color: #2c3444;
+    border: 1px solid #455068;
+    color: #ffffff;
+}
+
+QLabel#DeckEditorBreadcrumb {
+    background-color: transparent;
+    color: #6b7486;
+    font-size: 12px;
+}
+
+QLabel#DeckNameTitle {
+    background-color: transparent;
+    color: #ffffff;
+    font-size: 24px;
+    font-weight: 700;
+}
+
+QLabel#DeckTotalLabel {
+    background-color: transparent;
+    color: #8b93a3;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+QPushButton#DeckTab {
+    background-color: transparent;
+    color: #8b93a3;
+    border: none;
+    border-bottom: 2px solid transparent;
+    padding: 7px 12px;
+    font-size: 14px;
+    font-weight: 700;
+}
+
+QPushButton#DeckTab:hover {
+    color: #d6dae3;
+}
+
+QPushButton#DeckTab:checked {
+    color: #ffffff;
+    border-bottom: 2px solid #d4a84b;
+}
+
+QPushButton#DeckPanelFiltersButton {
+    background-color: #232936;
+    color: #cdd2dd;
+    border: 1px solid #2f3646;
+    border-radius: 7px;
+    padding: 7px 12px;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+QPushButton#DeckPanelFiltersButton:hover {
+    background-color: #2c3444;
+    border: 1px solid #455068;
+    color: #ffffff;
+}
+
+QPushButton#DeckPanelFiltersButton:pressed {
+    background-color: #1c212c;
+}
+
+/* =========================================================
+   ESTATÍSTICAS DO DECK
+========================================================= */
+
+QFrame#DeckStatsPanel {
+    background-color: #181c26;
+    border: 1px solid #272e3d;
+    border-radius: 12px;
+}
+
+QFrame#StatBox {
+    background-color: #1a1e29;
+    border: 1px solid #272e3d;
+    border-radius: 10px;
+}
+
+QLabel#StatBoxValue {
+    background-color: transparent;
+    color: #ffffff;
+    font-size: 24px;
+    font-weight: 700;
+}
+
+QLabel#StatBoxLabel {
+    background-color: transparent;
+    color: #7b8394;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 1px;
+}
+
+QLabel#StatBoxValue[accent="true"] {
+    color: #d4a84b;
+}
+
+QFrame#DeckMetaRow {
+    background-color: transparent;
+    border: none;
+}
+
+QLabel#DeckMetaKey {
+    background-color: transparent;
+    color: #6b7486;
+    font-size: 12px;
+}
+
+QLabel#DeckMetaValue {
+    background-color: transparent;
+    color: #d6dae3;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+QPushButton#DeckFavoriteButton {
+    background-color: #232936;
+    color: #8b93a3;
+    border: 1px solid #2f3646;
+    border-radius: 8px;
+    padding: 6px 12px;
+    font-size: 16px;
+}
+
+QPushButton#DeckFavoriteButton:checked {
+    background-color: #332b18;
+    color: #d4a84b;
+    border: 1px solid #d4a84b;
+}
+
+QPushButton#DeckFavoriteButton:hover {
+    background-color: #2c3444;
+    color: #e6c77b;
+}
+
+/* =========================================================
+   CURVA DE MANA
+========================================================= */
+
+QFrame#ManaCurvePanel,
+QFrame#DeckTypeBreakdownPanel {
+    background-color: #181c26;
+    border: 1px solid #272e3d;
+    border-radius: 12px;
+}
+
+QLabel#PanelTitle {
+    background-color: transparent;
+    color: #eef0f5;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+QLabel#CurveBarLabel {
+    background-color: transparent;
+    color: #7b8394;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+QFrame#CurveBarTrack {
+    background-color: #12161f;
+    border: 1px solid #262d3b;
+    border-radius: 4px;
+}
+
+QFrame#CurveBarFill {
+    background-color: #d4a84b;
+    border: none;
+    border-radius: 3px;
+}
+
+QLabel#TypeBreakdownValue {
+    background-color: transparent;
+    color: #ffffff;
+    font-size: 15px;
+    font-weight: 700;
+}
+
+QLabel#TypeBreakdownName {
+    background-color: transparent;
+    color: #7b8394;
+    font-size: 12px;
+}
+
+/* =========================================================
+   LISTA DE CARTAS DO DECK
+========================================================= */
+
+QFrame#DeckListCard {
+    background-color: #181c26;
+    border: 1px solid #272e3d;
+    border-radius: 10px;
+}
+
+QFrame#DeckListCard:hover {
+    background-color: #1d2230;
+    border: 1px solid #3d4557;
+}
+
+QFrame#DeckListCard[selected="true"] {
+    background-color: #221f15;
+    border: 1px solid #d4a84b;
+}
+
+QLabel#DeckListQuantity {
+    background-color: #292f3d;
+    color: #ffffff;
+    border: 1px solid #3a4253;
+    border-radius: 7px;
+    padding: 3px 9px;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+QLabel#DeckListThumbnail {
+    background-color: #12161f;
+    border: 1px solid #262d3b;
+    border-radius: 6px;
+    color: #4a5160;
+}
+
+QLabel#DeckListName {
+    background-color: transparent;
+    color: #eef0f5;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+QLabel#DeckListSub {
+    background-color: transparent;
+    color: #737c8d;
+    font-size: 11px;
+}
+
+QFrame#DeckListCard:hover QLabel#DeckListName {
+    color: #e6c77b;
+}
+
+QPushButton#DeckActionSmall {
+    background-color: #232936;
+    color: #b6bdcb;
+    border: 1px solid #2f3646;
+    border-radius: 6px;
+    min-width: 26px;
+    max-width: 26px;
+    min-height: 26px;
+    max-height: 26px;
+    padding: 0;
+    font-size: 15px;
+    font-weight: 700;
+}
+
+QPushButton#DeckActionSmall:hover {
+    background-color: #2c3444;
+    border: 1px solid #455068;
+    color: #ffffff;
+}
+
+QPushButton#DeckActionSmall:pressed {
+    background-color: #1c212c;
+}
+
+QPushButton#DeckActionSmall:disabled {
+    background-color: #181c25;
+    color: #4a5160;
+    border: 1px solid #232936;
+}
+
+QPushButton#SideboardMoveButton {
+    background-color: transparent;
+    color: #7b8394;
+    border: 1px solid #2f3646;
+    border-radius: 6px;
+    padding: 3px 8px;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+QPushButton#SideboardMoveButton:hover {
+    background-color: #2c3444;
+    color: #e6c77b;
+    border: 1px solid #455068;
+}
+
+QLabel#DeckEmptyState,
+QLabel#DeckPanelEmpty {
+    background-color: transparent;
+    color: #5c6474;
+    font-size: 13px;
+}
+
+/* =========================================================
+   PAINEL DE PREVIEW DA CARTA
+========================================================= */
+
+QFrame#CardPreviewPanel {
+    background-color: #181c26;
+    border: 1px solid #272e3d;
+    border-radius: 12px;
+}
+
+QLabel#CardPreviewImage {
+    background-color: #12161f;
+    border: 1px solid #262d3b;
+    border-radius: 10px;
+    color: #4a5160;
+}
+
+QLabel#CardPreviewName {
+    background-color: transparent;
+    color: #ffffff;
+    font-size: 17px;
+    font-weight: 700;
+}
+
+QLabel#CardPreviewType {
+    background-color: transparent;
+    color: #9aa2b1;
+    font-size: 12px;
+}
+
+QLabel#CardPreviewOracle {
+    background-color: transparent;
+    color: #cdd2dd;
+    font-size: 12px;
+    line-height: 1.4;
+}
+
+QFrame#CardPreviewSeparator {
+    background-color: #2c3342;
+    border: none;
+    max-height: 1px;
+}
+
+/* =========================================================
+   PAINEL LATERAL — ADICIONAR CARTAS
+========================================================= */
+
+QFrame#DeckCollectionPanel,
+QFrame#DeckScryfallPanel {
+    background-color: #151821;
+    border: 1px solid #2c3342;
+    border-radius: 12px;
+}
+
+QLabel#DeckPanelTitle {
+    background-color: transparent;
+    color: #ffffff;
+    font-size: 18px;
+    font-weight: 700;
+}
+
+QLabel#DeckPanelStatus {
+    background-color: transparent;
+    color: #8b93a3;
+    font-size: 13px;
+}
+
+QPushButton#DeckPanelCloseButton {
+    background-color: #232936;
+    color: #d6dae3;
+    border: 1px solid #2f3646;
+    border-radius: 7px;
+    min-width: 32px;
+    max-width: 32px;
+    min-height: 32px;
+    max-height: 32px;
+    padding: 0;
+    font-size: 16px;
+    font-weight: 700;
+}
+
+QPushButton#DeckPanelCloseButton:hover {
+    background-color: #2c3444;
+    border: 1px solid #455068;
+    color: #ffffff;
+}
+
+QFrame#DeckPanelSearchFrame QLineEdit {
+    background-color: #161a23;
+    border: 1px solid #2a3040;
+    border-radius: 8px;
+    padding: 8px 12px;
+    color: #f2f4f8;
+}
+
+QFrame#DeckPanelSearchFrame QLineEdit:focus {
+    border: 1px solid #d4a84b;
+}
+
+QListWidget#DeckPanelResultsList {
+    background-color: #161a23;
+    border: 1px solid #2a3040;
+    border-radius: 8px;
+    color: #e8ebf2;
+    outline: none;
+}
+
+QListWidget#DeckPanelResultsList::item {
+    padding: 8px 12px;
+    border-radius: 6px;
+}
+
+QListWidget#DeckPanelResultsList::item:hover {
+    background-color: #1e2330;
+}
+
+QListWidget#DeckPanelResultsList::item:selected {
+    background-color: #292f3d;
+    color: #ffffff;
+}
+
+QFrame#CollectionDeckCard {
+    background-color: #181c26;
+    border: 1px solid #272e3d;
+    border-radius: 8px;
+    min-height: 80px;
+    max-height: 80px;
+}
+
+QFrame#CollectionDeckCard:hover {
+    background-color: #1d2230;
+    border: 1px solid #3d4557;
+}
+
+QFrame#CollectionDeckCard > QWidget,
+QFrame#CollectionDeckCard QLabel {
+    background-color: transparent;
+    border: none;
+}
+
+QLabel#CollectionDeckThumbnail {
+    background-color: #12161f;
+    border: 1px solid #262d3b;
+    border-radius: 6px;
+    color: #4a5160;
+}
+
+QLabel#CollectionDeckCardName {
+    color: #eef0f5;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+QLabel#CollectionDeckCardStatus {
+    color: #7b8394;
+    font-size: 11px;
+}
+
+QLabel#CollectionDeckQuantity {
+    color: #ffffff;
+    font-size: 13px;
+    font-weight: 700;
+    min-width: 20px;
+    max-width: 30px;
+    min-height: 24px;
+    max-height: 30px;
+    padding: 0;
+    margin: 0;
+}
+
+QPushButton#CollectionDeckRemoveButton,
+QPushButton#CollectionDeckAddButton {
+    background-color: #232936;
+    color: #d6dae3;
+    border: 1px solid #2f3646;
+    border-radius: 6px;
+    min-width: 30px;
+    max-width: 30px;
+    min-height: 30px;
+    max-height: 30px;
+    padding: 0;
+    font-size: 17px;
+    font-weight: 700;
+}
+
+QPushButton#CollectionDeckRemoveButton:hover,
+QPushButton#CollectionDeckAddButton:hover {
+    background-color: #2c3444;
+    border: 1px solid #455068;
+    color: #ffffff;
+}
+
+QPushButton#CollectionDeckRemoveButton:disabled,
+QPushButton#CollectionDeckAddButton:disabled {
+    background-color: #181c25;
+    color: #4a5160;
+    border: 1px solid #232936;
+}
+
+QPushButton#DeckAddCardsButton {
+    background-color: #232936;
+    color: #cdd2dd;
+    border: 1px solid #2f3646;
+    border-radius: 7px;
+    min-height: 32px;
+    padding: 0 14px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+QPushButton#DeckAddCardsButton:hover {
+    background-color: #2c3444;
+    border: 1px solid #455068;
+    color: #ffffff;
+}
+
+QLabel#DeckAddCardsTitle {
+    color: #eef0f5;
+    font-size: 15px;
+    font-weight: 700;
+}
+
+QLabel#DeckAddCardsDescription {
+    color: #7b8394;
+    font-size: 12px;
+}
+
+/* =========================================================
+   CAPA DO DECK
+========================================================= */
+
+QFrame#DeckPreviewSection,
+QFrame#DeckAddCardsSection {
+    background-color: #181c26;
+    border: 1px solid #272e3d;
+    border-radius: 12px;
+}
+
+QLabel#DeckCoverImage {
+    background-color: #12161f;
+    border: 1px solid #262d3b;
+    border-radius: 9px;
+    font-size: 28px;
+}
+
+QLabel#DeckCoverTitle {
+    color: #eef0f5;
+    font-size: 15px;
+    font-weight: 700;
+}
+
+QLabel#DeckCoverDescription {
+    color: #7b8394;
+    font-size: 12px;
+}
+
+QPushButton#DeckCoverButton {
+    background-color: #232936;
+    color: #cdd2dd;
+    border: 1px solid #2f3646;
+    border-radius: 7px;
+    padding: 7px 12px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+QPushButton#DeckCoverButton:hover {
+    background-color: #2c3444;
+    border: 1px solid #455068;
+    color: #ffffff;
+}
+
+QPushButton#DeckCoverResetButton {
+    background-color: transparent;
+    color: #7b8394;
+    border: none;
+    padding: 5px;
+    font-size: 12px;
+}
+
+QPushButton#DeckCoverResetButton:hover {
+    color: #d6dae3;
+}
+
+QLabel#DeckPreviewSelectorTitle {
+    color: #ffffff;
+    font-size: 18px;
+    font-weight: 700;
+}
+
+QPushButton#DeckPreviewSelectorCard {
+    background-color: #181c26;
+    border: 1px solid #272e3d;
+    border-radius: 8px;
+}
+
+QPushButton#DeckPreviewSelectorCard:hover {
+    background-color: #1d2230;
+    border: 1px solid #d4a84b;
+}
+
+/* =========================================================
+   CARTAS — GRADE DA COLEÇÃO
+========================================================= */
+
+QFrame#GridCardFrame {
+    background-color: #181c26;
+    border: 1px solid #272e3d;
+    border-radius: 10px;
+}
+
+QFrame#GridCardFrame[hover="true"] {
+    background-color: #1d2230;
+    border: 1px solid #3d4557;
+}
+
+QFrame#GridCardFrame[selected="true"] {
+    background-color: #221f15;
+    border: 2px solid #d4a84b;
+}
+
+QLabel#GridCardImage {
+    background-color: #12161f;
+    border: none;
+    border-radius: 8px;
+    color: #4a5160;
+    font-size: 21px;
+}
+
+QFrame#GridQuantityOverlay {
+    background-color: rgba(10, 12, 17, 215);
+    border: 1px solid rgba(255, 255, 255, 40);
+    border-radius: 10px;
+}
+
+QLabel#GridQuantityLabel {
+    background-color: transparent;
+    color: #ffffff;
+    border: none;
+    font-size: 14px;
+    font-weight: 700;
+    padding: 2px 7px;
+}
+
+QPushButton#GridQuantityButton {
+    background-color: #232936;
+    color: #d6dae3;
+    border: 1px solid #2f3646;
+    border-radius: 6px;
+    min-width: 30px;
+    max-width: 30px;
+    min-height: 30px;
+    max-height: 30px;
+    padding: 0;
+    font-size: 16px;
+    font-weight: 700;
+}
+
+QPushButton#GridQuantityButton:hover {
+    background-color: #2c3444;
+    border: 1px solid #455068;
+    color: #ffffff;
+}
+
+QLineEdit#GridQuantityInput {
+    background-color: rgba(255, 255, 255, 16);
+    border: 1px solid rgba(255, 255, 255, 40);
+    border-radius: 7px;
+    color: #ffffff;
+    font-size: 14px;
+    font-weight: 700;
+    padding: 0;
+}
+
+QLineEdit#GridQuantityInput:focus {
+    border: 1px solid #d4a84b;
+}
+
+QFrame#CardFrame {
+    background-color: #181c26;
+    border: 1px solid #272e3d;
+    border-radius: 11px;
+}
+
+QFrame#CardFrame[hover="true"] {
+    background-color: #1d2230;
+    border: 1px solid #3d4557;
+}
+
+QWidget#CardInfo,
+QWidget#CardSideWidget,
+QWidget#CardMana,
+QWidget#CardMeta {
+    background-color: transparent;
+    border: none;
+}
+
+QWidget#CardMana QLabel,
+QWidget#CardMana QWidget,
+QWidget#CardMana QFrame {
+    background-color: transparent;
+    border: none;
+}
+
+QLabel#CardThumbnail {
+    background-color: #12161f;
+    border: 1px solid #262d3b;
+    border-radius: 7px;
+    color: #4a5160;
+    font-size: 21px;
+}
+
+QLabel#CardName {
+    background-color: transparent;
+    color: #eef0f5;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+QLabel#CardType {
+    background-color: transparent;
+    color: #9aa2b1;
+    font-size: 12px;
+}
+
+QLabel#CardSet {
+    background-color: transparent;
+    color: #6b7486;
+    font-size: 11px;
+}
+
+QFrame#CardMetaSeparator {
+    background-color: #2c3342;
+    border: none;
+    min-width: 1px;
+    max-width: 1px;
+    min-height: 64px;
+    max-height: 80px;
+}
+
+QLabel#CardPT {
+    background-color: #232936;
+    border: 1px solid #2f3646;
+    border-radius: 6px;
+    color: #eef0f5;
+    font-size: 12px;
+    font-weight: 700;
+    padding: 3px 7px;
+    min-width: 64px;
+    max-width: 80px;
+    min-height: 26px;
+    max-height: 32px;
+}
+
+QFrame#QuantityFrame {
+    background-color: transparent;
+    border: none;
+}
+
+QLabel#Quantity {
+    background-color: transparent;
+    color: #ffffff;
+    font-size: 14px;
+    font-weight: 700;
+}
+
+QPushButton#QuantityButton {
+    background-color: transparent;
+    border: none;
+    border-radius: 6px;
+    min-width: 30px;
+    max-width: 30px;
+    min-height: 30px;
+    max-height: 30px;
+    padding: 0;
+    color: #9aa2b1;
+    font-size: 16px;
+    font-weight: 700;
+}
+
+QPushButton#QuantityButton:hover {
+    background-color: #232936;
+    color: #ffffff;
+}
+
+/* =========================================================
+   DIALOGO
+========================================================= */
+
+QDialog {
+    background-color: #12151d;
+    color: #e8ebf2;
+}
+
+QDialog QLabel {
+    background-color: transparent;
+    color: #d6dae3;
+}
+
+QDialogButtonBox QPushButton {
+    background-color: #232936;
+    color: #d6dae3;
+    border: 1px solid #2f3646;
+    border-radius: 7px;
+    padding: 8px 16px;
+    min-width: 80px;
+}
+
+QDialogButtonBox QPushButton:hover {
+    background-color: #2c3444;
+    border: 1px solid #455068;
+    color: #ffffff;
+}
+
+QLabel#DeckNameDialogLabel {
+    color: #eef0f5;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+/* =========================================================
+   DETALHES DA CARTA
+========================================================= */
+
+QLabel#CardDetailImage {
+    background-color: #12161f;
+    border: 1px solid #2a3040;
+    border-radius: 10px;
+    color: #4a5160;
+    font-size: 14px;
+}
+
+QLabel#CardDetailName {
+    background-color: transparent;
+    color: #ffffff;
+    font-size: 25px;
+    font-weight: 700;
+}
+
+QLabel#CardDetailManaTitle {
+    background-color: transparent;
+    color: #6b7486;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1px;
+}
+
+QLabel#CardDetailType {
+    background-color: transparent;
+    color: #b6bdcb;
+    font-size: 14px;
+}
+
+QLabel#CardDetailPT {
+    background-color: #232936;
+    border: 1px solid #2f3646;
+    border-radius: 6px;
+    color: #ffffff;
+    font-size: 13px;
+    font-weight: 700;
+    padding: 5px 9px;
+}
+
+QLabel#CardDetailField {
+    background-color: transparent;
+    color: #aeb5c2;
+    font-size: 13px;
+    padding: 2px 0;
+}
+
+QLabel#CardDetailOracle {
+    background-color: transparent;
+    color: #e0e3ea;
+    font-size: 14px;
+    line-height: 1.45;
+}
+
+QLabel#CardDetailFlavor {
+    background-color: transparent;
+    color: #8b93a3;
+    font-size: 13px;
+    font-style: italic;
+}
+
+QLabel#CardDetailMuted {
+    background-color: transparent;
+    color: #737c8d;
+    font-size: 13px;
+}
+
+QFrame#CardDetailSeparator {
+    background-color: #2c3342;
+    border: none;
+    max-height: 1px;
+    margin: 8px 0;
+}
+
+QLabel#CardDetailSet {
+    background-color: transparent;
+    color: #6b7486;
+    font-size: 13px;
+}
+
+QLabel#CardDetailQuantity {
+    background-color: transparent;
+    color: #ffffff;
+    font-size: 14px;
+    font-weight: 700;
+}
+
+QLabel#CardDetailText {
+    background-color: #161a23;
+    border: 1px solid #2a3040;
+    border-radius: 8px;
+    color: #cdd2dd;
+    padding: 12px;
+    font-size: 13px;
+}
+
+QWidget#CardDetailLeftPanel,
+QWidget#CardDetailRightPanel {
+    background-color: transparent;
+    border: none;
+}
+
+QWidget#FaceSwitch {
+    background-color: #161a23;
+    border: 1px solid #2a3040;
+    border-radius: 10px;
+}
+
+QPushButton#FaceSwitchButton {
+    background-color: transparent;
+    color: #8b93a3;
+    border: none;
+    border-radius: 7px;
+    padding: 8px 16px;
+    font-weight: 600;
+}
+
+QPushButton#FaceSwitchButton:hover {
+    background-color: #1e2330;
+    color: #ffffff;
+}
+
+QPushButton#FaceSwitchButton:checked {
+    background-color: #d4a84b;
+    color: #14161d;
+}
+
+QComboBox#DetailSelector {
+    background-color: #161a23;
+    border: 1px solid #2a3040;
+    border-radius: 9px;
+    color: #e0e3ea;
+    padding: 9px 12px;
+}
+
+QWidget#CardDetailMana,
+QWidget#CardDetailMana QLabel,
+QWidget#CardDetailMana QWidget {
+    background-color: transparent;
+    border: none;
+}
+
+QFrame#DetailInfoCard {
+    background-color: #161a23;
+    border: 1px solid #2a3040;
+    border-radius: 8px;
+}
+
+QFrame#DetailInfoCard:hover {
+    border: 1px solid #3d4557;
+    background-color: #1a1f2a;
+}
+
+QLabel#DetailInfoTitle {
+    background-color: transparent;
+    color: #6b7486;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+QLabel#DetailInfoValue {
+    background-color: transparent;
+    color: #eef0f5;
+    font-size: 13px;
+}
+
+QLabel#DetailPriceTitle {
+    background-color: transparent;
+    color: #6b7486;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+QLabel#DetailPriceValue {
+    background-color: transparent;
+    color: #eef0f5;
+    font-size: 13px;
+}
+
+QLabel#DetailMarketValue {
+    background-color: transparent;
+    color: #cdd2dd;
+    font-size: 16px;
+    font-weight: 600;
+}
+
+QFrame#MarketValueCard {
+    background-color: #161a23;
+    border: 1px solid #2a3040;
+    border-radius: 9px;
+}
+
+QFrame#MarketValueCard:hover {
+    background-color: #1a1f2a;
+    border: 1px solid #3d4557;
+}
+
+QLabel#DetailMarketTotal {
+    background-color: transparent;
+    color: #d4a84b;
+    font-size: 22px;
+    font-weight: 800;
+}
+
+QTabWidget#CardDetailTabs::pane {
+    background-color: transparent;
+    border: none;
+}
+
+QTabWidget#CardDetailTabs QTabBar::tab {
+    background-color: #161a23;
+    color: #8b93a3;
+    border: 1px solid #2a3040;
+    border-radius: 7px;
+    padding: 8px 14px;
+    margin-right: 6px;
+}
+
+QTabWidget#CardDetailTabs QTabBar::tab:selected {
+    background-color: #292f3d;
+    color: #ffffff;
+    border-color: #3d4557;
+}
+
+/* =========================================================
+   SÍMBOLOS DE MANA
+========================================================= */
+
+QLabel#ManaSymbol {
+    background-color: transparent;
+    border: none;
+}
+
+QLabel#CardManaEmpty {
+    background-color: transparent;
+    color: #5c6474;
+    font-size: 12px;
+}
+
+QLabel#CardManaLoading,
+QLabel#CardManaFallback {
+    background-color: transparent;
+    color: #8b93a3;
+    font-size: 12px;
+}
+
+/* =========================================================
+   AUTOCOMPLETE
+========================================================= */
+
+QListWidget#SuggestionList {
+    background-color: #1a1e29;
+    color: #e8ebf2;
+    border: 1px solid #2f3646;
+    border-radius: 8px;
+    padding: 4px;
+    outline: none;
+}
+
+QListWidget#SuggestionList::item {
+    background-color: transparent;
+    padding: 9px 12px;
+    border-radius: 6px;
+}
+
+QListWidget#SuggestionList::item:hover {
+    background-color: #1e2330;
+}
+
+QListWidget#SuggestionList::item:selected {
+    background-color: #292f3d;
+    color: #ffffff;
+}
+
+/* =========================================================
+   TABELAS
+========================================================= */
+
+QTableWidget,
+QTableView {
+    background-color: #161a23;
+    alternate-background-color: #181c26;
+    color: #e0e3ea;
+    border: 1px solid #2a3040;
+    border-radius: 9px;
+    gridline-color: #2a3040;
+    outline: none;
+}
+
+QTableWidget::item,
+QTableView::item {
+    padding: 7px;
+    border: none;
+}
+
+QTableWidget::item:hover,
+QTableView::item:hover {
+    background-color: #1e2330;
+}
+
+QTableWidget::item:selected,
+QTableView::item:selected {
+    background-color: #292f3d;
+    color: #ffffff;
+}
+
+QHeaderView::section {
+    background-color: #1a1e29;
+    color: #aeb5c2;
+    border: none;
+    border-bottom: 1px solid #2c3342;
+    padding: 9px 10px;
+    font-weight: 600;
+}
+
+QHeaderView::section:hover {
+    background-color: #232936;
+    color: #ffffff;
+}
+
+/* =========================================================
+   LISTAS GERAIS
+========================================================= */
+
+QListWidget,
+QListView {
+    background-color: #161a23;
+    color: #e0e3ea;
+    border: 1px solid #2a3040;
+    border-radius: 9px;
+    outline: none;
+    padding: 4px;
+}
+
+QListWidget::item,
+QListView::item {
+    padding: 8px 10px;
+    border-radius: 6px;
+}
+
+QListWidget::item:hover,
+QListView::item:hover {
+    background-color: #1e2330;
+}
+
+QListWidget::item:selected,
+QListView::item:selected {
+    background-color: #292f3d;
+    color: #ffffff;
+}
+
+/* =========================================================
+   STATUS BAR / TOOLBAR / DIVERSOS
+========================================================= */
+
+QStatusBar {
+    background-color: #151821;
+    color: #737c8d;
+    border-top: 1px solid #232936;
+}
+
+QStatusBar::item {
+    border: none;
+}
+
+QToolBar {
+    background-color: #151821;
+    border: none;
+    spacing: 5px;
+    padding: 4px;
+}
+
+QToolBar::separator {
+    background-color: #2c3342;
+    width: 1px;
+    margin: 5px 4px;
+}
+
+QToolTip {
+    background-color: #1a1e29;
+    color: #e8ebf2;
+    border: 1px solid #2f3646;
+    border-radius: 6px;
+    padding: 6px 9px;
+}
+
+QToolButton {
+    background-color: transparent;
+    color: #9aa2b1;
+    border: 1px solid transparent;
+    border-radius: 7px;
+    padding: 7px 9px;
+}
+
+QToolButton:hover {
+    background-color: #1e2330;
+    border: 1px solid #2f3646;
+    color: #ffffff;
+}
+
+QToolButton:checked {
+    background-color: #292f3d;
+    border: 1px solid #3a4253;
+    color: #ffffff;
+}
+
+QToolButton:disabled {
+    background-color: transparent;
+    color: #4a5160;
+}
+
+QProgressBar {
+    background-color: #161a23;
+    color: #e0e3ea;
+    border: 1px solid #2a3040;
+    border-radius: 7px;
+    text-align: center;
+    min-height: 14px;
+}
+
+QProgressBar::chunk {
+    background-color: #d4a84b;
+    border-radius: 5px;
+}
+
+QGroupBox {
+    background-color: #161a23;
+    color: #d6dae3;
+    border: 1px solid #2a3040;
+    border-radius: 9px;
+    margin-top: 12px;
+    padding: 12px;
+}
+
+QGroupBox::title {
+    background-color: #161a23;
+    color: #aeb5c2;
+    subcontrol-origin: margin;
+    left: 12px;
+    padding: 0 6px;
+}
+
+QCheckBox {
+    background-color: transparent;
+    color: #d6dae3;
+    spacing: 8px;
+}
+
+QCheckBox:hover {
+    color: #ffffff;
+}
+
+QCheckBox::indicator {
+    width: 17px;
+    height: 17px;
+    background-color: #161a23;
+    border: 1px solid #2f3646;
+    border-radius: 5px;
+}
+
+QCheckBox::indicator:hover {
+    background-color: #1e2330;
+    border: 1px solid #3d4557;
+}
+
+QCheckBox::indicator:checked {
+    background-color: #d4a84b;
+    border: 1px solid #d4a84b;
+}
+
+QRadioButton {
+    background-color: transparent;
+    color: #d6dae3;
+    spacing: 8px;
+}
+
+QRadioButton::indicator {
+    width: 17px;
+    height: 17px;
+    background-color: #161a23;
+    border: 1px solid #2f3646;
+    border-radius: 9px;
+}
+
+QRadioButton::indicator:checked {
+    background-color: #d4a84b;
+    border: 4px solid #161a23;
+}
+
+QSpinBox,
+QDoubleSpinBox {
+    background-color: #161a23;
+    color: #ffffff;
+    border: 1px solid #2a3040;
+    border-radius: 8px;
+    padding: 8px 10px;
+}
+
+QSpinBox::up-button,
+QSpinBox::down-button,
+QDoubleSpinBox::up-button,
+QDoubleSpinBox::down-button {
+    background-color: #1e2330;
+    border: none;
+    width: 22px;
+}
+
+QSpinBox::up-button:hover,
+QSpinBox::down-button:hover,
+QDoubleSpinBox::up-button:hover,
+QDoubleSpinBox::down-button:hover {
+    background-color: #2c3444;
+}
+
+QSlider::groove:horizontal {
+    height: 5px;
+    background-color: #2a3040;
+    border-radius: 3px;
+}
+
+QSlider::handle:horizontal {
+    width: 14px;
+    height: 14px;
+    margin: -5px 0;
+    background-color: #d4a84b;
+    border: 1px solid #e6c77b;
+    border-radius: 7px;
+}
+
+QSlider::handle:horizontal:hover {
+    background-color: #e6c77b;
+}
+
+QSlider::sub-page:horizontal {
+    background-color: #d4a84b;
+    border-radius: 3px;
+}
+
+QTabWidget::pane {
+    background-color: #161a23;
+    border: 1px solid #2a3040;
+    border-radius: 8px;
+}
+
+QTabBar::tab {
+    background-color: #181c26;
+    color: #737c8d;
+    border: 1px solid #2a3040;
+    padding: 8px 14px;
+    margin-right: 2px;
+}
+
+QTabBar::tab:hover {
+    background-color: #1e2330;
+    color: #d6dae3;
+}
+
+QTabBar::tab:selected {
+    background-color: #292f3d;
+    color: #ffffff;
+    border-color: #3d4557;
+}
+
+QFrame {
+    background-color: transparent;
+}
+
+QLabel:disabled {
+    color: #4a5160;
+}
+
+/* =========================================================
+   DASHBOARD
+========================================================= */
+
+QWidget#DashboardPage {
+    background-color: #0D0E10;
+}
+
+QWidget#DashboardContent {
+    background-color: transparent;
+}
+
+QScrollArea#DashboardScroll {
+    background-color: transparent;
+    border: none;
+}
+
+QLabel#DashboardTitle {
+    background-color: transparent;
+    color: #F2F3F5;
+
+    font-size: 28px;
+    font-weight: 700;
+}
+
+QLabel#DashboardSubtitle {
+    background-color: transparent;
+    color: #737984;
+
+    font-size: 13px;
+}
+
+
+/* =========================================================
+   STAT CARDS
+========================================================= */
+
+QFrame#DashboardStatCard {
+    background-color: #15171A;
+
+    border: 1px solid #292C31;
+    border-radius: 12px;
+}
+
+QFrame#DashboardStatCard:hover {
+    background-color: #181B20;
+    border: 1px solid #353A42;
+}
+
+QLabel#DashboardStatTitle {
+    background-color: transparent;
+    color: #858B96;
+
+    font-size: 12px;
+    font-weight: 600;
+}
+
+QLabel#DashboardStatValue {
+    background-color: transparent;
+    color: #F2F3F5;
+
+    font-size: 25px;
+    font-weight: 700;
+}
+
+QLabel#DashboardStatSubtitle {
+    background-color: transparent;
+    color: #5F646D;
+
+    font-size: 11px;
+}
+
+
+/* =========================================================
+   PANELS
+========================================================= */
+
+QFrame#DashboardPanel {
+    background-color: #15171A;
+
+    border: 1px solid #292C31;
+    border-radius: 12px;
+}
+
+QLabel#DashboardPanelTitle {
+    background-color: transparent;
+    color: #E8E9EC;
+
+    font-size: 15px;
+    font-weight: 700;
+
+    padding-bottom: 4px;
+}
+
+QLabel#DashboardRowLabel {
+    background-color: transparent;
+    color: #A9AEB7;
+
+    font-size: 12px;
+}
+
+QLabel#DashboardRowValue {
+    background-color: transparent;
+    color: #E7E9EC;
+
+    font-size: 12px;
+    font-weight: 600;
+}
+
+QLabel#DashboardMuted {
+    background-color: transparent;
+    color: #666B74;
+
+    font-size: 12px;
+}
+
+
+/* =========================================================
+   BARRAS
+========================================================= */
+
+QProgressBar#DashboardColorBar,
+QProgressBar#DashboardRarityBar {
+    background-color: #202328;
+
+    border: none;
+    border-radius: 3px;
+}
+
+QProgressBar#DashboardColorBar::chunk,
+QProgressBar#DashboardRarityBar::chunk {
+    background-color: #6E747F;
+
+    border-radius: 3px;
+}
+
+
+/* =========================================================
+   RECENTES
+========================================================= */
+
+QLabel#DashboardRecentName {
+    background-color: transparent;
+
+    color: #C7CAD0;
+
+    font-size: 12px;
+}
+
+
+/* =========================================================
+   DECK SUMMARY
+========================================================= */
+
+QFrame#DashboardDeckSummary {
+    background-color: #15171A;
+
+    border: 1px solid #292C31;
+    border-radius: 12px;
+}
+
+QLabel#DashboardDeckTitle {
+    background-color: transparent;
+
+    color: #A9AEB7;
+
+    font-size: 13px;
+    font-weight: 600;
+}
+
+QLabel#DashboardDeckValue {
+    background-color: transparent;
+
+    color: #F2F3F5;
+
+    font-size: 17px;
+    font-weight: 700;
+}
+
+/* =========================================================
+   DASHBOARD — MAGIC COLLECTION
+========================================================= */
+
+QWidget#DashboardPage {
+    background-color: #0C0D10;
+}
+
+QWidget#DashboardContent {
+    background-color: transparent;
+}
+
+QScrollArea#DashboardScroll {
+    background-color: transparent;
+    border: none;
+}
+
+QLabel#DashboardTitle {
+    background-color: transparent;
+
+    color: #F4F5F7;
+
+    font-size: 28px;
+    font-weight: 700;
+}
+
+QLabel#DashboardSubtitle {
+    background-color: transparent;
+
+    color: #777D87;
+
+    font-size: 12px;
+}
+
+QLabel#DashboardUpdated {
+    background-color: transparent;
+
+    color: #626873;
+
+    font-size: 11px;
+
+    padding-top: 3px;
+}
+
+
+/* =========================================================
+   STAT CARDS
+========================================================= */
+
+QFrame#DashboardStatCard {
+    background-color: #15171B;
+
+    border: 1px solid #292D34;
+    border-radius: 10px;
+
+    min-height: 86px;
+}
+
+QFrame#DashboardStatCard:hover {
+    background-color: #181B20;
+
+    border: 1px solid #343943;
+}
+
+QLabel#DashboardStatTitle {
+    background-color: transparent;
+
+    color: #737984;
+
+    font-size: 10px;
+    font-weight: 700;
+
+    letter-spacing: 1px;
+}
+
+QLabel#DashboardStatValue {
+    background-color: transparent;
+
+    color: #F1F2F4;
+
+    font-size: 25px;
+    font-weight: 700;
+}
+
+QLabel#DashboardStatDescription {
+    background-color: transparent;
+
+    color: #5D636D;
+
+    font-size: 10px;
+}
+
+
+/* =========================================================
+   PANELS
+========================================================= */
+
+QFrame#DashboardPanel {
+    background-color: #15171B;
+
+    border: 1px solid #292D34;
+    border-radius: 10px;
+}
+
+QLabel#DashboardPanelTitle {
+    background-color: transparent;
+
+    color: #E8EAF0;
+
+    font-size: 14px;
+    font-weight: 700;
+}
+
+QLabel#DashboardPanelSubtitle {
+    background-color: transparent;
+
+    color: #646A74;
+
+    font-size: 10px;
+}
+
+
+/* =========================================================
+   LINHAS
+========================================================= */
+
+QLabel#DashboardRowLabel {
+    background-color: transparent;
+
+    color: #AEB2BA;
+
+    font-size: 11px;
+}
+
+QLabel#DashboardRowValue {
+    background-color: transparent;
+
+    color: #E1E3E7;
+
+    font-size: 11px;
+    font-weight: 600;
+}
+
+QLabel#DashboardMuted {
+    background-color: transparent;
+
+    color: #60656E;
+
+    font-size: 11px;
+}
+
+
+/* =========================================================
+   CORES
+========================================================= */
+
+QLabel#DashboardColorDot {
+    border-radius: 4px;
+
+    background-color: #666C75;
+}
+
+QLabel#DashboardColorDot[color="White"] {
+    background-color: #E5E0D3;
+}
+
+QLabel#DashboardColorDot[color="Blue"] {
+    background-color: #4B82C4;
+}
+
+QLabel#DashboardColorDot[color="Black"] {
+    background-color: #777B83;
+}
+
+QLabel#DashboardColorDot[color="Red"] {
+    background-color: #B9574F;
+}
+
+QLabel#DashboardColorDot[color="Green"] {
+    background-color: #568A60;
+}
+
+QLabel#DashboardColorDot[color="Colorless"] {
+    background-color: #92969C;
+}
+
+QLabel#DashboardColorDot[color="Multi"] {
+    background-color: #B39A54;
+}
+
+
+/* =========================================================
+   BARRAS DE COR
+========================================================= */
+
+QProgressBar#DashboardColorBar {
+    background-color: #202329;
+
+    border: none;
+    border-radius: 4px;
+}
+
+QProgressBar#DashboardColorBar::chunk {
+    background-color: #6C727C;
+
+    border-radius: 4px;
+}
+
+QProgressBar#DashboardColorBar[color="White"]::chunk {
+    background-color: #B8B0A0;
+}
+
+QProgressBar#DashboardColorBar[color="Blue"]::chunk {
+    background-color: #477BB7;
+}
+
+QProgressBar#DashboardColorBar[color="Black"]::chunk {
+    background-color: #666A73;
+}
+
+QProgressBar#DashboardColorBar[color="Red"]::chunk {
+    background-color: #A94F49;
+}
+
+QProgressBar#DashboardColorBar[color="Green"]::chunk {
+    background-color: #4F825A;
+}
+
+QProgressBar#DashboardColorBar[color="Colorless"]::chunk {
+    background-color: #80858D;
+}
+
+QProgressBar#DashboardColorBar[color="Multi"]::chunk {
+    background-color: #AD9450;
+}
+
+
+/* =========================================================
+   RARIDADES
+========================================================= */
+
+QProgressBar#DashboardRarityBar {
+    background-color: #202329;
+
+    border: none;
+    border-radius: 4px;
+}
+
+QProgressBar#DashboardRarityBar::chunk {
+    background-color: #777D87;
+
+    border-radius: 4px;
+}
+
+
+/* =========================================================
+   MANA CURVE
+========================================================= */
+
+QLabel#DashboardManaValue {
+    background-color: transparent;
+
+    color: #8E949E;
+
+    font-size: 9px;
+}
+
+QLabel#DashboardManaLabel {
+    background-color: transparent;
+
+    color: #9EA3AC;
+
+    font-size: 10px;
+    font-weight: 600;
+}
+
+QProgressBar#DashboardManaBar {
+    background-color: #202329;
+
+    border: none;
+    border-radius: 4px;
+
+    min-width: 24px;
+    max-width: 24px;
+}
+
+QProgressBar#DashboardManaBar::chunk {
+    background-color: #777D87;
+
+    border-radius: 4px;
+}
+
+
+/* =========================================================
+   EDIÇÕES
+========================================================= */
+
+QLabel#DashboardSetName {
+    background-color: transparent;
+
+    color: #B7BBC2;
+
+    font-size: 11px;
+}
+
+QProgressBar#DashboardSetBar {
+    background-color: #202329;
+
+    border: none;
+    border-radius: 3px;
+}
+
+QProgressBar#DashboardSetBar::chunk {
+    background-color: #666C75;
+
+    border-radius: 3px;
+}
+
+
+/* =========================================================
+   CARTAS RECENTES
+========================================================= */
+
+QFrame#DashboardRecentCard {
+    background-color: #111317;
+
+    border: 1px solid transparent;
+    border-radius: 7px;
+}
+
+QFrame#DashboardRecentCard:hover {
+    background-color: #1A1D22;
+
+    border: 1px solid #2B3038;
+}
+
+QLabel#DashboardRecentImage {
+    background-color: #0B0C0E;
+
+    border: 1px solid #2B3038;
+    border-radius: 4px;
+}
+
+QLabel#DashboardImageFallback {
+    color: #555B64;
+
+    font-size: 18px;
+}
+
+QLabel#DashboardRecentName {
+    background-color: transparent;
+
+    color: #D8DBE0;
+
+    font-size: 11px;
+    font-weight: 600;
+}
+
+QLabel#DashboardRecentMeta {
+    background-color: transparent;
+
+    color: #626872;
+
+    font-size: 9px;
+}
+
+QLabel#DashboardRecentQuantity {
+    background-color: transparent;
+
+    color: #AEB3BC;
+
+    font-size: 11px;
+    font-weight: 700;
+}
+
+
+/* =========================================================
+   DECKS
+========================================================= */
+
+QFrame#DashboardDeckPanel {
+    background-color: #15171B;
+
+    border: 1px solid #292D34;
+    border-radius: 10px;
+}
+
+QLabel#DashboardDeckSubtitle {
+    background-color: transparent;
+
+    color: #626872;
+
+    font-size: 10px;
+}
+
+QFrame#DashboardDeckCard {
+    background-color: #111317;
+
+    border: 1px solid #292D34;
+    border-radius: 7px;
+}
+
+QFrame#DashboardDeckCard:hover {
+    background-color: #1A1D22;
+
+    border: 1px solid #383E47;
+}
+
+QLabel#DashboardDeckImage {
+    background-color: #0B0C0E;
+
+    border: 1px solid #2B3038;
+    border-radius: 4px;
+}
+
+QLabel#DashboardDeckName {
+    background-color: transparent;
+
+    color: #D8DBE0;
+
+    font-size: 11px;
+    font-weight: 600;
+}
+
+QLabel#DashboardDeckCards {
+    background-color: transparent;
+
+    color: #656B75;
+
+    font-size: 9px;
+}
+
+
+/* =========================================================
+   DASHBOARD — REFINAMENTO FINAL
+   ========================================================= */
+
+QWidget#DashboardPage {
+    background-color: #0f1117;
+}
+
+QWidget#DashboardContent {
+    background-color: transparent;
+}
+
+QScrollArea#DashboardScroll {
+    background: transparent;
+    border: none;
+}
+
+
+/* =========================================================
+   TÍTULO
+   ========================================================= */
+
+QLabel#DashboardTitle {
+    color: #f4f5f7;
+    font-size: 27px;
+    font-weight: 700;
+}
+
+QLabel#DashboardSubtitle {
+    color: #778092;
+    font-size: 12px;
+}
+
+QLabel#DashboardUpdated {
+    color: #596273;
+    font-size: 10px;
+}
+
+
+/* =========================================================
+   CARDS SUPERIORES
+   ========================================================= */
+
+QFrame#DashboardStatCard {
+    background-color: #171a22;
+    border: 1px solid #272d3a;
+    border-radius: 11px;
+
+    min-height: 96px;
+}
+
+QFrame#DashboardStatCard:hover {
+    background-color: #1b1f29;
+    border: 1px solid #394253;
+}
+
+QLabel#DashboardStatTitle {
+    background: transparent;
+    color: #737d8f;
+
+    font-size: 10px;
+    font-weight: 700;
+}
+
+QLabel#DashboardStatValue {
+    background: transparent;
+    color: #f5f6f8;
+
+    font-size: 24px;
+    font-weight: 700;
+}
+
+QLabel#DashboardStatDescription {
+    background: transparent;
+    color: #606a7b;
+
+    font-size: 10px;
+}
+
+
+/* =========================================================
+   PAINÉIS
+   ========================================================= */
+
+QFrame#DashboardPanel,
+QFrame#DashboardDeckPanel {
+    background-color: #171a22;
+
+    border: 1px solid #272d3a;
+    border-radius: 11px;
+}
+
+QLabel#DashboardPanelTitle {
+    background: transparent;
+    color: #edf0f5;
+
+    font-size: 14px;
+    font-weight: 700;
+}
+
+QLabel#DashboardPanelSubtitle {
+    background: transparent;
+    color: #667084;
+
+    font-size: 10px;
+}
+
+QLabel#DashboardRowLabel {
+    background: transparent;
+    color: #aeb5c2;
+
+    font-size: 11px;
+}
+
+QLabel#DashboardRowValue {
+    background: transparent;
+    color: #e6e9ee;
+
+    font-size: 11px;
+    font-weight: 600;
+}
+
+
+/* =========================================================
+   SÍMBOLOS DE MANA
+   ========================================================= */
+
+QLabel#DashboardManaSymbol {
+    border-radius: 11px;
+
+    font-size: 10px;
+    font-weight: 800;
+}
+
+QLabel#DashboardManaSymbol[color="White"] {
+    background-color: #e7e2d6;
+    color: #4b4a47;
+}
+
+QLabel#DashboardManaSymbol[color="Blue"] {
+    background-color: #4b83c4;
+    color: #ffffff;
+}
+
+QLabel#DashboardManaSymbol[color="Black"] {
+    background-color: #242831;
+    color: #d5d9e0;
+    border: 1px solid #4a505c;
+}
+
+QLabel#DashboardManaSymbol[color="Red"] {
+    background-color: #b6534b;
+    color: #ffffff;
+}
+
+QLabel#DashboardManaSymbol[color="Green"] {
+    background-color: #52845d;
+    color: #ffffff;
+}
+
+QLabel#DashboardManaSymbol[color="Colorless"] {
+    background-color: #858b95;
+    color: #171a20;
+}
+
+QLabel#DashboardManaSymbol[color="Multi"] {
+    background-color: #c0a64e;
+    color: #171a20;
+}
+
+
+/* =========================================================
+   BARRAS DE CORES
+   ========================================================= */
+
+QProgressBar#DashboardColorBar {
+    background-color: #20242c;
+    border: none;
+    border-radius: 4px;
+}
+
+QProgressBar#DashboardColorBar::chunk {
+    border-radius: 4px;
+}
+
+QProgressBar#DashboardColorBar[color="White"]::chunk {
+    background-color: #c8c1b1;
+}
+
+QProgressBar#DashboardColorBar[color="Blue"]::chunk {
+    background-color: #4b83c4;
+}
+
+QProgressBar#DashboardColorBar[color="Black"]::chunk {
+    background-color: #626873;
+}
+
+QProgressBar#DashboardColorBar[color="Red"]::chunk {
+    background-color: #b6534b;
+}
+
+QProgressBar#DashboardColorBar[color="Green"]::chunk {
+    background-color: #52845d;
+}
+
+QProgressBar#DashboardColorBar[color="Colorless"]::chunk {
+    background-color: #858b95;
+}
+
+QProgressBar#DashboardColorBar[color="Multi"]::chunk {
+    background-color: #c0a64e;
+}
+
+
+/* =========================================================
+   RARIDADES
+   ========================================================= */
+
+QProgressBar#DashboardRarityBar {
+    background-color: #20242c;
+    border: none;
+    border-radius: 4px;
+}
+
+QProgressBar#DashboardRarityBar::chunk {
+    border-radius: 4px;
+}
+
+QProgressBar#DashboardRarityBar[rarity="Comum"]::chunk {
+    background-color: #858b95;
+}
+
+QProgressBar#DashboardRarityBar[rarity="Incomum"]::chunk {
+    background-color: #aeb6c4;
+}
+
+QProgressBar#DashboardRarityBar[rarity="Rara"]::chunk {
+    background-color: #c9a84e;
+}
+
+QProgressBar#DashboardRarityBar[rarity="Mítica"]::chunk {
+    background-color: #c76b3c;
+}
+
+QProgressBar#DashboardRarityBar[rarity="Sem raridade"]::chunk {
+    background-color: #515866;
+}
+
+
+/* =========================================================
+   CURVA DE MANA — NOVO
+   ========================================================= */
+
+QFrame#DashboardManaTrack {
+    background-color: #20242c;
+
+    border: 1px solid #2b3240;
+    border-radius: 6px;
+}
+
+QFrame#DashboardManaFill {
+    background-color: #d4a84b;
+
+    border: none;
+    border-radius: 5px;
+}
+
+QLabel#DashboardManaValue {
+    background: transparent;
+    color: #dfe3e9;
+
+    font-size: 10px;
+    font-weight: 700;
+}
+
+QLabel#DashboardManaLabel {
+    background: transparent;
+    color: #858e9f;
+
+    font-size: 10px;
+    font-weight: 700;
+}
+
+
+/* =========================================================
+   EDIÇÕES
+   ========================================================= */
+
+QLabel#DashboardSetName {
+    background: transparent;
+    color: #c0c6d0;
+
+    font-size: 11px;
+    font-weight: 600;
+}
+
+QProgressBar#DashboardSetBar {
+    background-color: #20242c;
+
+    border: none;
+    border-radius: 3px;
+}
+
+QProgressBar#DashboardSetBar::chunk {
+    border-radius: 3px;
+}
+
+QProgressBar#DashboardSetBar[setIndex="0"]::chunk {
+    background-color: #d4a84b;
+}
+
+QProgressBar#DashboardSetBar[setIndex="1"]::chunk {
+    background-color: #5c84bd;
+}
+
+QProgressBar#DashboardSetBar[setIndex="2"]::chunk {
+    background-color: #668b67;
+}
+
+QProgressBar#DashboardSetBar[setIndex="3"]::chunk {
+    background-color: #9a6caf;
+}
+
+QProgressBar#DashboardSetBar[setIndex="4"]::chunk {
+    background-color: #b46b57;
+}
+
+QProgressBar#DashboardSetBar[setIndex="5"]::chunk {
+    background-color: #71808e;
+}
+
+
+/* =========================================================
+   CARTAS RECENTES
+   ========================================================= */
+
+QFrame#DashboardRecentCard {
+    background-color: #12151b;
+
+    border: 1px solid transparent;
+    border-radius: 8px;
+}
+
+QFrame#DashboardRecentCard:hover {
+    background-color: #1c2029;
+    border: 1px solid #303847;
+}
+
+QLabel#DashboardRecentImage {
+    background-color: #0c0f14;
+
+    border: 1px solid #2b3240;
+    border-radius: 5px;
+}
+
+QLabel#DashboardRecentName {
+    color: #e0e4ea;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+QLabel#DashboardRecentMeta {
+    color: #697385;
+    font-size: 9px;
+}
+
+QLabel#DashboardRecentQuantity {
+    color: #c5cbd5;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+
+/* =========================================================
+   DECKS
+   ========================================================= */
+
+QFrame#DashboardDeckCard {
+    background-color: #12151b;
+
+    border: 1px solid #292f3c;
+    border-radius: 9px;
+}
+
+QFrame#DashboardDeckCard:hover {
+    background-color: #1c2029;
+    border: 1px solid #d4a84b;
+}
+
+QLabel#DashboardDeckImage {
+    background-color: #0c0f14;
+
+    border: 1px solid #2b3240;
+    border-radius: 5px;
+}
+
+QLabel#DashboardDeckName {
+    background: transparent;
+    color: #e0e4ea;
+
+    font-size: 12px;
+    font-weight: 700;
+}
+
+QFrame#DashboardDeckCard:hover QLabel#DashboardDeckName {
+    color: #e4c36b;
+}
+
+QLabel#DashboardDeckCards {
+    background: transparent;
+    color: #727d8f;
+
+    font-size: 10px;
+}

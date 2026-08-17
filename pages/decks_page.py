@@ -32,9 +32,13 @@ ASSETS_DIR = BASE_DIR / "assets"
 
 ICONS_DIR = ASSETS_DIR / "icons"
 
-COLLECTION_ICON_PATH = ICONS_DIR / "collection_icon.png"
+COLLECTION_ICON_PATH = ICONS_DIR / "cards.png"
+
+COLLECTION_PATH = ICONS_DIR / "collection.png"
 
 CARD_ICON_PATH = ICONS_DIR / "card_icon.png"
+
+MAGIC_ICON_PATH = ICONS_DIR / "mcollection.png"
 
 from PySide6.QtWidgets import (
     QWidget,
@@ -6346,8 +6350,8 @@ class DecksPage(QWidget):
         if not collection_pixmap.isNull():
 
             collection_pixmap = collection_pixmap.scaled(
-                82,
-                82,
+                135,
+                135,
                 Qt.AspectRatioMode.KeepAspectRatio,
                 Qt.TransformationMode.SmoothTransformation,
             )
@@ -6422,7 +6426,15 @@ class DecksPage(QWidget):
         # =================================================
 
         self.add_cards_button = QPushButton(
-            "▦  Da coleção"
+            "Da coleção"
+        )
+
+        self.add_cards_button.setIcon(
+            QIcon(str(COLLECTION_PATH))
+        )
+
+        self.add_cards_button.setIconSize(
+            QSize(20, 20)
         )
 
         self.add_cards_button.setObjectName(
@@ -6450,7 +6462,15 @@ class DecksPage(QWidget):
         # =================================================
 
         self.add_magic_cards_button = QPushButton(
-            "✦  Magic / Scryfall"
+            "Magic / Scryfall"
+        )
+
+        self.add_magic_cards_button.setIcon(
+            QIcon(str(MAGIC_ICON_PATH))
+        )
+
+        self.add_magic_cards_button.setIconSize(
+            QSize(20, 20)
         )
 
         self.add_magic_cards_button.setObjectName(
