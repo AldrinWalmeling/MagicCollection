@@ -19,6 +19,7 @@ from PySide6.QtCore import (
 from PySide6.QtGui import (
     QPixmap,
     QIcon,
+    QIntValidator,
 )
 
 
@@ -221,29 +222,137 @@ def _get_card_value(card, key, index=None, default=None):
     return default
 
 
-def _load_pixmap(path):
-    if not path:
-        return None
+# =========================================================
+# PLACEHOLDER DA COLEÇÃO / DECK
+# =========================================================
+
+_DECK_PLACEHOLDER_PIXMAP = None
+
+
+def _get_deck_placeholder():
+    global _DECK_PLACEHOLDER_PIXMAP
+
+    if _DECK_PLACEHOLDER_PIXMAP is not None:
+        return _DECK_PLACEHOLDER_PIXMAP
 
     try:
-        path = Path(path)
 
-        if not path.exists():
+        if not CARD_ICON_PATH.exists():
             return None
 
-        if path.stat().st_size <= 0:
-            return None
-
-        pixmap = QPixmap(str(path))
+        pixmap = QPixmap(
+            str(CARD_ICON_PATH)
+        )
 
         if pixmap.isNull():
             return None
 
-        return pixmap
+        _DECK_PLACEHOLDER_PIXMAP = pixmap.scaled(
+            48,
+            68,
+            Qt.AspectRatioMode.KeepAspectRatio,
+            Qt.TransformationMode.FastTransformation,
+        )
+
+        return _DECK_PLACEHOLDER_PIXMAP
 
     except Exception:
         return None
 
+
+# =========================================================
+# CACHE GLOBAL DE PIXMAPS
+# =========================================================
+
+_DECK_IMAGE_CACHE = {}
+
+_DECK_IMAGE_CACHE_MAX = 500
+
+
+def _load_pixmap(path):
+
+    if not path:
+        return None
+
+    try:
+        path = str(path)
+
+    except Exception:
+        return None
+
+    # -----------------------------------------------------
+    # CACHE
+    # -----------------------------------------------------
+
+    cached = _DECK_IMAGE_CACHE.get(
+        path
+    )
+
+    if cached is not None:
+        return cached
+
+    # -----------------------------------------------------
+    # ARQUIVO
+    # -----------------------------------------------------
+
+    try:
+
+        file_path = Path(
+            path
+        )
+
+        if not file_path.exists():
+            return None
+
+        if file_path.stat().st_size <= 0:
+            return None
+
+        pixmap = QPixmap(
+            path
+        )
+
+        if pixmap.isNull():
+            return None
+
+    except Exception:
+        return None
+
+    # -----------------------------------------------------
+    # CACHE
+    # -----------------------------------------------------
+
+    _DECK_IMAGE_CACHE[path] = pixmap
+
+    # -----------------------------------------------------
+    # LIMITE
+    # -----------------------------------------------------
+
+    if (
+        len(_DECK_IMAGE_CACHE)
+        > _DECK_IMAGE_CACHE_MAX
+    ):
+
+        remove_count = max(
+            1,
+            int(
+                _DECK_IMAGE_CACHE_MAX
+                * 0.20
+            ),
+        )
+
+        keys = list(
+            _DECK_IMAGE_CACHE.keys()
+        )[
+            :remove_count
+        ]
+
+        for key in keys:
+            _DECK_IMAGE_CACHE.pop(
+                key,
+                None,
+            )
+
+    return pixmap
 
 # =========================================================
 # BANCO DE DADOS — DECKS
@@ -1242,6 +1351,7 @@ class DeckCardImage(QLabel):
 class DeckCardFrame(QFrame):
 
     doubleClicked = Signal()
+    quantityEdited = Signal(int)
 
     def __init__(
         self,
@@ -1258,8 +1368,8 @@ class DeckCardFrame(QFrame):
         # TAMANHO NORMAL
         # =================================================
 
-        self._base_width = 160
-        self._base_height = 230
+        self._base_width = 180
+        self._base_height = 252
 
         self._hover_scale = 1.08
 
@@ -1423,10 +1533,10 @@ class DeckCardFrame(QFrame):
         )
 
         # -------------------------------------------------
-        # QUANTIDADE
+        # QUANTIDADE EDITÁVEL
         # -------------------------------------------------
 
-        self.control_quantity = QLabel(
+        self.control_quantity = QLineEdit(
             "0",
             self.controls,
         )
@@ -1444,10 +1554,30 @@ class DeckCardFrame(QFrame):
             32,
         )
 
+        self.control_quantity.setValidator(
+            QIntValidator(
+                0,
+                999999,
+                self.control_quantity,
+            )
+        )
+
+        self.control_quantity.setFocusPolicy(
+            Qt.FocusPolicy.StrongFocus
+        )
+
+        # Mantém o hover ativo enquanto o campo de quantidade
+        # estiver sendo editado, mesmo se o mouse sair da carta.
+        self.control_quantity.installEventFilter(self)
+
         controls_layout.addWidget(
             self.control_quantity,
             0,
             Qt.AlignmentFlag.AlignCenter,
+        )
+
+        self.control_quantity.editingFinished.connect(
+            self._quantity_edit_finished
         )
 
         # -------------------------------------------------
@@ -1487,6 +1617,40 @@ class DeckCardFrame(QFrame):
         self.controls.hide()
 
         self._hovering = False
+        self._hover_locked = False
+
+    # =====================================================
+    # EVENT FILTER — EDIÇÃO DA QUANTIDADE
+    # =====================================================
+
+    def eventFilter(
+        self,
+        watched,
+        event,
+    ):
+
+        if watched is self.control_quantity:
+
+            if event.type() == QEvent.Type.FocusIn:
+
+                # Igual à lógica da coleção: ao selecionar o
+                # número, o estado de hover fica preso no card.
+                self._hover_locked = True
+
+                self._animate_hover(True)
+
+            elif event.type() == QEvent.Type.FocusOut:
+
+                self._hover_locked = False
+
+                # Se o mouse já saiu da carta, libera o hover.
+                if not self._hovering:
+                    self._animate_hover(False)
+
+        return super().eventFilter(
+            watched,
+            event,
+        )
 
     # =====================================================
     # QUANTIDADE
@@ -1508,6 +1672,37 @@ class DeckCardFrame(QFrame):
 
         self.control_quantity.setText(
             str(quantity)
+        )
+
+    # =====================================================
+    # EDITAR QUANTIDADE MANUALMENTE
+    # =====================================================
+
+    def _quantity_edit_finished(
+        self,
+    ):
+
+        try:
+            quantity = int(
+                self.control_quantity.text()
+            )
+        except (
+            TypeError,
+            ValueError,
+        ):
+            quantity = 0
+
+        quantity = max(
+            0,
+            quantity,
+        )
+
+        self.control_quantity.setText(
+            str(quantity)
+        )
+
+        self.quantityEdited.emit(
+            quantity
         )
 
     # =====================================================
@@ -1533,20 +1728,27 @@ class DeckCardFrame(QFrame):
         )
 
         # -------------------------------------------------
-        # CONTROLES
+        # CONTROLES HOVER
         # -------------------------------------------------
 
         self.controls.adjustSize()
 
-        control_margin = 4
-
-        self.controls.move(
+        # Centralizar horizontalmente
+        controls_x = (
             width
             - self.controls.width()
-            - control_margin,
+        ) // 2
+
+        # Colocar na parte inferior
+        controls_y = (
             height
             - self.controls.height()
-            - control_margin,
+            - 4
+        )
+
+        self.controls.move(
+            controls_x,
+            controls_y,
         )
 
         # -------------------------------------------------
@@ -1606,11 +1808,19 @@ class DeckCardFrame(QFrame):
 
         self._hovering = hovering
 
+        self.setProperty(
+            "hover",
+            bool(hovering or self._hover_locked),
+        )
+
+        self.style().unpolish(self)
+        self.style().polish(self)
+
         # -------------------------------------------------
         # Controles e Badge
         # -------------------------------------------------
 
-        if hovering:
+        if hovering or self._hover_locked:
 
             self.controls.show()
 
@@ -2189,15 +2399,14 @@ class NewDeckFrame(QFrame):
 # =========================================================
 
 class CollectionCardItem(QFrame):
-
     clicked = Signal(int)
     removed = Signal(int)
 
     def __init__(
-        self,
-        card,
-        deck_quantity,
-        parent=None,
+            self,
+            card,
+            deck_quantity,
+            parent=None,
     ):
         super().__init__(parent)
 
@@ -2217,6 +2426,8 @@ class CollectionCardItem(QFrame):
             0,
             int(deck_quantity or 0),
         )
+
+        self._image_loaded = False
 
         self.setObjectName(
             "CollectionDeckCard"
@@ -2239,6 +2450,10 @@ class CollectionCardItem(QFrame):
 
         layout.setSpacing(10)
 
+        # -------------------------------------------------
+        # IMAGEM
+        # -------------------------------------------------
+
         self.image_label = QLabel()
 
         self.image_label.setObjectName(
@@ -2255,22 +2470,25 @@ class CollectionCardItem(QFrame):
         )
 
         self.image_label.setText("")
-        
-        # Usar card.png como placeholder
-        if CARD_ICON_PATH.exists():
-            pixmap = QPixmap(str(CARD_ICON_PATH))
-            if not pixmap.isNull():
-                scaled = pixmap.scaled(
-                    48,
-                    68,
-                    Qt.AspectRatioMode.KeepAspectRatio,
-                    Qt.TransformationMode.SmoothTransformation,
-                )
-                self.image_label.setPixmap(scaled)
+
+        # -------------------------------------------------
+        # PLACEHOLDER
+        # -------------------------------------------------
+
+        placeholder = _get_deck_placeholder()
+
+        if placeholder is not None:
+            self.image_label.setPixmap(
+                placeholder
+            )
 
         layout.addWidget(
             self.image_label
         )
+
+        # -------------------------------------------------
+        # INFORMAÇÕES
+        # -------------------------------------------------
 
         info = QWidget()
 
@@ -2313,9 +2531,7 @@ class CollectionCardItem(QFrame):
             )
 
         name = QLabel(
-            str(
-                display_name
-            )
+            str(display_name)
         )
 
         name.setObjectName(
@@ -2327,6 +2543,10 @@ class CollectionCardItem(QFrame):
         info_layout.addWidget(
             name
         )
+
+        # -------------------------------------------------
+        # QUANTIDADE NA COLEÇÃO
+        # -------------------------------------------------
 
         collection_quantity = max(
             0,
@@ -2373,6 +2593,10 @@ class CollectionCardItem(QFrame):
 
         controls.setSpacing(4)
 
+        # -------------------------------------------------
+        # BOTÃO -
+        # -------------------------------------------------
+
         self.minus_button = QPushButton("−")
 
         self.minus_button.setObjectName(
@@ -2396,6 +2620,10 @@ class CollectionCardItem(QFrame):
             self.minus_button
         )
 
+        # -------------------------------------------------
+        # QUANTIDADE
+        # -------------------------------------------------
+
         self.quantity_label = QLabel(
             "0"
         )
@@ -2408,13 +2636,18 @@ class CollectionCardItem(QFrame):
             Qt.AlignmentFlag.AlignCenter
         )
 
-        self.quantity_label.setFixedWidth(
-            30
+        self.quantity_label.setFixedSize(
+            28,
+            30,
         )
 
         controls.addWidget(
             self.quantity_label
         )
+
+        # -------------------------------------------------
+        # BOTÃO +
+        # -------------------------------------------------
 
         self.add_button = QPushButton("+")
 
@@ -2443,8 +2676,16 @@ class CollectionCardItem(QFrame):
             controls
         )
 
+        # -------------------------------------------------
+        # ESTADO INICIAL
+        # -------------------------------------------------
+
         self.update_state()
-        self.load_image()
+
+
+    # -------------------------------------------------
+    # ATUALIZAR ESTADO
+    # -------------------------------------------------
 
     def update_state(self):
 
@@ -2483,13 +2724,25 @@ class CollectionCardItem(QFrame):
             self.deck_quantity > 0
         )
 
+    # -------------------------------------------------
+    # ADICIONAR CARTA
+    # -------------------------------------------------
+
     def add_one(self):
 
         if self.deck_quantity <= 0:
-            self.clicked.emit(self.card_id)
+            self.clicked.emit(
+                self.card_id
+            )
             return
 
-        self.clicked.emit(self.card_id)
+        self.clicked.emit(
+            self.card_id
+        )
+
+    # -------------------------------------------------
+    # REMOVER CARTA
+    # -------------------------------------------------
 
     def remove_one(self):
 
@@ -2500,7 +2753,18 @@ class CollectionCardItem(QFrame):
             self.card_id
         )
 
-    def load_image(self):
+    # -------------------------------------------------
+    # CARREGAR IMAGEM
+    # -------------------------------------------------
+
+    def load_image(
+            self,
+    ):
+
+        if self._image_loaded:
+            return
+
+        self._image_loaded = True
 
         image_path = _get_card_value(
             self.card,
@@ -2512,32 +2776,36 @@ class CollectionCardItem(QFrame):
             image_path
         )
 
-        if not pixmap:
+        if pixmap is None:
             return
 
         scaled = pixmap.scaled(
             48,
             68,
             Qt.AspectRatioMode.KeepAspectRatio,
-            Qt.TransformationMode.SmoothTransformation,
+            Qt.TransformationMode.FastTransformation,
         )
-
-        self.image_label.setText("")
 
         self.image_label.setPixmap(
             scaled
         )
 
+        self.image_label.setText(
+            ""
+        )
+    # -------------------------------------------------
+    # CLIQUE
+    # -------------------------------------------------
+
     def mousePressEvent(
-        self,
-        event,
+            self,
+            event,
     ):
 
         if (
-            event.button()
-            == Qt.MouseButton.LeftButton
+                event.button()
+                == Qt.MouseButton.LeftButton
         ):
-
             self.clicked.emit(
                 self.card_id
             )
@@ -2547,7 +2815,6 @@ class CollectionCardItem(QFrame):
             return
 
         super().mousePressEvent(event)
-
 
 # =========================================================
 # PAINEL LATERAL
@@ -2575,10 +2842,38 @@ class DeckCollectionPanel(QFrame):
         self.deck_quantities = {}
         self.deck_id = None
 
+        # =====================================================
+        # RENDERIZAÇÃO PROGRESSIVA
+        # =====================================================
+
+        self._rendered_items = {}
+
+        self._render_index = 0
+
+        self._render_batch_size = 12
+
+        self._render_timer = QTimer(
+            self
+        )
+
+        self._render_timer.setSingleShot(
+            True
+        )
+
+        self._render_timer.setInterval(
+            15
+        )
+
+        self._render_timer.timeout.connect(
+            self._render_next_batch
+        )
+
         self.filter_color = "all"
         self.filter_type = "all"
         self.filter_set = "all"
         self.filter_language = "all"
+
+        self._cards_loaded = False
 
         self.search_timer = QTimer(self)
 
@@ -2783,6 +3078,10 @@ class DeckCollectionPanel(QFrame):
             self.list_container
         )
 
+        self.scroll_area.verticalScrollBar().valueChanged.connect(
+            self._check_render_more
+        )
+
         layout.addWidget(
             self.scroll_area,
             1,
@@ -2811,18 +3110,63 @@ class DeckCollectionPanel(QFrame):
 
         self.search_input.blockSignals(False)
 
-        self.load_cards()
-
         self.show()
         self.raise_()
 
         self.search_input.setFocus()
 
-    def load_cards(self):
+        self.load_cards()
 
-        self.all_cards = list(
-            get_all_cards() or []
-        )
+    def load_cards(
+            self,
+            force=False,
+    ):
+
+        # =====================================================
+        # CARREGAR COLEÇÃO SOMENTE UMA VEZ
+        # =====================================================
+
+        if (
+                not self._cards_loaded
+                or force
+        ):
+            self.all_cards = list(
+                get_all_cards() or []
+            )
+
+            self._collection_quantities = {
+                int(
+                    _get_card_value(
+                        card,
+                        "id",
+                        0,
+                        0,
+                    )
+                    or 0
+                ):
+                    max(
+                        0,
+                        int(
+                            _get_card_value(
+                                card,
+                                "quantity",
+                                10,
+                                0,
+                            )
+                            or 0
+                        ),
+                    )
+                for card in self.all_cards
+            }
+
+
+            self._cards_loaded = True
+
+
+
+        # =====================================================
+        # QUANTIDADES DO DECK
+        # =====================================================
 
         self.deck_quantities = (
             get_deck_card_quantities(
@@ -2830,8 +3174,11 @@ class DeckCollectionPanel(QFrame):
             )
         )
 
-        self.apply_search()
+        # =====================================================
+        # APLICAR FILTROS
+        # =====================================================
 
+        self.apply_search()
     def schedule_search(
         self,
         _text,
@@ -3304,16 +3651,124 @@ class DeckCollectionPanel(QFrame):
         self.render_cards(
             filtered
         )
-    def render_cards(
-        self,
-        cards,
+
+    def _check_render_more(
+            self,
+            value,
     ):
+        if (
+                self._render_index
+                >= len(self.filtered_cards)
+        ):
+            return
+
+        scrollbar = (
+            self.scroll_area.verticalScrollBar()
+        )
+
+        maximum = scrollbar.maximum()
+
+        # -------------------------------------------------
+        # AINDA NÃO HÁ SCROLL SUFICIENTE
+        # -------------------------------------------------
+
+        if maximum <= 0:
+
+            if not self._render_timer.isActive():
+                self._render_timer.start()
+
+            return
+
+        # -------------------------------------------------
+        # PERTO DO FINAL
+        # -------------------------------------------------
+
+        remaining = (
+                maximum
+                - value
+        )
+
+        if remaining <= 300:
+
+            if not self._render_timer.isActive():
+                self._render_timer.start()
+
+    def render_cards(
+            self,
+            cards,
+    ):
+
+        self._render_timer.stop()
 
         self.clear_list()
 
-        visible_count = 0
+        self._rendered_items.clear()
 
-        for card in cards:
+        self.filtered_cards = list(
+            cards or []
+        )
+
+        self._render_index = 0
+
+        # =====================================================
+        # NENHUM RESULTADO
+        # =====================================================
+
+        if not self.filtered_cards:
+            empty = QLabel(
+                "Nenhuma carta encontrada."
+            )
+
+            empty.setObjectName(
+                "DeckPanelEmpty"
+            )
+
+            empty.setAlignment(
+                Qt.AlignmentFlag.AlignCenter
+            )
+
+            empty.setWordWrap(
+                True
+            )
+
+            self.list_layout.addWidget(
+                empty
+            )
+
+            return
+
+        # =====================================================
+        # PRIMEIRO LOTE
+        # =====================================================
+
+        self._render_next_batch()
+
+    def _render_next_batch(
+            self,
+    ):
+
+        start = (
+            self._render_index
+        )
+
+        end = min(
+            start
+            + self._render_batch_size,
+            len(
+                self.filtered_cards
+            ),
+        )
+
+        for index in range(
+                start,
+                end,
+        ):
+
+            card = (
+                self.filtered_cards[
+                    index
+                ]
+            )
 
             collection_quantity = max(
                 0,
@@ -3366,31 +3821,47 @@ class DeckCollectionPanel(QFrame):
                 item
             )
 
-            visible_count += 1
+            self._rendered_items[
+                card_id
+            ] = item
 
-        if visible_count == 0:
+            # -------------------------------------------------
+            # CARREGAR IMAGEM DEPOIS
+            # -------------------------------------------------
 
-            empty = QLabel(
-                "Nenhuma carta encontrada."
+            QTimer.singleShot(
+                0,
+                item.load_image,
             )
 
-            empty.setObjectName(
-                "DeckPanelEmpty"
+        self._render_index = end
+
+        # =====================================================
+        # AINDA HÁ MAIS
+        # =====================================================
+
+        if (
+                self._render_index
+                < len(
+            self.filtered_cards
+        )
+        ):
+            scrollbar = (
+                self.scroll_area.verticalScrollBar()
             )
 
-            empty.setAlignment(
-                Qt.AlignmentFlag.AlignCenter
-            )
+            maximum = scrollbar.maximum()
 
-            empty.setWordWrap(True)
+            if maximum <= 0:
+                self._render_timer.start()
 
-            self.list_layout.addWidget(
-                empty
-            )
+    def clear_list(
+            self,
+    ):
 
-        self.list_layout.addStretch()
+        self._render_timer.stop()
 
-    def clear_list(self):
+        self._rendered_items.clear()
 
         while self.list_layout.count():
 
@@ -3399,9 +3870,7 @@ class DeckCollectionPanel(QFrame):
             widget = item.widget()
 
             if widget:
-
                 widget.deleteLater()
-
     def add_card(
             self,
             card_id,
@@ -3441,46 +3910,12 @@ class DeckCollectionPanel(QFrame):
         # QUANTIDADE DISPONÍVEL NA COLEÇÃO
         # =================================================
 
-        collection_quantity = 0
-
-        for card in self.filtered_cards:
-
-            try:
-
-                current_id = int(
-                    _get_card_value(
-                        card,
-                        "id",
-                        0,
-                        0,
-                    )
-                    or 0
-                )
-
-            except (
-                    TypeError,
-                    ValueError,
-            ):
-
-                continue
-
-            if current_id != card_id:
-                continue
-
-            collection_quantity = max(
+        collection_quantity = (
+            self._collection_quantities.get(
+                card_id,
                 0,
-                int(
-                    _get_card_value(
-                        card,
-                        "quantity",
-                        10,
-                        0,
-                    )
-                    or 0
-                ),
             )
-
-            break
+        )
 
         # =================================================
         # LIMITE DA COLEÇÃO
@@ -3518,6 +3953,19 @@ class DeckCollectionPanel(QFrame):
                 current_quantity + 1
         )
 
+        item = (
+            self._rendered_items.get(
+                card_id
+            )
+        )
+
+        if item is not None:
+            item.deck_quantity = (
+                    current_quantity + 1
+            )
+
+            item.update_state()
+
         self.status_label.setText(
             "Carta adicionada ao deck."
         )
@@ -3526,9 +3974,49 @@ class DeckCollectionPanel(QFrame):
             card_id
         )
 
-        self.render_cards(
-            self.filtered_cards
+    def update_card_quantity(
+            self,
+            card_id,
+            quantity,
+    ):
+
+        try:
+            card_id = int(
+                card_id
+            )
+
+            quantity = int(
+                quantity
+            )
+
+        except (
+                TypeError,
+                ValueError,
+        ):
+            return
+
+        self.deck_quantities[
+            card_id
+        ] = max(
+            0,
+            quantity,
         )
+
+        item = (
+            self._rendered_items.get(
+                card_id
+            )
+        )
+
+        if item is None:
+            return
+
+        item.deck_quantity = max(
+            0,
+            quantity,
+        )
+
+        item.update_state()
 
     def remove_card(
         self,
@@ -3577,12 +4065,19 @@ class DeckCollectionPanel(QFrame):
             "Carta removida do deck."
         )
 
-        self.cardAdded.emit(
-            card_id
+        item = (
+            self._rendered_items.get(
+                card_id
+            )
         )
 
-        self.render_cards(
-            self.filtered_cards
+        if item is not None:
+            item.deck_quantity = new_quantity
+
+            item.update_state()
+
+        self.cardAdded.emit(
+            card_id
         )
 
     def close_panel(self):
@@ -3950,201 +4445,6 @@ class ScryfallWorker(
 # DENTRO DE DeckScryfallPanel
 # =========================================================
 
-def __init__(
-    self,
-    parent=None,
-):
-
-    super().__init__(
-        parent
-    )
-
-    self.setObjectName(
-        "DeckScryfallPanel"
-    )
-
-    self.setFixedWidth(
-        380
-    )
-
-    self.deck_id = None
-
-    self.all_cards = []
-
-    self.filtered_cards = []
-
-    self.search_pool = QThreadPool(
-        self
-    )
-
-    self.search_pool.setMaxThreadCount(
-        4
-    )
-
-    self.current_search_id = 0
-
-    self._active_workers = {}
-
-    self.search_timer = QTimer(
-        self
-    )
-
-    self.search_timer.setSingleShot(
-        True
-    )
-
-    self.search_timer.setInterval(
-        300
-    )
-
-    self.search_timer.timeout.connect(
-        self.search_scryfall
-    )
-
-    self.setup_ui()
-
-
-# =========================================================
-# PESQUISAR NO SCRYFALL
-# =========================================================
-
-def search_scryfall(
-    self,
-):
-
-    text = (
-        self.search_input
-        .text()
-        .strip()
-    )
-
-    if not text:
-
-        return
-
-    self.current_search_id += 1
-
-    search_id = (
-        self.current_search_id
-    )
-
-    self.results_list.clear()
-
-    self.status_label.setText(
-        "Pesquisando no Scryfall..."
-    )
-
-    worker = ScryfallWorker(
-        text
-    )
-
-    self._active_workers[
-        search_id
-    ] = worker
-
-    worker.signals.finished.connect(
-        self._on_scryfall_finished
-    )
-
-    worker.signals.error.connect(
-        self._on_scryfall_error
-    )
-
-    self.search_pool.start(
-        worker
-    )
-
-
-# =========================================================
-# RESULTADO DO WORKER
-# IMPORTANTE:
-# ESSE MÉTODO RODA NA THREAD PRINCIPAL
-# =========================================================
-
-@Slot(object)
-def _on_scryfall_finished(
-    self,
-    cards,
-):
-
-    # Descobre o worker atual pelo texto/
-    # busca mais recente.
-    search_id = (
-        self.current_search_id
-    )
-
-    self._active_workers.pop(
-        search_id,
-        None
-    )
-
-    if not self.isVisible():
-
-        return
-
-    cards = list(
-        cards or []
-    )
-
-    self.all_cards = cards
-
-    self.filtered_cards = cards
-
-    if not cards:
-
-        self.status_label.setText(
-            "Nenhuma carta encontrada."
-        )
-
-    else:
-
-        self.status_label.setText(
-            f"{len(cards)} "
-            + (
-                "resultado encontrado."
-                if len(cards) == 1
-                else "resultados encontrados."
-            )
-        )
-
-    self.render_cards(
-        cards
-    )
-
-
-# =========================================================
-# ERRO DO WORKER
-# =========================================================
-
-@Slot(str)
-def _on_scryfall_error(
-    self,
-    error,
-):
-
-    search_id = (
-        self.current_search_id
-    )
-
-    self._active_workers.pop(
-        search_id,
-        None
-    )
-
-    if not self.isVisible():
-
-        return
-
-    self.results_list.clear()
-
-    self.status_label.setText(
-        "Erro ao pesquisar no Scryfall."
-    )
-
-    print(
-        "[SCRYFALL] Erro:",
-        error,
-    )
 
 # =========================================================
 # PAINEL LATERAL — MAGIC / SCRYFALL
@@ -4213,6 +4513,11 @@ class DeckScryfallPanel(QFrame):
         )
 
         self.setup_ui()
+
+    # =====================================================
+    # FECHAR DECK
+    # =====================================================
+
 
     # =====================================================
     # SETUP
@@ -5786,6 +6091,8 @@ class DecksPage(QWidget):
 
         self._rendering_cards = False
 
+        self._deck_card_frames = {}
+
         # =====================================================
         # REFRESH AGRUPADO DO DECK
         # =====================================================
@@ -6708,36 +7015,6 @@ class DecksPage(QWidget):
         ):
             self._refresh_timer.start()
 
-            def _on_card_data_changed(
-                    self,
-                    card_id,
-            ):
-                try:
-                    card_id = int(
-                        card_id
-                    )
-
-                except (
-                        TypeError,
-                        ValueError,
-                ):
-                    return
-
-                if card_id <= 0:
-                    return
-
-                print(
-                    "[DECKS PAGE] Dados da carta alterados:",
-                    card_id,
-                )
-
-                # -----------------------------------------------------
-                # NÃO RECONSTRUIR A PÁGINA TODA
-                # -----------------------------------------------------
-
-                self.schedule_deck_refresh(
-                    load_preview=True
-                )
 
     # =====================================================
     # CALLBACK PAINEL
@@ -6778,14 +7055,43 @@ class DecksPage(QWidget):
         )
 
     def _panel_card_changed(
-        self,
-        _card_id,
+            self,
+            card_id,
     ):
 
-        self.schedule_deck_refresh(
-            load_preview=False
+        try:
+            card_id = int(
+                card_id
+            )
+        except (
+                TypeError,
+                ValueError,
+        ):
+            return
+
+        # O painel já atualizou o próprio item.
+        # Aqui só sincronizamos o card que mudou
+        # no grid do deck.
+
+        frame = (
+            self._deck_card_frames.get(
+                card_id
+            )
         )
 
+        quantity = (
+            self.collection_panel
+            .deck_quantities
+            .get(
+                card_id,
+                0,
+            )
+        )
+
+        if frame is not None:
+            frame.set_quantity(
+                quantity
+            )
     # =====================================================
     # LIMPAR GRID
     # =====================================================
@@ -7115,6 +7421,8 @@ class DecksPage(QWidget):
                     self.current_deck_cards
                 )
 
+            self._deck_card_frames.clear()
+
             self.clear_grid(
                 self.cards_grid
             )
@@ -7199,6 +7507,10 @@ class DecksPage(QWidget):
 
                 frame = DeckCardFrame()
 
+                self._deck_card_frames[
+                    card_id
+                ] = frame
+
                 frame.set_quantity(
                     quantity
                 )
@@ -7226,6 +7538,15 @@ class DecksPage(QWidget):
                     )
                 )
 
+                frame.quantityEdited.connect(
+                    lambda new_quantity,
+                           cid=card_id:
+                    self.set_deck_card_quantity(
+                        cid,
+                        new_quantity,
+                    )
+                )
+
                 row = index // columns
 
                 column = index % columns
@@ -7243,8 +7564,8 @@ class DecksPage(QWidget):
 
                 if pixmap:
                     scaled = pixmap.scaled(
-                        156,
-                        226,
+                        176,
+                        246,
                         Qt.AspectRatioMode.KeepAspectRatio,
                         Qt.TransformationMode.SmoothTransformation,
                     )
@@ -7278,18 +7599,115 @@ class DecksPage(QWidget):
         finally:
 
             self._rendering_cards = False
+    def set_deck_card_quantity(
+        self,
+        card_id,
+        new_quantity,
+    ):
+
+        if not self.current_deck_id:
+            return
+
+        try:
+            card_id = int(card_id)
+            new_quantity = int(new_quantity)
+
+        except (
+            TypeError,
+            ValueError,
+        ):
+            return
+
+        if card_id <= 0:
+            return
+
+        new_quantity = max(
+            0,
+            new_quantity,
+        )
+
+        # ---------------------------------------------
+        # QUANTIDADE ATUAL
+        # ---------------------------------------------
+
+        current_quantity = 0
+
+        for card in self.current_deck_cards:
+
+            current_id = int(
+                _get_card_value(
+                    card,
+                    "id",
+                    0,
+                    0,
+                )
+                or 0
+            )
+
+            if current_id != card_id:
+                continue
+
+            current_quantity = int(
+                _get_card_value(
+                    card,
+                    "deck_quantity",
+                    14,
+                    0,
+                )
+                or 0
+            )
+
+            break
+
+        # ---------------------------------------------
+        # CALCULAR DIFERENÇA
+        # ---------------------------------------------
+
+        difference = (
+            new_quantity
+            - current_quantity
+        )
+
+        if difference == 0:
+            return
+
+        # ---------------------------------------------
+        # USAR O MESMO SISTEMA DOS BOTÕES + / -
+        # ---------------------------------------------
+
+        self.change_card_quantity(
+            card_id,
+            difference,
+        )
 
     # =====================================================
     # ALTERAR QUANTIDADE
     # =====================================================
 
     def change_card_quantity(
-        self,
-        card_id,
-        amount,
+            self,
+            card_id,
+            amount,
     ):
 
         if not self.current_deck_id:
+            return
+
+        try:
+
+            card_id = int(
+                card_id
+            )
+
+            amount = int(
+                amount
+            )
+
+        except (
+                TypeError,
+                ValueError,
+        ):
+
             return
 
         success = change_deck_card_quantity(
@@ -7301,12 +7719,137 @@ class DecksPage(QWidget):
         if not success:
             return
 
-        self.schedule_deck_refresh()
+        # =====================================================
+        # ATUALIZAR MEMÓRIA DO DECK
+        # =====================================================
 
-        if self.collection_panel.isVisible():
+        current_quantity = 0
 
-            self.collection_panel.load_cards()
+        for card in (
+                self.current_deck_cards
+        ):
 
+            current_id = int(
+                _get_card_value(
+                    card,
+                    "id",
+                    0,
+                    0,
+                )
+                or 0
+            )
+
+            if current_id != card_id:
+                continue
+
+            current_quantity = int(
+                _get_card_value(
+                    card,
+                    "deck_quantity",
+                    14,
+                    0,
+                )
+                or 0
+            )
+
+            new_quantity = max(
+                0,
+                current_quantity + amount,
+            )
+
+            if isinstance(
+                    card,
+                    dict,
+            ):
+                card[
+                    "deck_quantity"
+                ] = new_quantity
+
+            break
+
+        # =====================================================
+        # ATUALIZAR TOTAL
+        # =====================================================
+
+        total = sum(
+            max(
+                0,
+                int(
+                    _get_card_value(
+                        card,
+                        "deck_quantity",
+                        14,
+                        0,
+                    )
+                    or 0
+                ),
+            )
+            for card in (
+                self.current_deck_cards
+            )
+        )
+
+        self.deck_total_label.setText(
+            f"{total} "
+            f"{'carta' if total == 1 else 'cartas'}"
+        )
+
+        # =====================================================
+        # ATUALIZAR ITEM DO PAINEL
+        # =====================================================
+
+        if (
+                self.collection_panel
+                and self.collection_panel.isVisible()
+        ):
+
+            old_quantity = int(
+                self.collection_panel.deck_quantities.get(
+                    card_id,
+                    0,
+                )
+                or 0
+            )
+
+            new_quantity = max(
+                0,
+                old_quantity + amount,
+            )
+
+            if new_quantity > 0:
+
+                self.collection_panel.deck_quantities[
+                    card_id
+                ] = new_quantity
+
+            else:
+
+                self.collection_panel.deck_quantities.pop(
+                    card_id,
+                    None,
+                )
+
+            self.collection_panel.update_card_quantity(
+                card_id,
+                new_quantity,
+            )
+
+        # =====================================================
+        # ATUALIZAR SOMENTE O CARD DO DECK
+        # =====================================================
+
+        frame = getattr(
+            self,
+            "_deck_card_frames",
+            {},
+        ).get(
+            card_id
+        )
+
+        if frame is not None:
+            frame.set_quantity(
+                new_quantity
+            )
     # =====================================================
     # ABRIR PAINEL — COLEÇÃO
     # =====================================================
@@ -7414,7 +7957,7 @@ class DecksPage(QWidget):
             self.scryfall_panel.search_timer.stop()
 
             self.scryfall_panel.hide()
-            
+        
             # Não deletar o painel, apenas esconder
             # Isso evita o erro "Internal C++ object already deleted"
 
@@ -7706,7 +8249,7 @@ class DecksPage(QWidget):
         self.deck_cover_label.clear()
 
         self.deck_cover_label.setText("")
-        
+    
         # Usar card.png como placeholder
         if CARD_ICON_PATH.exists():
             pixmap = QPixmap(str(CARD_ICON_PATH))
@@ -7958,3 +8501,5 @@ class DecksPage(QWidget):
         super().closeEvent(
             event
         )
+
+

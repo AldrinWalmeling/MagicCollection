@@ -1094,6 +1094,120 @@ QListWidget#DeckPanelResultsList::item:selected {
     color: #ffffff;
 }
 
+/* =========================================================
+   CARTA DO DECK — GRID
+========================================================= */
+
+QFrame#DeckCardFrame {
+    background-color: transparent;
+    border: none;
+}
+
+QFrame#DeckCardFrame:hover {
+    background-color: transparent;
+    border: none;
+}
+
+QFrame#DeckCardFrame:hover {
+    background-color: #191B1F;
+    border: 1px solid #3A3D43;
+}
+
+QFrame#DeckCardItem {
+    background-color: #15171A;
+    border: 1px solid #272A2E;
+    border-radius: 10px;
+}
+
+QFrame#DeckCardItem:hover {
+    background-color: #191B1F;
+    border: 1px solid #3A3D43;
+}
+
+QFrame#DeckCardItem[selected="true"] {
+    border: 1px solid #777A80;
+    background-color: #191B1F;
+}
+
+QFrame#DeckCardItem[isPrimary="true"] {
+    border: 1px solid #8A8D93;
+    background-color: #191B1F;
+}
+
+QLabel#DeckQuantityBadge,
+QLabel#GridQuantityBadge {
+    background-color: rgba(13, 14, 16, 235);
+    color: #FFFFFF;
+
+    border: 1px solid rgba(255, 255, 255, 180);
+    border-radius: 8px;
+
+    padding-left: 7px;
+    padding-right: 7px;
+    padding-top: 2px;
+    padding-bottom: 2px;
+
+    font-size: 13px;
+    font-weight: bold;
+}
+
+/* =========================================================
+   CONTROLES DE QUANTIDADE — DECK
+========================================================= */
+
+QFrame#DeckQuantityControls {
+    background-color: rgba(13, 14, 16, 235);
+
+    border: none;
+    border-top: 1px solid #303339;
+    border-radius: 10px;
+
+    border-bottom-left-radius: 9px;
+    border-bottom-right-radius: 9px;
+}
+
+QLabel#DeckControlQuantity {
+    background-color: #232936;
+    color: #FFFFFF;
+
+    border: 1px solid #454850;
+    border-radius: 6px;
+
+    padding: 4px 9px;
+    font-size: 12px;
+    font-weight: bold;
+
+    qproperty-alignment: 'AlignCenter';
+}
+
+QPushButton#DeckQuantityButton {
+    background-color: #232936;
+    color: #d6dae3;
+    border: 1px solid #2f3646;
+    border-radius: 6px;
+    min-width: 30px;
+    max-width: 30px;
+    min-height: 30px;
+    max-height: 30px;
+    padding: 0;
+    font-size: 16px;
+    font-weight: 700;
+}
+
+QPushButton#DeckQuantityButton:hover {
+    background-color: #303339;
+    border: 1px solid #454850;
+    color: #FFFFFF;
+}
+
+QPushButton#DeckQuantityButton:pressed {
+    background-color: #1C1E22;
+    border: 1px solid #383B41;
+    color: #FFFFFF;
+}
+
+/* ========================================================= */
+
 QFrame#CollectionDeckCard {
     background-color: #181c26;
     border: 1px solid #272e3d;
@@ -1302,9 +1416,19 @@ QLabel#GridCardImage {
     font-size: 21px;
 }
 
+/* =========================================================
+   HOVER / CONTROLES DE QUANTIDADE — COLLECTION
+========================================================= */
+
+/*
+    Mantém o formato original da Collection:
+    overlay flutuante sobre a carta.
+*/
+
 QFrame#GridQuantityOverlay {
-    background-color: rgba(10, 12, 17, 215);
-    border: 1px solid rgba(255, 255, 255, 40);
+    background-color: rgba(10, 12, 17, 235);
+
+    border: 1px solid #303339;
     border-radius: 10px;
 }
 
@@ -1317,38 +1441,96 @@ QLabel#GridQuantityLabel {
     padding: 2px 7px;
 }
 
+/* =========================================================
+   CONTROLES DE QUANTIDADE — COLLECTION
+========================================================= */
+
+QFrame#GridQuantityOverlay {
+    background-color: rgba(13, 14, 16, 235);
+    border: 1px solid #303339;
+    border-radius: 10px;
+}
+
+/* ---------------------------------------------------------
+   BOTÕES + / -
+--------------------------------------------------------- */
+
 QPushButton#GridQuantityButton {
     background-color: #232936;
     color: #d6dae3;
+
     border: 1px solid #2f3646;
     border-radius: 6px;
+
     min-width: 30px;
     max-width: 30px;
+
     min-height: 30px;
     max-height: 30px;
+
     padding: 0;
+
     font-size: 16px;
     font-weight: 700;
 }
 
 QPushButton#GridQuantityButton:hover {
-    background-color: #2c3444;
-    border: 1px solid #455068;
+    background-color: #303339;
+    border: 1px solid #454850;
     color: #ffffff;
 }
 
-QLineEdit#GridQuantityInput {
-    background-color: rgba(255, 255, 255, 16);
-    border: 1px solid rgba(255, 255, 255, 40);
-    border-radius: 7px;
+/* PRESSIONADO */
+
+QPushButton#GridQuantityButton:pressed {
+    background-color: #1c1e22;
+    border: 1px solid #383b41;
     color: #ffffff;
-    font-size: 14px;
-    font-weight: 700;
+}
+
+/* DESABILITADO */
+
+QPushButton#GridQuantityButton:disabled {
+    background-color: #181c25;
+    border: 1px solid #232936;
+    color: #4a5160;
+}
+
+/* ---------------------------------------------------------
+   NÚMERO DA QUANTIDADE
+--------------------------------------------------------- */
+
+QLineEdit#GridQuantityInput {
+    background-color: #232936;
+    color: #ffffff;
+
+    border: 1px solid #454850;
+    border-radius: 6px;
+
+    min-width: 34px;
+    max-width: 34px;
+
+    min-height: 30px;
+    max-height: 30px;
+
     padding: 0;
+
+    font-size: 13px;
+    font-weight: 700;
+
+    selection-background-color: #3a4253;
+    selection-color: #ffffff;
+}
+
+QLineEdit#GridQuantityInput:hover {
+    background-color: #303339;
+    border: 1px solid #454850;
 }
 
 QLineEdit#GridQuantityInput:focus {
+    background-color: #232936;
     border: 1px solid #d4a84b;
+    color: #ffffff;
 }
 
 QFrame#CardFrame {
@@ -1430,6 +1612,22 @@ QLabel#CardPT {
 QFrame#QuantityFrame {
     background-color: transparent;
     border: none;
+}
+
+QLabel#GridQuantityBadge {
+    background-color: rgba(13, 14, 16, 235);
+    color: #FFFFFF;
+
+    border: 1px solid rgba(255, 255, 255, 180);
+    border-radius: 8px;
+
+    padding-left: 7px;
+    padding-right: 7px;
+    padding-top: 2px;
+    padding-bottom: 2px;
+
+    font-size: 13px;
+    font-weight: bold;
 }
 
 QLabel#Quantity {
