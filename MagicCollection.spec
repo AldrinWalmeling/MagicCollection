@@ -24,34 +24,31 @@ a = Analysis(
         "main.py",
     ],
 
-    # Diretório principal do projeto
     pathex=[
         str(PROJECT_DIR),
     ],
 
-    # Binários adicionais
     binaries=[],
 
-    # Arquivos adicionais
-    datas=[],
+    datas=[
+        (
+            str(PROJECT_DIR / "ui" / "theme.qss"),
+            "ui",
+        ),
+    ],
 
-    # Imports que o PyInstaller não encontra automaticamente
     hiddenimports=[],
 
-    # Hooks personalizados
     hookspath=[],
 
     hooksconfig={},
 
     runtime_hooks=[],
 
-    # Módulos que queremos excluir
     excludes=[],
 
-    # Mantém o arquivo Python em archive
     noarchive=False,
 
-    # Otimização
     optimize=0,
 )
 
@@ -130,18 +127,10 @@ coll = COLLECT(
 
     a.datas,
 
-    # =====================================================
-    # ASSETS
-    # =====================================================
-
     Tree(
         str(ASSETS_DIR),
         prefix="assets",
     ),
-
-    # =====================================================
-    # CONFIGURAÇÕES
-    # =====================================================
 
     strip=False,
 
@@ -149,6 +138,5 @@ coll = COLLECT(
 
     upx_exclude=[],
 
-    # Nome da pasta final
     name="Magic Collection",
 )

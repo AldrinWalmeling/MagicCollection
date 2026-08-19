@@ -435,6 +435,351 @@ QComboBox QAbstractItemView {
     outline: none;
 }
 
+
+
+
+/* =========================================================
+   FILTROS DA COLLECTION
+========================================================= */
+
+/* ---------------------------------------------------------
+   BOTÕES DOS FILTROS
+--------------------------------------------------------- */
+
+QPushButton#MultiSelectFilterButton {
+    background-color: #161a23;
+    color: #d6dae3;
+    border: 1px solid #2a3040;
+    border-radius: 8px;
+    padding: 7px 12px;
+    min-height: 18px;
+    font-size: 13px;
+    font-weight: 600;
+    text-align: left;
+}
+
+QPushButton#MultiSelectFilterButton:hover {
+    background-color: #1a1f2a;
+    border: 1px solid #38405a;
+    color: #ffffff;
+}
+
+QPushButton#MultiSelectFilterButton:pressed {
+    background-color: #202632;
+    border: 1px solid #4a5367;
+}
+
+QPushButton#MultiSelectFilterButton:focus {
+    border: 1px solid #d4a84b;
+}
+
+
+/* ---------------------------------------------------------
+   MENU DOS FILTROS
+--------------------------------------------------------- */
+
+QPushButton#MultiSelectFilterButton QMenu {
+    background-color: #181c26;
+    color: #e8ebf2;
+    border: 1px solid #30384a;
+    border-radius: 12px;
+    padding: 1px;
+}
+
+
+/* ---------------------------------------------------------
+   ÁREA INTERNA DO MENU
+--------------------------------------------------------- */
+
+QPushButton#MultiSelectFilterButton QScrollArea {
+    background-color: transparent;
+    border: none;
+}
+
+
+/* ---------------------------------------------------------
+   CHECKBOXES
+--------------------------------------------------------- */
+
+QPushButton#MultiSelectFilterButton QCheckBox {
+    background-color: transparent;
+    color: #cfd4df;
+    border: none;
+    border-radius: 6px;
+    padding: 6px 8px;
+    spacing: 8px;
+    min-height: 24px;
+}
+
+QPushButton#MultiSelectFilterButton QCheckBox:hover {
+    background-color: #292f3d;
+    color: #ffffff;
+}
+
+QPushButton#MultiSelectFilterButton QCheckBox:checked {
+    background-color: #292f3d;
+    color: #ffffff;
+    font-weight: 600;
+}
+
+
+/* =========================================================
+   TODAS
+========================================================= */
+
+QWidget#CollectionFilterMenu QCheckBox[filterOption="all"] {
+    color: #d4a84b;
+    font-weight: 700;
+}
+
+QWidget#CollectionFilterMenu QCheckBox[filterOption="all"]:hover {
+    background-color: #222936;
+    color: #e6c77b;
+}
+
+QWidget#CollectionFilterMenu QCheckBox[filterOption="all"]:checked {
+    background-color: #252d3b;
+    color: #e6c77b;
+}
+
+
+/* ---------------------------------------------------------
+   SEPARADOR DOS FILTROS
+--------------------------------------------------------- */
+
+QWidget#CollectionFilterSeparator {
+    background-color: #2c3443;
+    border: none;
+    min-height: 1px;
+    max-height: 1px;
+    margin: 3px 2px;
+}
+
+
+/* =========================================================
+   CONTAINER DO MENU DE FILTRO
+   ========================================================= */
+
+QWidget#CollectionFilterMenu {
+    background-color: #181c26;
+    color: #e8ebf2;
+    border: none;
+    border-radius: 10px;
+}
+
+
+/* ---------------------------------------------------------
+   OPÇÕES DO FILTRO
+--------------------------------------------------------- */
+
+QWidget#CollectionFilterMenu QCheckBox {
+    background-color: transparent;
+    color: #cdd3df;
+    border: none;
+    border-radius: 7px;
+    padding: 6px 9px;
+    spacing: 9px;
+    min-height: 26px;
+}
+
+QWidget#CollectionFilterMenu QCheckBox:hover {
+    background-color: #222936;
+    color: #ffffff;
+}
+
+QWidget#CollectionFilterMenu QCheckBox:checked {
+    background-color: #252d3b;
+    color: #ffffff;
+    font-weight: 600;
+}
+
+
+/* ---------------------------------------------------------
+   CHECKBOX MARCADO
+--------------------------------------------------------- */
+
+QWidget#CollectionFilterMenu QCheckBox:checked {
+    background-color: #292f3d;
+    color: #ffffff;
+    font-weight: 600;
+}
+
+
+/* ---------------------------------------------------------
+   CHECKBOX
+--------------------------------------------------------- */
+
+QWidget#CollectionFilterMenu QCheckBox::indicator {
+    width: 16px;
+    height: 16px;
+
+    background-color: #141820;
+
+    border: 1px solid #3a4354;
+    border-radius: 5px;
+}
+
+QWidget#CollectionFilterMenu QCheckBox::indicator:hover {
+    background-color: #1d2430;
+    border: 1px solid #687388;
+}
+
+QWidget#CollectionFilterMenu QCheckBox::indicator:checked {
+    background-color: #d4a84b;
+    border: 1px solid #d4a84b;
+}
+
+/* =========================================================
+   CORES DOS FILTROS
+========================================================= */
+
+QWidget#CollectionFilterMenu QCheckBox[filterColor="W"]:checked {
+    background-color: #eeeeee;
+    color: #151820;
+}
+
+QWidget#CollectionFilterMenu QCheckBox[filterColor="U"]:checked {
+    background-color: #3f82c4;
+    color: #ffffff;
+}
+
+QWidget#CollectionFilterMenu QCheckBox[filterColor="B"]:checked {
+    background-color: #3b3b44;
+    color: #ffffff;
+}
+
+QWidget#CollectionFilterMenu QCheckBox[filterColor="R"]:checked {
+    background-color: #bd4c4c;
+    color: #ffffff;
+}
+
+QWidget#CollectionFilterMenu QCheckBox[filterColor="G"]:checked {
+    background-color: #4d9360;
+    color: #ffffff;
+}
+
+QWidget#CollectionFilterMenu QCheckBox[filterColor="C"]:checked {
+    background-color: #9ba2ad;
+    color: #151820;
+}
+
+QWidget#CollectionFilterMenu QCheckBox[filterColor="M"]:checked {
+    background-color: #a96f42;
+    color: #ffffff;
+}
+
+/* =========================================================
+   CORES — FILTRO DE COR
+========================================================= */
+
+/* Branco */
+QPushButton#MultiSelectFilterButton QCheckBox[filterOption="color_W"]:checked {
+    background-color: #e8e8e8;
+    color: #161a23;
+}
+
+/* Azul */
+QPushButton#MultiSelectFilterButton QCheckBox[filterOption="color_U"]:checked {
+    background-color: #3f8fd2;
+    color: #ffffff;
+}
+
+/* Preto */
+QPushButton#MultiSelectFilterButton QCheckBox[filterOption="color_B"]:checked {
+    background-color: #3a3a42;
+    color: #ffffff;
+}
+
+/* Vermelho */
+QPushButton#MultiSelectFilterButton QCheckBox[filterOption="color_R"]:checked {
+    background-color: #c94a4a;
+    color: #ffffff;
+}
+
+/* Verde */
+QPushButton#MultiSelectFilterButton QCheckBox[filterOption="color_G"]:checked {
+    background-color: #4f9b62;
+    color: #ffffff;
+}
+
+/* Incolor */
+QPushButton#MultiSelectFilterButton QCheckBox[filterOption="color_C"]:checked {
+    background-color: #9da3ad;
+    color: #161a23;
+}
+
+/* Multicolor */
+QPushButton#MultiSelectFilterButton QCheckBox[filterOption="color_M"]:checked {
+    background-color: #b07a42;
+    color: #ffffff;
+}
+
+/* =========================================================
+   RARIDADES
+========================================================= */
+
+QPushButton#MultiSelectFilterButton QCheckBox[filterOption="rarity_common"]:checked {
+    background-color: #666d78;
+    color: #ffffff;
+}
+
+QPushButton#MultiSelectFilterButton QCheckBox[filterOption="rarity_uncommon"]:checked {
+    background-color: #7c8a9c;
+    color: #ffffff;
+}
+
+QPushButton#MultiSelectFilterButton QCheckBox[filterOption="rarity_rare"]:checked {
+    background-color: #b08a35;
+    color: #ffffff;
+}
+
+QPushButton#MultiSelectFilterButton QCheckBox[filterOption="rarity_mythic"]:checked {
+    background-color: #a64d32;
+    color: #ffffff;
+}
+
+QPushButton#MultiSelectFilterButton QCheckBox[filterOption="rarity_special"]:checked {
+    background-color: #7659a8;
+    color: #ffffff;
+}
+
+QPushButton#MultiSelectFilterButton QCheckBox[filterOption="rarity_bonus"]:checked {
+    background-color: #4f8f83;
+    color: #ffffff;
+}
+
+
+
+/* =========================================================
+   TIPOS
+========================================================= */
+
+QPushButton#MultiSelectFilterButton QCheckBox[filterOption^="type_"]:checked {
+    background-color: #292f3d;
+    color: #e6c77b;
+}
+
+
+/* =========================================================
+   SUPERTIPOS
+========================================================= */
+
+QPushButton#MultiSelectFilterButton QCheckBox[filterOption^="supertype_"]:checked {
+    background-color: #292f3d;
+    color: #d4a84b;
+}
+
+/* =========================================================
+   EDIÇÃO
+========================================================= */
+
+QPushButton#MultiSelectFilterButton QCheckBox[filterOption="edition"]:checked {
+    background-color: #292f3d;
+    color: #e6c77b;
+    font-weight: 600;
+}
+
+
 /* =========================================================
    MENUS
 ========================================================= */
@@ -467,6 +812,30 @@ QMenu::separator {
     background-color: #2c3342;
     margin: 4px 8px;
 }
+
+/* =========================================================
+   FUNDO DOS FILTROS
+========================================================= */
+
+
+
+QWidget#CollectionFilterMenu QScrollArea {
+    background-color: transparent;
+    border: none;
+}
+
+QWidget#CollectionFilterMenu QScrollArea > QWidget {
+    background-color: transparent;
+    border: none;
+}
+
+QWidget#CollectionFilterMenu QScrollArea > QWidget > QWidget {
+    background-color: transparent;
+    border: none;
+}
+
+
+
 
 /* =========================================================
    SCROLL AREAS

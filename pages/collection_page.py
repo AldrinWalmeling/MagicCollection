@@ -32,7 +32,6 @@ from components.card_details_dialog import (
     CardDetailsDialog,
 )
 
-
 # =========================================================
 # CAMINHOS DOS ASSETS
 # =========================================================
@@ -68,7 +67,6 @@ SCRYFALL_LANGUAGES = {
     "Chinês Tradicional": "zht",
     "Russo": "ru",
 }
-
 from PySide6.QtWidgets import (
     QWidget,
     QVBoxLayout,
@@ -88,7 +86,10 @@ from PySide6.QtWidgets import (
     QMessageBox,
     QComboBox,
     QApplication,
+    QCheckBox,
+    QWidgetAction,
 )
+
 
 from services.scryfall import (
     autocomplete_card_names,
@@ -141,13 +142,11 @@ from export import (
 
 from ui.theme import DARK_THEME
 
-
 # =========================================================
 # CONFIGURAÇÃO
 # =========================================================
 
 COLLECTION_RENDER_DELAY = 0  # Delay em ms antes de exibir cartas (0 = imediato)
-
 
 # =========================================================
 # CACHE GLOBAL DE IMAGENS
@@ -170,6 +169,7 @@ _GRID_THUMBNAIL_CACHE = {}
 
 _MAX_GRID_THUMBNAIL_CACHE_SIZE = 500
 
+
 def _get_grid_placeholder_pixmap(
         width,
         height,
@@ -191,17 +191,16 @@ def _get_grid_placeholder_pixmap(
     # -----------------------------------------------------
 
     if (
-        _GRID_PLACEHOLDER_PIXMAP is None
-        or _GRID_PLACEHOLDER_PIXMAP.isNull()
+            _GRID_PLACEHOLDER_PIXMAP is None
+            or _GRID_PLACEHOLDER_PIXMAP.isNull()
     ):
-
         _GRID_PLACEHOLDER_PIXMAP = QPixmap(
             str(CARD_ICON_PATH)
         )
 
     if (
-        _GRID_PLACEHOLDER_PIXMAP is None
-        or _GRID_PLACEHOLDER_PIXMAP.isNull()
+            _GRID_PLACEHOLDER_PIXMAP is None
+            or _GRID_PLACEHOLDER_PIXMAP.isNull()
     ):
         return QPixmap()
 
@@ -223,8 +222,8 @@ def _get_grid_placeholder_pixmap(
     )
 
     if (
-        cached is not None
-        and not cached.isNull()
+            cached is not None
+            and not cached.isNull()
     ):
         return cached
 
@@ -244,37 +243,12 @@ def _get_grid_placeholder_pixmap(
     # -----------------------------------------------------
 
     if "_GRID_THUMBNAIL_CACHE" in globals():
-
         _GRID_THUMBNAIL_CACHE[
             cache_key
         ] = scaled
 
     return scaled
 
-def _cleanup_grid_thumbnail_cache():
-    """
-    Mantém o cache de thumbnails dentro do limite.
-    Remove as entradas mais antigas quando necessário.
-    """
-
-    global _GRID_THUMBNAIL_CACHE
-
-    if (
-        len(_GRID_THUMBNAIL_CACHE)
-        > _MAX_GRID_THUMBNAIL_CACHE_SIZE
-    ):
-
-        keys_to_remove = list(
-            _GRID_THUMBNAIL_CACHE.keys()
-        )[
-            :int(
-                _MAX_GRID_THUMBNAIL_CACHE_SIZE
-                * 0.2
-            )
-        ]
-
-        for key in keys_to_remove:
-            del _GRID_THUMBNAIL_CACHE[key]
 
 def _cleanup_grid_thumbnail_cache():
     """
@@ -285,22 +259,47 @@ def _cleanup_grid_thumbnail_cache():
     global _GRID_THUMBNAIL_CACHE
 
     if (
-        len(_GRID_THUMBNAIL_CACHE)
-        > _MAX_GRID_THUMBNAIL_CACHE_SIZE
+            len(_GRID_THUMBNAIL_CACHE)
+            > _MAX_GRID_THUMBNAIL_CACHE_SIZE
     ):
 
         keys_to_remove = list(
             _GRID_THUMBNAIL_CACHE.keys()
         )[
-            :int(
-                _MAX_GRID_THUMBNAIL_CACHE_SIZE
-                * 0.2
-            )
-        ]
+                         :int(
+                             _MAX_GRID_THUMBNAIL_CACHE_SIZE
+                             * 0.2
+                         )
+                         ]
 
         for key in keys_to_remove:
             del _GRID_THUMBNAIL_CACHE[key]
 
+
+def _cleanup_grid_thumbnail_cache():
+    """
+    Mantém o cache de thumbnails dentro do limite.
+    Remove as entradas mais antigas quando necessário.
+    """
+
+    global _GRID_THUMBNAIL_CACHE
+
+    if (
+            len(_GRID_THUMBNAIL_CACHE)
+            > _MAX_GRID_THUMBNAIL_CACHE_SIZE
+    ):
+
+        keys_to_remove = list(
+            _GRID_THUMBNAIL_CACHE.keys()
+        )[
+                         :int(
+                             _MAX_GRID_THUMBNAIL_CACHE_SIZE
+                             * 0.2
+                         )
+                         ]
+
+        for key in keys_to_remove:
+            del _GRID_THUMBNAIL_CACHE[key]
 
 
 def _cleanup_image_cache():
@@ -312,12 +311,14 @@ def _cleanup_image_cache():
         for key in keys_to_remove:
             del _IMAGE_PIXMAP_CACHE[key]
 
+
 # =========================================================
 # CACHE LOCAL DE SÍMBOLOS
 # =========================================================
 
 _MANA_SYMBOL_WIDGET_DATA_CACHE = {}
 _MAX_SYMBOL_CACHE_SIZE = 200
+
 
 def _cleanup_symbol_cache():
     """Remove entradas mais antigas do cache de símbolos se exceder o limite."""
@@ -329,6 +330,836 @@ def _cleanup_symbol_cache():
 
 
 # =========================================================
+# FILTRO DE MÚLTIPLA SELEÇÃO
+# =========================================================
+
+class MultiSelectFilterButton(QPushButton):
+    """
+    Botão de filtro com seleção múltipla.
+
+    Comportamento:
+    - Clique abre um menu.
+    - Permite selecionar múltiplas opções.
+    - Mostra as seleções no próprio botão.
+    - Muitas opções usam lista com scrollbar.
+    """
+
+    selectionChanged = Signal(list)
+
+    def __init__(
+            self,
+            title,
+            options,
+            parent=None,
+    ):
+        super().__init__(
+            parent
+        )
+
+        # =================================================
+        # DADOS
+        # =================================================
+
+        self.title = title
+
+        self.options = list(
+            options or []
+        )
+
+        self.selected_values = set()
+
+        self.actions = {}
+
+        # =================================================
+        # BOTÃO
+        # =================================================
+
+        self.setObjectName(
+            "MultiSelectFilterButton"
+        )
+
+        self.setText(
+            f"{self.title}: Todas"
+        )
+
+        self.setMinimumHeight(
+            36
+        )
+
+        if self.title == "Cor":
+
+            scroll_height = 145
+            menu_width = 95
+
+        elif self.title == "Tipo":
+
+            scroll_height = 145
+            menu_width = 150
+
+        elif self.title == "Supertipo":
+
+            scroll_height = 85
+            menu_width = 120
+
+        elif self.title == "Raridade":
+
+            scroll_height = 125
+            menu_width = 125
+
+        elif self.title == "Edição":
+
+            scroll_height = 340
+            menu_width = 300
+
+        elif self.title == "Ordenação":
+
+            scroll_height = 250
+            menu_width = 260
+
+
+        self.setCursor(
+            Qt.CursorShape.PointingHandCursor
+        )
+
+        # =================================================
+        # MENU
+        # =================================================
+
+        self.menu = QMenu(
+            self
+        )
+
+        # -------------------------------------------------
+        # POPUP SEM MOLDURA NATIVA
+        # -------------------------------------------------
+
+        self.menu.setWindowFlags(
+            Qt.WindowType.Popup
+            |
+            Qt.WindowType.FramelessWindowHint
+        )
+
+        self.menu.setAttribute(
+            Qt.WidgetAttribute.WA_TranslucentBackground,
+            True
+        )
+
+        self.menu.setAttribute(
+            Qt.WidgetAttribute.WA_NoSystemBackground,
+            True
+        )
+
+        self.menu.setObjectName(
+            "CollectionFilterPopup"
+        )
+
+        self._build_menu()
+
+        self.setMenu(
+            self.menu
+        )
+
+    # =====================================================
+    # CRIAR MENU
+    # =====================================================
+
+    def _build_menu(
+            self,
+    ):
+        # =================================================
+        # LIMPAR MENU
+        # =================================================
+
+        self.menu.clear()
+
+        self.actions = {}
+
+        # =================================================
+        # CONTAINER PRINCIPAL
+        # =================================================
+
+        container = QWidget()
+
+        container.setObjectName(
+            "CollectionFilterMenu"
+        )
+
+        container.setAttribute(
+            Qt.WidgetAttribute.WA_TranslucentBackground,
+            True
+        )
+
+        container_layout = QVBoxLayout(
+            container
+        )
+
+        container_layout.setContentsMargins(
+            8,
+            8,
+            8,
+            8,
+        )
+
+        container_layout.setSpacing(
+            4
+        )
+
+        # =================================================
+        # "TODAS"
+        # =================================================
+
+        all_checkbox = QCheckBox(
+            "Todas"
+        )
+
+        all_checkbox.setChecked(
+            not self.selected_values
+        )
+
+        all_checkbox.setCursor(
+            Qt.CursorShape.PointingHandCursor
+        )
+
+        all_checkbox.toggled.connect(
+            self._toggle_all_checkbox
+        )
+
+        container_layout.addWidget(
+            all_checkbox
+        )
+
+        self.all_action = (
+            all_checkbox
+        )
+
+        # =================================================
+        # SEPARADOR
+        # =================================================
+
+        separator = QWidget()
+
+        separator.setObjectName(
+            "CollectionFilterSeparator"
+        )
+
+        separator.setFixedHeight(
+            1
+        )
+
+        container_layout.addWidget(
+            separator
+        )
+
+        # =================================================
+        # ÁREA DA LISTA
+        # =================================================
+
+        scroll_area = QScrollArea()
+
+        scroll_area.setObjectName(
+            "CollectionFilterScrollArea"
+        )
+
+        scroll_area.setWidgetResizable(
+            True
+        )
+
+        scroll_area.setFrameShape(
+            QFrame.Shape.NoFrame
+        )
+
+        scroll_area.setAttribute(
+            Qt.WidgetAttribute.WA_TranslucentBackground,
+            True
+        )
+
+        # =================================================
+        # TAMANHO DO MENU
+        # =================================================
+
+        option_count = len(
+            self.options
+        )
+
+        # -------------------------------------------------
+        # TAMANHOS PADRÃO
+        # -------------------------------------------------
+
+        scroll_height = 220
+        menu_width = 240
+
+        # -------------------------------------------------
+        # TAMANHO ESPECÍFICO POR FILTRO
+        # -------------------------------------------------
+
+        if self.title == "Cor":
+
+            scroll_height = 280
+            menu_width = 120
+
+        elif self.title == "Tipo":
+
+            scroll_height = 280
+            menu_width = 180
+
+        elif self.title == "Supertipo":
+
+            scroll_height = 160
+            menu_width = 130
+
+        elif self.title == "Raridade":
+
+            scroll_height = 240
+            menu_width = 120
+
+        elif self.title == "Edição":
+
+            scroll_height = 340
+            menu_width = 300
+
+        elif self.title == "Ordenação":
+
+            scroll_height = 250
+            menu_width = 260
+
+        # -------------------------------------------------
+        # APLICAR TAMANHO
+        # -------------------------------------------------
+
+        scroll_area.setFixedHeight(
+            scroll_height
+        )
+
+        scroll_area.setMinimumWidth(
+            menu_width
+        )
+
+        scroll_area.setMaximumWidth(
+            menu_width
+        )
+
+        # =================================================
+        # LISTA
+        # =================================================
+
+        list_widget = QWidget()
+
+        list_widget.setObjectName(
+            "CollectionFilterList"
+        )
+
+        list_widget.setAttribute(
+            Qt.WidgetAttribute.WA_TranslucentBackground,
+            True
+        )
+
+        list_layout = QVBoxLayout(
+            list_widget
+        )
+
+        list_layout.setContentsMargins(
+            4,
+            0,
+            4,
+            0,
+        )
+
+        list_layout.setSpacing(
+            2
+        )
+
+        # =================================================
+        # OPÇÕES
+        # =================================================
+
+        for label, value in self.options:
+            checkbox = QCheckBox(
+                label
+            )
+
+            if self.title == "Cor":
+                checkbox.setProperty(
+                    "filterColor",
+                    value
+                )
+
+            # -------------------------------------------------
+            # IDENTIDADE VISUAL DA OPÇÃO
+            # -------------------------------------------------
+
+            if self.title == "Cor":
+
+                checkbox.setProperty(
+                    "filterOption",
+                    f"color_{value}"
+                )
+
+            elif self.title == "Tipo":
+
+                checkbox.setProperty(
+                    "filterOption",
+                    f"type_{value}"
+                )
+
+            elif self.title == "Supertipo":
+
+                checkbox.setProperty(
+                    "filterOption",
+                    f"supertype_{value}"
+                )
+
+            elif self.title == "Raridade":
+
+                checkbox.setProperty(
+                    "filterOption",
+                    f"rarity_{value}"
+                )
+
+            elif self.title == "Edição":
+
+                checkbox.setProperty(
+                    "filterOption",
+                    "edition"
+                )
+
+            checkbox.setChecked(
+                value
+                in self.selected_values
+            )
+
+            checkbox.setCursor(
+                Qt.CursorShape.PointingHandCursor
+            )
+
+            checkbox.toggled.connect(
+                lambda checked,
+                       value=value:
+                self.toggle_value(
+                    value,
+                    checked,
+                )
+            )
+
+            list_layout.addWidget(
+                checkbox
+            )
+
+            self.actions[
+                value
+            ] = checkbox
+
+        list_layout.addStretch()
+
+        scroll_area.setWidget(
+            list_widget
+        )
+
+        container_layout.addWidget(
+            scroll_area
+        )
+
+        # =================================================
+        # COLOCAR NO QMENU
+        # =================================================
+
+        widget_action = QWidgetAction(
+            self.menu
+        )
+
+        widget_action.setDefaultWidget(
+            container
+        )
+
+        self.menu.addAction(
+            widget_action
+        )
+    # =====================================================
+    # TODAS — LISTA ROLÁVEL
+    # =====================================================
+
+    def _toggle_all_checkbox(
+            self,
+            checked,
+    ):
+        if not checked:
+            return
+
+        self.selected_values.clear()
+
+        for action in self.actions.values():
+
+            action.blockSignals(
+                True
+            )
+
+            action.setChecked(
+                False
+            )
+
+            action.blockSignals(
+                False
+            )
+
+        self.update_button_text()
+
+        self.selectionChanged.emit(
+            []
+        )
+
+    # =====================================================
+    # ALTERAR OPÇÕES
+    # =====================================================
+
+    def set_options(
+            self,
+            options,
+    ):
+        # -------------------------------------------------
+        # GUARDAR SELEÇÕES ATUAIS
+        # -------------------------------------------------
+
+        current_selection = set(
+            self.selected_values
+        )
+
+        # -------------------------------------------------
+        # NOVAS OPÇÕES
+        # -------------------------------------------------
+
+        self.options = list(
+            options or []
+        )
+
+        # -------------------------------------------------
+        # VALIDAR SELEÇÕES
+        # -------------------------------------------------
+
+        valid_values = {
+            value
+            for label, value
+            in self.options
+        }
+
+        current_selection &= (
+            valid_values
+        )
+
+        self.selected_values = (
+            current_selection
+        )
+
+        # -------------------------------------------------
+        # RECRIAR MENU
+        # -------------------------------------------------
+
+        self._build_menu()
+
+        # -------------------------------------------------
+        # RESTAURAR CHECKS
+        # -------------------------------------------------
+
+        for value, action in (
+                self.actions.items()
+        ):
+
+            action.blockSignals(
+                True
+            )
+
+            action.setChecked(
+                value
+                in self.selected_values
+            )
+
+            action.blockSignals(
+                False
+            )
+
+        # -------------------------------------------------
+        # ATUALIZAR "TODAS"
+        # -------------------------------------------------
+
+        self.all_action.blockSignals(
+            True
+        )
+
+        self.all_action.setChecked(
+            not self.selected_values
+        )
+
+        self.all_action.blockSignals(
+            False
+        )
+
+        # -------------------------------------------------
+        # ATUALIZAR TEXTO
+        # -------------------------------------------------
+
+        self.update_button_text()
+
+    # =====================================================
+    # SELECIONAR VALORES
+    # =====================================================
+
+    def set_selected_values(
+            self,
+            values,
+    ):
+        values = set(
+            values or []
+        )
+
+        valid_values = {
+            value
+            for label, value
+            in self.options
+        }
+
+        values &= valid_values
+
+        self.selected_values = (
+            values
+        )
+
+        # -------------------------------------------------
+        # ATUALIZAR OPÇÕES
+        # -------------------------------------------------
+
+        for value, action in (
+                self.actions.items()
+        ):
+
+            action.blockSignals(
+                True
+            )
+
+            action.setChecked(
+                value
+                in self.selected_values
+            )
+
+            action.blockSignals(
+                False
+            )
+
+        # -------------------------------------------------
+        # ATUALIZAR TODAS
+        # -------------------------------------------------
+
+        self.all_action.blockSignals(
+            True
+        )
+
+        self.all_action.setChecked(
+            not self.selected_values
+        )
+
+        self.all_action.blockSignals(
+            False
+        )
+
+        # -------------------------------------------------
+        # TEXTO
+        # -------------------------------------------------
+
+        self.update_button_text()
+
+    # =====================================================
+    # OBTER VALORES
+    # =====================================================
+
+    def get_selected_values(
+            self,
+    ):
+        return list(
+            self.selected_values
+        )
+
+    # =====================================================
+    # SELECIONAR / DESSELECIONAR
+    # =====================================================
+
+    def toggle_value(
+            self,
+            value,
+            checked,
+    ):
+        if checked:
+
+            self.selected_values.add(
+                value
+            )
+
+        else:
+
+            self.selected_values.discard(
+                value
+            )
+
+        # -------------------------------------------------
+        # "TODAS"
+        # -------------------------------------------------
+
+        self.all_action.blockSignals(
+            True
+        )
+
+        self.all_action.setChecked(
+            not self.selected_values
+        )
+
+        self.all_action.blockSignals(
+            False
+        )
+
+        # -------------------------------------------------
+        # TEXTO
+        # -------------------------------------------------
+
+        self.update_button_text()
+
+        # -------------------------------------------------
+        # AVISAR FILTRO
+        # -------------------------------------------------
+
+        self.selectionChanged.emit(
+            list(
+                self.selected_values
+            )
+        )
+
+    # =====================================================
+    # LIMPAR SELEÇÃO
+    # =====================================================
+
+    def clear_selection(
+            self,
+    ):
+        self.selected_values.clear()
+
+        for action in (
+                self.actions.values()
+        ):
+
+            action.blockSignals(
+                True
+            )
+
+            action.setChecked(
+                False
+            )
+
+            action.blockSignals(
+                False
+            )
+
+        self.all_action.blockSignals(
+            True
+        )
+
+        self.all_action.setChecked(
+            True
+        )
+
+        self.all_action.blockSignals(
+            False
+        )
+
+        self.update_button_text()
+
+        self.selectionChanged.emit(
+            []
+        )
+
+    # =====================================================
+    # TEXTO DO BOTÃO
+    # =====================================================
+
+    def update_button_text(
+            self,
+    ):
+        count = len(
+            self.selected_values
+        )
+
+        # -------------------------------------------------
+        # NADA SELECIONADO
+        # -------------------------------------------------
+
+        if count == 0:
+
+            self.setText(
+                f"{self.title}: Todas"
+            )
+
+            return
+
+        # -------------------------------------------------
+        # UMA OPÇÃO
+        # -------------------------------------------------
+
+        if count == 1:
+
+            value = next(
+                iter(
+                    self.selected_values
+                )
+            )
+
+            label = next(
+                (
+                    label
+                    for label, option_value
+                    in self.options
+                    if option_value == value
+                ),
+                value,
+            )
+
+            self.setText(
+                f"{self.title}: {label}"
+            )
+
+            return
+
+        # -------------------------------------------------
+        # DUAS OPÇÕES
+        # -------------------------------------------------
+
+        if count == 2:
+
+            labels = []
+
+            for label, value in (
+                    self.options
+            ):
+
+                if value in (
+                        self.selected_values
+                ):
+                    labels.append(
+                        label
+                    )
+
+            self.setText(
+                f"{self.title}: "
+                + ", ".join(
+                    labels
+                )
+            )
+
+            return
+
+        # -------------------------------------------------
+        # MUITAS OPÇÕES
+        # -------------------------------------------------
+
+        self.setText(
+            f"{self.title}: "
+            f"{count} selecionadas"
+        )
+
+# =========================================================
 # TAREFA SCRYFALL — AUTOCOMPLETE
 # =========================================================
 
@@ -336,13 +1167,12 @@ class ScryfallSignals(QObject):
     finished = Signal(str, list)
 
 
-
 class ScryfallTask(QRunnable):
 
     def __init__(
-        self,
-        query,
-        language="en",
+            self,
+            query,
+            language="en",
     ):
         super().__init__()
 
@@ -351,8 +1181,8 @@ class ScryfallTask(QRunnable):
         ).strip()
 
         self.language = (
-            language
-            or "en"
+                language
+                or "en"
         )
 
         self.signals = ScryfallSignals()
@@ -388,14 +1218,12 @@ class ScryfallTask(QRunnable):
             )
 
 
-
 # =========================================================
 # TAREFA SCRYFALL — CARTA COMPLETA
 # =========================================================
 
 
 class ScryfallCardSignals(QObject):
-
     finished = Signal(
         str,
         object,
@@ -410,9 +1238,9 @@ class ScryfallCardSignals(QObject):
 class ScryfallCardTask(QRunnable):
 
     def __init__(
-        self,
-        name,
-        language="en",
+            self,
+            name,
+            language="en",
     ):
         super().__init__()
 
@@ -421,8 +1249,8 @@ class ScryfallCardTask(QRunnable):
         ).strip()
 
         self.language = (
-            language
-            or "en"
+                language
+                or "en"
         )
 
         self.signals = (
@@ -577,19 +1405,19 @@ class RefreshCardDataTask(QRunnable):
                 str(error)
             )
 
+
 class ImageSignals(QObject):
     finished = Signal(str, str, bytes, object)
     failed = Signal(str, str, object)
 
 
-
 class ImageTask(QRunnable):
 
     def __init__(
-        self,
-        url,
-        local_path,
-        label,
+            self,
+            url,
+            local_path,
+            label,
     ):
         super().__init__()
 
@@ -615,8 +1443,8 @@ class ImageTask(QRunnable):
             # -------------------------------------------------
 
             if (
-                path.exists()
-                and path.stat().st_size > 0
+                    path.exists()
+                    and path.stat().st_size > 0
             ):
                 data = path.read_bytes()
 
@@ -692,27 +1520,23 @@ class ImageTask(QRunnable):
             )
 
 
-
-
 # =========================================================
 # CARD FRAME
 # =========================================================
 
 class CardFrame(QFrame):
-
     doubleClicked = Signal()
 
     def __init__(self, parent=None):
         super().__init__(parent)
-        
+
         self.setMouseTracking(True)
         self.setAttribute(Qt.WidgetAttribute.WA_Hover, True)
 
     def mouseDoubleClickEvent(self, event):
-
         if (
-            event.button()
-            == Qt.MouseButton.LeftButton
+                event.button()
+                == Qt.MouseButton.LeftButton
         ):
             self.doubleClicked.emit()
 
@@ -723,14 +1547,14 @@ class CardFrame(QFrame):
         super().mouseDoubleClickEvent(
             event
         )
-    
+
     def enterEvent(self, event):
         # Aplicar estilo de hover como nos Decks
         self.setProperty("hover", True)
         self.style().unpolish(self)
         self.style().polish(self)
         super().enterEvent(event)
-    
+
     def leaveEvent(self, event):
         # Remover estilo de hover como nos Decks
         self.setProperty("hover", False)
@@ -744,14 +1568,12 @@ class CardFrame(QFrame):
 # =========================================================
 
 class CardImageLabel(QLabel):
-
     doubleClicked = Signal()
 
     def mouseDoubleClickEvent(self, event):
-
         if (
-            event.button()
-            == Qt.MouseButton.LeftButton
+                event.button()
+                == Qt.MouseButton.LeftButton
         ):
             self.doubleClicked.emit()
 
@@ -777,16 +1599,17 @@ class CardImageLabel(QLabel):
 # =========================================================
 
 class GridCardFrame(QFrame):
-
     clicked = Signal()
     doubleClicked = Signal()
 
     def __init__(
-        self,
-        parent=None,
+            self,
+            parent=None,
     ):
 
         super().__init__(parent)
+
+
 
         self.setObjectName(
             "GridCardFrame"
@@ -1050,8 +1873,8 @@ class GridCardFrame(QFrame):
     # =====================================================
 
     def set_card_width(
-        self,
-        width,
+            self,
+            width,
     ):
 
         width = max(
@@ -1087,7 +1910,7 @@ class GridCardFrame(QFrame):
     # =====================================================
 
     def _update_overlays(
-        self,
+            self,
     ):
 
         width = self.width()
@@ -1149,8 +1972,8 @@ class GridCardFrame(QFrame):
     # =====================================================
 
     def resizeEvent(
-        self,
-        event,
+            self,
+            event,
     ):
 
         super().resizeEvent(
@@ -1159,14 +1982,13 @@ class GridCardFrame(QFrame):
 
         self._update_overlays()
 
-
     # =====================================================
     # QUANTIDADE
     # =====================================================
 
     def set_quantity(
-        self,
-        quantity,
+            self,
+            quantity,
     ):
 
         quantity = max(
@@ -1183,30 +2005,30 @@ class GridCardFrame(QFrame):
         )
 
     def eventFilter(
-        self,
-        watched,
-        event,
+            self,
+            watched,
+            event,
     ):
         if watched is self.control_quantity:
             if event.type() in (
-                QEvent.Type.FocusIn,
-                QEvent.Type.MouseButtonPress,
+                    QEvent.Type.FocusIn,
+                    QEvent.Type.MouseButtonPress,
             ):
                 self._editing_quantity = True
                 self._animate_hover(True)
 
             elif event.type() in (
-                QEvent.Type.FocusOut,
-                QEvent.Type.KeyPress,
+                    QEvent.Type.FocusOut,
+                    QEvent.Type.KeyPress,
             ):
                 if (
-                    event.type() == QEvent.Type.KeyPress
-                    and event.key()
-                    not in (
+                        event.type() == QEvent.Type.KeyPress
+                        and event.key()
+                        not in (
                         Qt.Key.Key_Return,
                         Qt.Key.Key_Enter,
                         Qt.Key.Key_Escape,
-                    )
+                )
                 ):
                     return super().eventFilter(
                         watched,
@@ -1264,6 +2086,7 @@ class GridCardFrame(QFrame):
         # -----------------------------------------------------
 
         self.update_card_image()
+
     def update_card_image(self):
         """
         Atualiza somente a imagem desta carta no Grid.
@@ -1404,13 +2227,14 @@ class GridCardFrame(QFrame):
             "[GRID] Imagem atualizada:",
             self.card_data.get("name"),
         )
+
     # =====================================================
     # COMEÇAR ZOOM
     # =====================================================
 
     def _animate_hover(
-        self,
-        hovering,
+            self,
+            hovering,
     ):
 
         self._hovering = hovering
@@ -1444,8 +2268,8 @@ class GridCardFrame(QFrame):
     # =====================================================
 
     def enterEvent(
-        self,
-        event,
+            self,
+            event,
     ):
 
         self._animate_hover(
@@ -1461,8 +2285,8 @@ class GridCardFrame(QFrame):
     # =====================================================
 
     def leaveEvent(
-        self,
-        event,
+            self,
+            event,
     ):
 
         if not self._editing_quantity:
@@ -1479,15 +2303,14 @@ class GridCardFrame(QFrame):
     # =====================================================
 
     def mouseDoubleClickEvent(
-        self,
-        event,
+            self,
+            event,
     ):
 
         if (
-            event.button()
-            == Qt.MouseButton.LeftButton
+                event.button()
+                == Qt.MouseButton.LeftButton
         ):
-
             self.doubleClicked.emit()
 
             event.accept()
@@ -1499,8 +2322,8 @@ class GridCardFrame(QFrame):
         )
 
     def mousePressEvent(
-        self,
-        event,
+            self,
+            event,
     ):
         if event.button() == Qt.MouseButton.LeftButton:
             self.clicked.emit()
@@ -1508,16 +2331,16 @@ class GridCardFrame(QFrame):
         super().mousePressEvent(
             event
         )
+
+
 # =========================================================
 # CONTAINER DA GRADE
 # =========================================================
 
 class CardsContainer(QWidget):
-
     resized = Signal()
 
     def resizeEvent(self, event):
-
         old_size = event.oldSize()
         new_size = event.size()
 
@@ -1526,8 +2349,8 @@ class CardsContainer(QWidget):
         )
 
         if (
-            old_size.width()
-            != new_size.width()
+                old_size.width()
+                != new_size.width()
         ):
             self.resized.emit()
 
@@ -1536,17 +2359,16 @@ class CardsContainer(QWidget):
 # COLLECTION PAGE
 # =========================================================
 class SuggestionLineEdit(QLineEdit):
-
     keyPressed = Signal(object)
 
     def keyPressEvent(
-        self,
-        event,
+            self,
+            event,
     ):
-
         self.keyPressed.emit(
             event
         )
+
 
 class CollectionPage(QWidget):
 
@@ -1559,7 +2381,6 @@ class CollectionPage(QWidget):
         self.setStyleSheet(
             DARK_THEME
         )
-
 
         # =================================================
         # DADOS
@@ -1757,6 +2578,7 @@ class CollectionPage(QWidget):
             0,
             self.load_cards
         )
+
     # =========================================================
     # LOADING DA COLLECTION
     # =========================================================
@@ -1784,7 +2606,6 @@ class CollectionPage(QWidget):
         overlay = QFrame(
             self.scroll_area.viewport()
         )
-
 
         overlay.setObjectName(
             "collectionLoadingOverlay"
@@ -2036,6 +2857,7 @@ class CollectionPage(QWidget):
             container_width,
             container_height,
         )
+
     # =========================================================
     # MOSTRAR LOADING
     # =========================================================
@@ -2096,6 +2918,7 @@ class CollectionPage(QWidget):
         )
 
         self._collection_loading_overlay.update()
+
     # =========================================================
     # ESCONDER LOADING
     # =========================================================
@@ -2210,6 +3033,7 @@ class CollectionPage(QWidget):
             )
 
         return updated
+
     def setup_ui(self):
 
         self.main_layout = QVBoxLayout(
@@ -2446,50 +3270,25 @@ class CollectionPage(QWidget):
         # -------------------------------------------------
         # COR
         # -------------------------------------------------
-
-        self.color_filter = QComboBox()
-
-        self.color_filter.addItem(
-            "Todas as cores",
-            "all",
+        self.color_filter = MultiSelectFilterButton(
+            "Cor",
+            [
+                ("Branco", "W"),
+                ("Azul", "U"),
+                ("Preto", "B"),
+                ("Vermelho", "R"),
+                ("Verde", "G"),
+                ("Incolor", "C"),
+                ("Multicolor", "M"),
+            ],
+            self,
         )
 
-        self.color_filter.addItem(
-            "Branco",
-            "W",
+        self.color_filter.setFixedWidth(
+            120
         )
 
-        self.color_filter.addItem(
-            "Azul",
-            "U",
-        )
-
-        self.color_filter.addItem(
-            "Preto",
-            "B",
-        )
-
-        self.color_filter.addItem(
-            "Vermelho",
-            "R",
-        )
-
-        self.color_filter.addItem(
-            "Verde",
-            "G",
-        )
-
-        self.color_filter.addItem(
-            "Incolor",
-            "C",
-        )
-
-        self.color_filter.addItem(
-            "Multicolor",
-            "M",
-        )
-
-        self.color_filter.currentIndexChanged.connect(
+        self.color_filter.selectionChanged.connect(
             self.apply_collection_filters
         )
 
@@ -2501,49 +3300,25 @@ class CollectionPage(QWidget):
         # TIPO
         # -------------------------------------------------
 
-        self.type_filter = QComboBox()
-
-        self.type_filter.addItem(
-            "Todos os tipos",
-            "all",
+        self.type_filter = MultiSelectFilterButton(
+            "Tipo",
+            [
+                ("Criatura", "Criatura"),
+                ("Mágica Instantânea", "Mágica Instantânea"),
+                ("Feitiço", "Feitiço"),
+                ("Encantamento", "Encantamento"),
+                ("Artefato", "Artefato"),
+                ("Planeswalker", "Planeswalker"),
+                ("Terreno", "Terreno"),
+            ],
+            self,
         )
 
-        self.type_filter.addItem(
-            "Criatura",
-            "Criatura",
+        self.type_filter.setFixedWidth(
+            120
         )
 
-        self.type_filter.addItem(
-            "Mágica Instantânea",
-            "Mágica Instantânea",
-        )
-
-        self.type_filter.addItem(
-            "Feitiço",
-            "Feitiço",
-        )
-
-        self.type_filter.addItem(
-            "Encantamento",
-            "Encantamento",
-        )
-
-        self.type_filter.addItem(
-            "Artefato",
-            "Artefato",
-        )
-
-        self.type_filter.addItem(
-            "Planeswalker",
-            "Planeswalker",
-        )
-
-        self.type_filter.addItem(
-            "Terreno",
-            "Terreno",
-        )
-
-        self.type_filter.currentIndexChanged.connect(
+        self.type_filter.selectionChanged.connect(
             self.apply_collection_filters
         )
 
@@ -2555,19 +3330,22 @@ class CollectionPage(QWidget):
         # SUPERTIPO
         # -------------------------------------------------
 
-        self.supertype_filter = QComboBox()
-
-        self.supertype_filter.addItem(
-            "Todos os supertipos",
-            "all",
+        self.supertype_filter = MultiSelectFilterButton(
+            "Supertipo",
+            [
+                ("Lendária", "legendary"),
+                ("Básica", "basic"),
+                ("Nevada", "snow"),
+                ("Mundo", "world"),
+            ],
+            self,
         )
 
-        self.supertype_filter.addItem(
-            "Lendária",
-            "legendary",
+        self.supertype_filter.setFixedWidth(
+            150
         )
 
-        self.supertype_filter.currentIndexChanged.connect(
+        self.supertype_filter.selectionChanged.connect(
             self.apply_collection_filters
         )
 
@@ -2579,68 +3357,50 @@ class CollectionPage(QWidget):
         # RARIDADE
         # -------------------------------------------------
 
-        self.rarity_filter = QComboBox()
-
-        self.rarity_filter.addItem(
-            "Todas as raridades",
-            "all",
+        self.rarity_filter = MultiSelectFilterButton(
+            "Raridade",
+            [
+                ("Comum", "common"),
+                ("Incomum", "uncommon"),
+                ("Rara", "rare"),
+                ("Mítica", "mythic"),
+                ("Especial", "special"),
+                ("Bônus", "bonus"),
+            ],
+            self,
         )
 
-        self.rarity_filter.addItem(
-            "Comum",
-            "common",
+        self.rarity_filter.setFixedWidth(
+            150
         )
 
-        self.rarity_filter.addItem(
-            "Incomum",
-            "uncommon",
-        )
-
-        self.rarity_filter.addItem(
-            "Rara",
-            "rare",
-        )
-
-        self.rarity_filter.addItem(
-            "Mítica",
-            "mythic",
-        )
-
-        self.rarity_filter.addItem(
-            "Especial",
-            "special",
-        )
-
-        self.rarity_filter.addItem(
-            "Bônus",
-            "bonus",
-        )
-
-        self.rarity_filter.currentIndexChanged.connect(
+        self.rarity_filter.selectionChanged.connect(
             self.apply_collection_filters
         )
 
         filters_layout.addWidget(
             self.rarity_filter
         )
-
         # -------------------------------------------------
         # EDIÇÃO
         # -------------------------------------------------
 
-        self.set_filter = QComboBox()
-
-        self.set_filter.addItem(
-            "Todas as edições",
-            "all",
+        self.set_filter = MultiSelectFilterButton(
+            "Edição",
+            [],
+            self,
         )
 
-        self.set_filter.currentIndexChanged.connect(
+        self.set_filter.selectionChanged.connect(
             self.apply_collection_filters
         )
 
         filters_layout.addWidget(
             self.set_filter
+        )
+
+        self.set_filter.setFixedWidth(
+            125
         )
 
         # -------------------------------------------------
@@ -2660,12 +3420,12 @@ class CollectionPage(QWidget):
         )
 
         self.sort_filter.addItem(
-            "Quantidade: menor → maior",
+            "Menor → Maior",
             "quantity_asc",
         )
 
         self.sort_filter.addItem(
-            "Quantidade: maior → menor",
+            "Maior → Menor",
             "quantity_desc",
         )
 
@@ -2689,6 +3449,10 @@ class CollectionPage(QWidget):
             "oldest",
         )
 
+        self.sort_filter.setFixedWidth(
+            135
+        )
+
         self.sort_filter.currentIndexChanged.connect(
             self.apply_collection_filters
         )
@@ -2701,16 +3465,29 @@ class CollectionPage(QWidget):
         # LIMPAR
         # -------------------------------------------------
 
-        clear_filters_button = QPushButton(
+        self.clear_filters_button = QPushButton(
             "Limpar filtros"
         )
 
-        clear_filters_button.clicked.connect(
+        self.clear_filters_button.setMinimumWidth(
+            130
+        )
+
+        self.clear_filters_button.setMaximumWidth(
+            200
+        )
+
+        self.clear_filters_button.setSizePolicy(
+            QSizePolicy.Policy.Preferred,
+            QSizePolicy.Policy.Fixed,
+        )
+
+        self.clear_filters_button.clicked.connect(
             self.clear_collection_filters
         )
 
         filters_layout.addWidget(
-            clear_filters_button
+            self.clear_filters_button
         )
 
         self.main_layout.addWidget(
@@ -2879,8 +3656,6 @@ class CollectionPage(QWidget):
             self.search_scryfall
         )
 
-
-
         self.add_input.keyPressed.connect(
             self.handle_add_input_keypress
         )
@@ -2996,8 +3771,6 @@ class CollectionPage(QWidget):
         self.scroll_area.setVerticalScrollBarPolicy(
             Qt.ScrollBarPolicy.ScrollBarAlwaysOff
         )
-        
-
 
         self.cards_container = CardsContainer()
 
@@ -3114,8 +3887,6 @@ class CollectionPage(QWidget):
                 self.layout_button.rect().bottomLeft()
             )
         )
-
-
 
         # =====================================================
         # SETUP
@@ -3345,6 +4116,7 @@ class CollectionPage(QWidget):
         self.display_cards(
             self.current_cards
         )
+
     # =========================================================
     # ALTERAR IDIOMAS
     # =========================================================
@@ -3427,6 +4199,7 @@ class CollectionPage(QWidget):
         )
 
         self.search_timer.start()
+
     # =====================================================
     # AUTOCOMPLETE
     # =====================================================
@@ -3477,7 +4250,6 @@ class CollectionPage(QWidget):
             f"{len(selected)} idiomas"
         )
 
-
     def search_scryfall(self, text):
 
         text = text.strip()
@@ -3485,7 +4257,6 @@ class CollectionPage(QWidget):
         self.search_timer.stop()
 
         if len(text) < 2:
-
             self.pending_search = ""
 
             self.suggestion_list.clear()
@@ -3665,13 +4436,12 @@ class CollectionPage(QWidget):
 
         self.suggestion_list.show()
 
-
     # =====================================================
     # ALTURA DAS SUGESTÕES
     # =====================================================
 
     def update_suggestion_height(
-        self,
+            self,
     ):
 
         count = (
@@ -3679,7 +4449,6 @@ class CollectionPage(QWidget):
         )
 
         if count <= 0:
-
             self.suggestion_list.hide()
 
             return
@@ -3691,7 +4460,6 @@ class CollectionPage(QWidget):
         )
 
         if row_height <= 0:
-
             row_height = 38
 
         visible_rows = min(
@@ -3700,9 +4468,9 @@ class CollectionPage(QWidget):
         )
 
         height = (
-            row_height
-            * visible_rows
-        ) + 8
+                         row_height
+                         * visible_rows
+                 ) + 8
 
         height = min(
             height,
@@ -3718,8 +4486,8 @@ class CollectionPage(QWidget):
     # =====================================================
 
     def select_suggestion(
-        self,
-        item,
+            self,
+            item,
     ):
 
         name = item.text()
@@ -3743,7 +4511,6 @@ class CollectionPage(QWidget):
             )
 
             if current_item:
-
                 self.select_suggestion(
                     current_item
                 )
@@ -3751,7 +4518,6 @@ class CollectionPage(QWidget):
                 return
 
             if self.suggestion_list.count():
-
                 self.select_suggestion(
                     self.suggestion_list.item(0)
                 )
@@ -4231,7 +4997,9 @@ class CollectionPage(QWidget):
 
         self.apply_collection_filters()
 
-
+    # =====================================================
+    # VERIFICAR FILTRO DE COR
+    # =====================================================
 
     # =====================================================
     # VERIFICAR FILTRO DE COR
@@ -4240,173 +5008,126 @@ class CollectionPage(QWidget):
     def card_matches_color(
             self,
             card,
-            color,
+            colors,
     ):
 
-        if color == "all":
+        # -------------------------------------------------
+        # NENHUM FILTRO
+        # -------------------------------------------------
+
+        if not colors:
             return True
 
-        colors = self.get_card_colors(
-            card
+        # -------------------------------------------------
+        # SEGURANÇA
+        # -------------------------------------------------
+
+        if not card:
+            return False
+
+        # -------------------------------------------------
+        # OBTER CUSTO DE MANA
+        # -------------------------------------------------
+
+        try:
+
+            mana_cost = (
+                card[6]
+                if len(card) > 6
+                else ""
+            )
+
+        except (
+                IndexError,
+                TypeError,
+        ):
+
+            mana_cost = ""
+
+        # -------------------------------------------------
+        # OBTER CORES DA CARTA
+        # -------------------------------------------------
+
+        card_colors = self.get_card_colors(
+            mana_cost
         )
 
         # -------------------------------------------------
         # INCOLOR
         # -------------------------------------------------
 
-        if color == "C":
-            return len(
-                colors
-            ) == 0
+        if "C" in colors:
+
+            if not card_colors:
+                return True
 
         # -------------------------------------------------
         # MULTICOLOR
         # -------------------------------------------------
 
-        if color == "M":
-            return len(
-                colors
-            ) >= 2
+        if "M" in colors:
+
+            if len(card_colors) >= 2:
+                return True
 
         # -------------------------------------------------
-        # COR ESPECÍFICA
+        # CORES NORMAIS
         # -------------------------------------------------
 
-        return color in colors
+        normal_colors = {
+            "W",
+            "U",
+            "B",
+            "R",
+            "G",
+        }
 
-
-
-        # -------------------------------------------------
-        # CRIATURA
-        # -------------------------------------------------
-
-        if type_filter == "Criatura":
-            return (
-                    "criatura" in type_line
-                    or
-                    "creature" in type_line
-            )
-
-        # -------------------------------------------------
-        # MÁGICA INSTANTÂNEA
-        # -------------------------------------------------
-
-        if type_filter == "Mágica Instantânea":
-            return (
-                    "mágica instantânea" in type_line
-                    or
-                    "instant" in type_line
-            )
-
-        # -------------------------------------------------
-        # FEITIÇO
-        # -------------------------------------------------
-
-        if type_filter == "Feitiço":
-            return (
-                    "feitiço" in type_line
-                    or
-                    "sorcery" in type_line
-            )
-
-        # -------------------------------------------------
-        # ENCANTAMENTO
-        # -------------------------------------------------
-
-        if type_filter == "Encantamento":
-            return (
-                    "encantamento" in type_line
-                    or
-                    "enchantment" in type_line
-            )
-
-        # -------------------------------------------------
-        # ARTEFATO
-        # -------------------------------------------------
-
-        if type_filter == "Artefato":
-            return (
-                    "artefato" in type_line
-                    or
-                    "artifact" in type_line
-            )
-
-        # -------------------------------------------------
-        # PLANESWALKER
-        # -------------------------------------------------
-
-        if type_filter == "Planeswalker":
-            return (
-                    "planeswalker" in type_line
-            )
-
-        # -------------------------------------------------
-        # TERRENO
-        # -------------------------------------------------
-
-        if type_filter == "Terreno":
-            return (
-                    "terreno" in type_line
-                    or
-                    "land" in type_line
-            )
-
-        return True
-
-    # =====================================================
-    # VERIFICAR FILTRO DE EDIÇÃO
-    # =====================================================
-
-
-
-
-
-        # =================================================
-        # RECRIAR COMBOBOX
-        # =================================================
-
-        self.set_filter.blockSignals(
-            True
+        selected_normal_colors = (
+                set(colors)
+                & normal_colors
         )
 
-        try:
+        if card_colors.intersection(
+                selected_normal_colors
+        ):
+            return True
 
-            self.set_filter.clear()
+        return False
 
-            self.set_filter.addItem(
-                "Todas as edições",
-                "all",
-            )
+    # =====================================================
+    # OBTER CORES DA CARTA
+    # =====================================================
 
-            for set_name in sets:
-                self.set_filter.addItem(
-                    set_name,
-                    set_name,
-                )
+    def get_card_colors(
+            self,
+            mana_cost,
+    ):
 
-            index = (
-                self.set_filter.findData(
-                    current
-                )
-            )
+        if not mana_cost:
+            return set()
 
-            if index >= 0:
+        mana = str(
+            mana_cost
+        ).upper()
 
-                self.set_filter.setCurrentIndex(
-                    index
-                )
+        colors = set()
 
-            else:
+        if "{W}" in mana:
+            colors.add("W")
 
-                self.set_filter.setCurrentIndex(
-                    0
-                )
+        if "{U}" in mana:
+            colors.add("U")
 
-        finally:
+        if "{B}" in mana:
+            colors.add("B")
 
-            self.set_filter.blockSignals(
-                False
-            )
+        if "{R}" in mana:
+            colors.add("R")
+
+        if "{G}" in mana:
+            colors.add("G")
+
+        return colors
 
     # =====================================================
     # OBTER QUANTIDADE
@@ -4689,11 +5410,10 @@ class CollectionPage(QWidget):
             f"{total_quantity} cartas · "
             f"{different_cards} diferentes"
         )
+
     def clear_collection_filters(
             self,
     ):
-
-
 
         # =================================================
         # ESTADO PADRÃO
@@ -4940,6 +5660,7 @@ class CollectionPage(QWidget):
                 )
 
         return True
+
     def update_card_image(
             self,
             card_id,
@@ -5000,14 +5721,12 @@ class CollectionPage(QWidget):
         # -------------------------------------------------
 
         if image_path:
-
             _IMAGE_PIXMAP_CACHE.pop(
                 image_path,
                 None,
             )
 
         if image_url:
-
             _IMAGE_PIXMAP_CACHE.pop(
                 image_url,
                 None,
@@ -5025,8 +5744,8 @@ class CollectionPage(QWidget):
                 name
                 for name in dir(frame)
                 if "image" in name.lower()
-                or "pixmap" in name.lower()
-                or "thumbnail" in name.lower()
+                   or "pixmap" in name.lower()
+                   or "thumbnail" in name.lower()
             ],
         )
         # -------------------------------------------------
@@ -5037,7 +5756,6 @@ class CollectionPage(QWidget):
                 frame,
                 "set_card_image",
         ):
-
             frame.set_card_image(
                 image_path,
                 image_url,
@@ -5049,7 +5767,6 @@ class CollectionPage(QWidget):
                 frame,
                 "set_image",
         ):
-
             frame.set_image(
                 image_path,
             )
@@ -5073,7 +5790,6 @@ class CollectionPage(QWidget):
             widget = item.widget()
 
             if widget:
-
                 widget.deleteLater()
 
                 continue
@@ -5093,7 +5809,6 @@ class CollectionPage(QWidget):
                     )
 
                     if nested_widget:
-
                         nested_widget.deleteLater()
 
     # =========================================================
@@ -5153,6 +5868,7 @@ class CollectionPage(QWidget):
         self.update_collection_count(
             self.current_cards
         )
+
     # =========================================================
     # EVENTOS — DADOS DA CARTA ALTERADOS
     # =========================================================
@@ -5224,6 +5940,7 @@ class CollectionPage(QWidget):
             ),
             updated_card,
         )
+
     # =====================================================
     # DISPLAY
     # =====================================================
@@ -5276,7 +5993,6 @@ class CollectionPage(QWidget):
 
         self.rebuilding_grid = True
 
-
         self.cards_container.setUpdatesEnabled(
             False
         )
@@ -5312,8 +6028,8 @@ class CollectionPage(QWidget):
     # =====================================================
 
     def display_cards_list(
-        self,
-        cards,
+            self,
+            cards,
     ):
 
         for card in cards:
@@ -5386,51 +6102,20 @@ class CollectionPage(QWidget):
     ):
         if not mana_cost:
             return None
-        
+
         widget = ManaSymbolsWidget(
             mana_cost,
             symbol_size=symbol_size,
         )
-        
+
         if parent:
             widget.setParent(parent)
-        
+
         return widget
 
     # =====================================================
     # FILTROS DA COLEÇÃO
     # =====================================================
-
-    def get_card_colors(
-        self,
-        mana_cost,
-    ):
-
-        if not mana_cost:
-            return set()
-
-        mana = str(
-            mana_cost
-        ).upper()
-
-        colors = set()
-
-        if "{W}" in mana:
-            colors.add("W")
-
-        if "{U}" in mana:
-            colors.add("U")
-
-        if "{B}" in mana:
-            colors.add("B")
-
-        if "{R}" in mana:
-            colors.add("R")
-
-        if "{G}" in mana:
-            colors.add("G")
-
-        return colors
 
     def card_matches_type(
             self,
@@ -5440,6 +6125,7 @@ class CollectionPage(QWidget):
         if (
                 not type_filter
                 or type_filter == "all"
+                or type_filter == []
         ):
             return True
 
@@ -5498,42 +6184,89 @@ class CollectionPage(QWidget):
             ),
         }
 
-        accepted_types = (
-            type_map.get(
-                type_filter
-            )
-        )
+        # -------------------------------------------------
+        # GARANTIR LISTA
+        # -------------------------------------------------
 
-        if not accepted_types:
-            # Fallback para filtros futuros
-            return (
-                    str(type_filter)
-                    .strip()
-                    .lower()
-                    in type_line
+        if isinstance(
+                type_filter,
+                str,
+        ):
+            type_filter = [
+                type_filter,
+            ]
+
+        # -------------------------------------------------
+        # VERIFICAR QUALQUER TIPO SELECIONADO
+        # -------------------------------------------------
+
+        for selected_type in type_filter:
+
+            accepted_types = type_map.get(
+                selected_type,
             )
 
-        return any(
-            accepted_type in type_line
-            for accepted_type
-            in accepted_types
-        )
+            if not accepted_types:
+                if (
+                        str(selected_type)
+                                .strip()
+                                .lower()
+                        in type_line
+                ):
+                    return True
+
+                continue
+
+            if any(
+                    accepted_type in type_line
+                    for accepted_type
+                    in accepted_types
+            ):
+                return True
+
+        return False
+
     def card_matches_set(
-        self,
-        card,
-        set_filter,
+            self,
+            card,
+            set_filter,
     ):
-
-        if set_filter == "all":
+        if (
+                not set_filter
+                or set_filter == "all"
+                or set_filter == []
+        ):
             return True
 
         if not card or len(card) <= 4:
             return False
 
-        return (
-            str(card[4] if len(card) > 4 else "").lower()
-            == str(set_filter or "").lower()
-        )
+        card_set = str(
+            card[4]
+            if len(card) > 4
+            else ""
+        ).strip().lower()
+
+        if not card_set:
+            return False
+
+        if isinstance(
+                set_filter,
+                str,
+        ):
+            set_filter = [
+                set_filter,
+            ]
+
+        selected_sets = {
+            str(value)
+            .strip()
+            .lower()
+            for value
+            in set_filter
+        }
+
+        return card_set in selected_sets
 
     def card_matches_supertype(
             self,
@@ -5543,6 +6276,7 @@ class CollectionPage(QWidget):
         if (
                 not supertype_filter
                 or supertype_filter == "all"
+                or supertype_filter == []
         ):
             return True
 
@@ -5566,15 +6300,65 @@ class CollectionPage(QWidget):
             return False
 
         # -------------------------------------------------
-        # LENDÁRIA
+        # GARANTIR LISTA
         # -------------------------------------------------
 
-        if supertype_filter == "legendary":
-            return (
-                    "lendária" in type_line
-                    or
-                    "legendary" in type_line
+        if isinstance(
+                supertype_filter,
+                str,
+        ):
+            supertype_filter = [
+                supertype_filter,
+            ]
+
+        # -------------------------------------------------
+        # MAPA DE SUPERTIPOS
+        # -------------------------------------------------
+
+        supertype_map = {
+            "legendary": (
+                "lendária",
+                "legendary",
+            ),
+
+            "basic": (
+                "básica",
+                "basic",
+            ),
+
+            "snow": (
+                "nevada",
+                "snow",
+            ),
+
+            "world": (
+                "mundo",
+                "world",
+            ),
+        }
+
+        # -------------------------------------------------
+        # VERIFICAR QUALQUER SUPERTIPO
+        # -------------------------------------------------
+
+        for selected_supertype in supertype_filter:
+
+            accepted_values = (
+                supertype_map.get(
+                    selected_supertype,
+                    (),
+                )
             )
+
+            if not accepted_values:
+                continue
+
+            if any(
+                    value in type_line
+                    for value
+                    in accepted_values
+            ):
+                return True
 
         return False
 
@@ -5664,7 +6448,11 @@ class CollectionPage(QWidget):
             card,
             rarity_filter,
     ):
-        if rarity_filter == "all":
+        if (
+                not rarity_filter
+                or rarity_filter == "all"
+                or rarity_filter == []
+        ):
             return True
 
         if not card:
@@ -5674,19 +6462,40 @@ class CollectionPage(QWidget):
             rarity = str(
                 card[-1] or ""
             ).strip().lower()
+
         except (
                 TypeError,
                 IndexError,
         ):
             return False
 
-        return rarity == str(
-            rarity_filter or ""
-        ).strip().lower()
+        if isinstance(
+                rarity_filter,
+                str,
+        ):
+            rarity_filter = [
+                rarity_filter,
+            ]
+
+        return (
+                rarity
+                in [
+                    str(value)
+                .strip()
+                .lower()
+                    for value
+                    in rarity_filter
+                ]
+        )
 
     def apply_collection_filters(
             self,
     ):
+
+        # =================================================
+        # VERIFICAR FILTROS EXISTENTES
+        # =================================================
+
         if not hasattr(
                 self,
                 "color_filter",
@@ -5723,35 +6532,38 @@ class CollectionPage(QWidget):
         ):
             return
 
+        # =================================================
+        # OBTER FILTROS ATUAIS
+        # =================================================
+
         color = (
-                self.color_filter.currentData()
-                or "all"
+            self.color_filter.get_selected_values()
         )
 
         card_type = (
-                self.type_filter.currentData()
-                or "all"
+            self.type_filter.get_selected_values()
         )
 
         supertype = (
-                self.supertype_filter.currentData()
-                or "all"
+            self.supertype_filter.get_selected_values()
         )
 
         rarity = (
-                self.rarity_filter.currentData()
-                or "all"
+            self.rarity_filter.get_selected_values()
         )
 
         set_name = (
-                self.set_filter.currentData()
-                or "all"
+            self.set_filter.get_selected_values()
         )
 
         sort_mode = (
                 self.sort_filter.currentData()
                 or "name_asc"
         )
+
+        # =================================================
+        # SALVAR FILTROS ATIVOS
+        # =================================================
 
         self.active_color_filter = (
             color
@@ -5794,16 +6606,19 @@ class CollectionPage(QWidget):
             )
 
         if search_text:
+
             cards = list(
                 self.search_result_cards
             )
+
         else:
+
             cards = list(
                 self.all_collection_cards
             )
 
         # =================================================
-        # FILTROS
+        # APLICAR FILTROS
         # =================================================
 
         filtered = []
@@ -5860,6 +6675,10 @@ class CollectionPage(QWidget):
             ):
                 continue
 
+            # -------------------------------------------------
+            # CARTA APROVADA
+            # -------------------------------------------------
+
             filtered.append(
                 card
             )
@@ -5868,11 +6687,9 @@ class CollectionPage(QWidget):
         # ORDENAÇÃO
         # =================================================
 
-        filtered = (
-            self.sort_collection_cards(
-                filtered,
-                sort_mode,
-            )
+        filtered = self.sort_collection_cards(
+            filtered,
+            sort_mode,
         )
 
         # =================================================
@@ -5884,16 +6701,21 @@ class CollectionPage(QWidget):
         )
 
         # =================================================
-        # MOSTRAR
+        # ATUALIZAR CARTAS ATUAIS
         # =================================================
 
         self.current_cards = list(
             filtered
         )
 
+        # =================================================
+        # MOSTRAR CARTAS
+        # =================================================
+
         self.display_cards(
             self.current_cards
         )
+
     def clear_collection_filters(
             self,
     ):
@@ -5922,25 +6744,15 @@ class CollectionPage(QWidget):
             True
         )
 
-        self.color_filter.setCurrentIndex(
-            0
-        )
+        self.color_filter.clear_selection()
 
-        self.type_filter.setCurrentIndex(
-            0
-        )
+        self.type_filter.clear_selection()
 
-        self.supertype_filter.setCurrentIndex(
-            0
-        )
+        self.supertype_filter.clear_selection()
 
-        self.rarity_filter.setCurrentIndex(
-            0
-        )
+        self.rarity_filter.clear_selection()
 
-        self.set_filter.setCurrentIndex(
-            0
-        )
+        self.set_filter.clear_selection()
 
         self.sort_filter.setCurrentIndex(
             0
@@ -5971,19 +6783,19 @@ class CollectionPage(QWidget):
         )
 
         self.apply_collection_filters()
-    def populate_set_filter(
-        self,
-    ):
 
-        if not hasattr(
+    def populate_set_filter(
             self,
-            "set_filter",
+    ):
+        if not hasattr(
+                self,
+                "set_filter",
         ):
             return
 
-        current = (
-            self.set_filter.currentData()
-        )
+        # -------------------------------------------------
+        # EDIÇÕES EXISTENTES NA COLEÇÃO
+        # -------------------------------------------------
 
         sets = sorted(
             {
@@ -5993,47 +6805,51 @@ class CollectionPage(QWidget):
                 if (
                     len(card) > 4
                     and card[4]
-                )
+            )
             },
             key=str.lower,
         )
 
-        self.set_filter.blockSignals(
-            True
+        # -------------------------------------------------
+        # PRESERVAR SELEÇÃO ATUAL
+        # -------------------------------------------------
+
+        current = (
+            self.set_filter.get_selected_values()
         )
 
-        self.set_filter.clear()
+        # -------------------------------------------------
+        # ATUALIZAR OPÇÕES
+        # -------------------------------------------------
 
-        self.set_filter.addItem(
-            "Todas as edições",
-            "all",
+        self.set_filter.set_options(
+            [
+                (
+                    set_name,
+                    set_name,
+                )
+                for set_name
+                in sets
+            ]
         )
 
-        for set_name in sets:
+        # -------------------------------------------------
+        # RESTAURAR SELEÇÕES QUE AINDA EXISTEM
+        # -------------------------------------------------
 
-            self.set_filter.addItem(
-                set_name,
-                set_name,
-            )
+        valid_current = [
+            value
+            for value
+            in current
+            if value in sets
+        ]
 
-        index = (
-            self.set_filter.findData(
-                current
-            )
-        )
-
-        if index >= 0:
-
-            self.set_filter.setCurrentIndex(
-                index
-            )
-
-        self.set_filter.blockSignals(
-            False
+        self.set_filter.set_selected_values(
+            valid_current
         )
 
     def save_collection_filter_settings(
-        self,
+            self,
     ):
 
         self.settings.setValue(
@@ -6052,6 +6868,11 @@ class CollectionPage(QWidget):
         )
 
         self.settings.setValue(
+            "collection/rarity_filter",
+            self.active_rarity_filter,
+        )
+
+        self.settings.setValue(
             "collection/set_filter",
             self.active_set_filter,
         )
@@ -6062,31 +6883,31 @@ class CollectionPage(QWidget):
         )
 
     def restore_collection_filter_settings(
-        self,
+            self,
     ):
-
         color = self.settings.value(
             "collection/color_filter",
-            "all",
-            type=str,
+            [],
         )
 
         card_type = self.settings.value(
             "collection/type_filter",
-            "all",
-            type=str,
+            [],
         )
 
         supertype = self.settings.value(
             "collection/supertype_filter",
-            "all",
-            type=str,
+            [],
+        )
+
+        rarity = self.settings.value(
+            "collection/rarity_filter",
+            [],
         )
 
         set_name = self.settings.value(
             "collection/set_filter",
-            "all",
-            type=str,
+            [],
         )
 
         sort_mode = self.settings.value(
@@ -6095,6 +6916,59 @@ class CollectionPage(QWidget):
             type=str,
         )
 
+        # -------------------------------------------------
+        # GARANTIR LISTAS
+        # -------------------------------------------------
+
+        if isinstance(
+                color,
+                str,
+        ):
+            if color == "all":
+                color = []
+            else:
+                color = [color]
+
+        if isinstance(
+                card_type,
+                str,
+        ):
+            if card_type == "all":
+                card_type = []
+            else:
+                card_type = [card_type]
+
+        if isinstance(
+                supertype,
+                str,
+        ):
+            if supertype == "all":
+                supertype = []
+            else:
+                supertype = [supertype]
+
+        if isinstance(
+                rarity,
+                str,
+        ):
+            if rarity == "all":
+                rarity = []
+            else:
+                rarity = [rarity]
+
+        if isinstance(
+                set_name,
+                str,
+        ):
+            if set_name == "all":
+                set_name = []
+            else:
+                set_name = [set_name]
+
+        # -------------------------------------------------
+        # BLOQUEAR SINAIS
+        # -------------------------------------------------
+
         self.color_filter.blockSignals(
             True
         )
@@ -6107,6 +6981,10 @@ class CollectionPage(QWidget):
             True
         )
 
+        self.rarity_filter.blockSignals(
+            True
+        )
+
         self.set_filter.blockSignals(
             True
         )
@@ -6115,52 +6993,33 @@ class CollectionPage(QWidget):
             True
         )
 
-        color_index = (
-            self.color_filter.findData(
-                color
-            )
+        # -------------------------------------------------
+        # RESTAURAR FILTROS
+        # -------------------------------------------------
+
+        self.color_filter.set_selected_values(
+            color
         )
 
-        if color_index >= 0:
-
-            self.color_filter.setCurrentIndex(
-                color_index
-            )
-
-        type_index = (
-            self.type_filter.findData(
-                card_type
-            )
+        self.type_filter.set_selected_values(
+            card_type
         )
 
-        if type_index >= 0:
-
-            self.type_filter.setCurrentIndex(
-                type_index
-            )
-
-        supertype_index = (
-            self.supertype_filter.findData(
-                supertype
-            )
+        self.supertype_filter.set_selected_values(
+            supertype
         )
 
-        if supertype_index >= 0:
-            self.supertype_filter.setCurrentIndex(
-                supertype_index
-            )
-
-        set_index = (
-            self.set_filter.findData(
-                set_name
-            )
+        self.rarity_filter.set_selected_values(
+            rarity
         )
 
-        if set_index >= 0:
+        self.set_filter.set_selected_values(
+            set_name
+        )
 
-            self.set_filter.setCurrentIndex(
-                set_index
-            )
+        # -------------------------------------------------
+        # RESTAURAR ORDENAÇÃO
+        # -------------------------------------------------
 
         sort_index = (
             self.sort_filter.findData(
@@ -6169,10 +7028,13 @@ class CollectionPage(QWidget):
         )
 
         if sort_index >= 0:
-
             self.sort_filter.setCurrentIndex(
                 sort_index
             )
+
+        # -------------------------------------------------
+        # DESBLOQUEAR SINAIS
+        # -------------------------------------------------
 
         self.color_filter.blockSignals(
             False
@@ -6186,6 +7048,10 @@ class CollectionPage(QWidget):
             False
         )
 
+        self.rarity_filter.blockSignals(
+            False
+        )
+
         self.set_filter.blockSignals(
             False
         )
@@ -6194,29 +7060,33 @@ class CollectionPage(QWidget):
             False
         )
 
+        # -------------------------------------------------
+        # ATUALIZAR VALORES ATIVOS
+        # -------------------------------------------------
+
         self.active_color_filter = (
-            self.color_filter.currentData()
-            or "all"
+            self.color_filter.get_selected_values()
         )
 
         self.active_type_filter = (
-            self.type_filter.currentData()
-            or "all"
+            self.type_filter.get_selected_values()
         )
 
         self.active_supertype_filter = (
-                self.supertype_filter.currentData()
-                or "all"
+            self.supertype_filter.get_selected_values()
+        )
+
+        self.active_rarity_filter = (
+            self.rarity_filter.get_selected_values()
         )
 
         self.active_set_filter = (
-            self.set_filter.currentData()
-            or "all"
+            self.set_filter.get_selected_values()
         )
 
         self.active_sort = (
-            self.sort_filter.currentData()
-            or "name_asc"
+                self.sort_filter.currentData()
+                or "name_asc"
         )
 
     # =========================================================
@@ -6258,8 +7128,6 @@ class CollectionPage(QWidget):
             0,
             self._update_virtual_grid,
         )
-
-
 
     # =========================================================
     # VIRTUALIZAÇÃO — ATUALIZAR GRADE
@@ -6988,6 +7856,7 @@ class CollectionPage(QWidget):
             columns,
             card_width,
         )
+
     # =========================================================
     # DISPLAY — GRADE
     # =========================================================
@@ -7649,7 +8518,7 @@ class CollectionPage(QWidget):
                 Qt.ScrollBarPolicy.ScrollBarAsNeeded
             )
 
-            return        # =====================================================
+            return  # =====================================================
         # AGENDAR PRÓXIMO LOTE
         # =====================================================
 
@@ -7668,36 +8537,37 @@ class CollectionPage(QWidget):
                 grid_layout,
             )
         )
+
     # =====================================================
     # CRIAR LINHA DA CARTA
     # =====================================================
 
     def create_card_widget(
-        self,
-        card_id,
-        name,
-        printed_name,
-        lang,
-        set_name,
-        collector_number,
-        mana_cost,
-        type_line,
-        oracle_text,
-        image_url,
-        quantity,
-        image_path,
-        power,
-        toughness,
-        card_faces=None,
-        card_printings=None,
-        preferred_language=None,
-        preferred_variant=None,
-        preferred_finish=None,
-        preferred_image=None,
-        preferred_face=0,
-        favorite=0,
-        custom_tags=None,
-        last_view=None,
+            self,
+            card_id,
+            name,
+            printed_name,
+            lang,
+            set_name,
+            collector_number,
+            mana_cost,
+            type_line,
+            oracle_text,
+            image_url,
+            quantity,
+            image_path,
+            power,
+            toughness,
+            card_faces=None,
+            card_printings=None,
+            preferred_language=None,
+            preferred_variant=None,
+            preferred_finish=None,
+            preferred_image=None,
+            preferred_face=0,
+            favorite=0,
+            custom_tags=None,
+            last_view=None,
     ):
 
         try:
@@ -7707,8 +8577,8 @@ class CollectionPage(QWidget):
             )
 
         except (
-            TypeError,
-            ValueError,
+                TypeError,
+                ValueError,
         ):
 
             return
@@ -7805,7 +8675,7 @@ class CollectionPage(QWidget):
         image_label.setText(
             ""
         )
-        
+
         # Usar card.png como placeholder
         if CARD_ICON_PATH.exists():
             pixmap = QPixmap(str(CARD_ICON_PATH))
@@ -7895,8 +8765,8 @@ class CollectionPage(QWidget):
         )
 
         has_pt = (
-            power is not None
-            and toughness is not None
+                power is not None
+                and toughness is not None
         )
 
         if has_mana or has_pt:
@@ -7946,7 +8816,6 @@ class CollectionPage(QWidget):
                 )
 
                 if mana_widget:
-
                     meta_layout.addWidget(
                         mana_widget,
                         0,
@@ -7958,7 +8827,6 @@ class CollectionPage(QWidget):
             # =================================================
 
             if has_mana and has_pt:
-
                 separator = QFrame()
 
                 separator.setObjectName(
@@ -7994,7 +8862,6 @@ class CollectionPage(QWidget):
             # =================================================
 
             if has_pt:
-
                 pt_label = QLabel(
                     f"{power} / {toughness}"
                 )
@@ -8069,12 +8936,11 @@ class CollectionPage(QWidget):
         # =================================================
 
         set_text = (
-            set_name
-            or "Edição desconhecida"
+                set_name
+                or "Edição desconhecida"
         )
 
         if collector_number:
-
             set_text += (
                 f"   •   #{collector_number}"
             )
@@ -8275,12 +9141,12 @@ class CollectionPage(QWidget):
 
         if image_path:
             local_path = Path(image_path)
-            
+
             if local_path.exists() and local_path.stat().st_size > 2:
                 # Carregar imagem síncrona como nos Decks
                 cache_key = str(local_path)
                 pixmap = self.image_cache.get(cache_key)
-                
+
                 if pixmap is None or pixmap.isNull():
                     try:
                         pixmap = QPixmap(str(local_path))
@@ -8345,14 +9211,13 @@ class CollectionPage(QWidget):
                     task
                 )
 
-
     # =====================================================
     # ID PELO URL
     # =====================================================
 
     def get_scryfall_id_from_url(
-        self,
-        url,
+            self,
+            url,
     ):
 
         if not url:
@@ -8367,9 +9232,8 @@ class CollectionPage(QWidget):
             )
 
             if filename.endswith(
-                ".jpg"
+                    ".jpg"
             ):
-
                 return filename[:-4]
 
         except Exception:
@@ -8382,9 +9246,9 @@ class CollectionPage(QWidget):
     # =====================================================
 
     def load_local_thumbnail(
-        self,
-        label,
-        path,
+            self,
+            label,
+            path,
     ):
 
         try:
@@ -8398,8 +9262,8 @@ class CollectionPage(QWidget):
             )
 
             if (
-                pixmap is None
-                or pixmap.isNull()
+                    pixmap is None
+                    or pixmap.isNull()
             ):
 
                 pixmap = QPixmap(
@@ -8412,7 +9276,7 @@ class CollectionPage(QWidget):
                 self.image_cache[
                     cache_key
                 ] = pixmap
-                
+
                 # Limpar cache se necessário
                 _cleanup_image_cache()
 
@@ -8431,9 +9295,9 @@ class CollectionPage(QWidget):
     # =====================================================
 
     def load_grid_thumbnail(
-        self,
-        label,
-        path,
+            self,
+            label,
+            path,
     ):
 
         try:
@@ -8447,8 +9311,8 @@ class CollectionPage(QWidget):
             )
 
             if (
-                pixmap is None
-                or pixmap.isNull()
+                    pixmap is None
+                    or pixmap.isNull()
             ):
 
                 pixmap = QPixmap(
@@ -8461,7 +9325,7 @@ class CollectionPage(QWidget):
                 self.image_cache[
                     cache_key
                 ] = pixmap
-                
+
                 # Limpar cache se necessário
                 _cleanup_image_cache()
 
@@ -8608,10 +9472,10 @@ class CollectionPage(QWidget):
             )
 
     def receive_image_error(
-        self,
-        url,
-        error,
-        label,
+            self,
+            url,
+            error,
+            label,
     ):
 
         print(
@@ -8619,7 +9483,6 @@ class CollectionPage(QWidget):
         )
 
         if label:
-
             label.setText(
                 "🃏"
             )
@@ -8800,6 +9663,7 @@ class CollectionPage(QWidget):
         label.setPixmap(
             scaled
         )
+
     # =====================================================
     # DETALHES DA CARTA
     # =====================================================
@@ -8823,8 +9687,8 @@ class CollectionPage(QWidget):
         self.selected_card_id = card_id
 
         for current_id in (
-            previous_id,
-            card_id,
+                previous_id,
+                card_id,
         ):
             if not current_id:
                 continue
@@ -8943,8 +9807,8 @@ class CollectionPage(QWidget):
             return
 
     def show_card_details(
-        self,
-        card,
+            self,
+            card,
     ):
 
         if not card:
@@ -8957,14 +9821,13 @@ class CollectionPage(QWidget):
         )
 
         if image_url:
-
             pixmap = self.image_cache.get(
                 image_url
             )
 
         if (
-            pixmap is None
-            or pixmap.isNull()
+                pixmap is None
+                or pixmap.isNull()
         ):
 
             image_path = card.get(
@@ -8980,8 +9843,8 @@ class CollectionPage(QWidget):
                     )
 
                     if (
-                        path.exists()
-                        and path.stat().st_size > 0
+                            path.exists()
+                            and path.stat().st_size > 0
                     ):
 
                         cache_key = str(
@@ -8993,8 +9856,8 @@ class CollectionPage(QWidget):
                         )
 
                         if (
-                            pixmap is None
-                            or pixmap.isNull()
+                                pixmap is None
+                                or pixmap.isNull()
                         ):
 
                             pixmap = QPixmap(
@@ -9006,16 +9869,15 @@ class CollectionPage(QWidget):
                                 self.image_cache[
                                     cache_key
                                 ] = pixmap
-                                
+
                                 # Limpar cache se necessário
                                 _cleanup_image_cache()
 
                                 if image_url:
-
                                     self.image_cache[
                                         image_url
                                     ] = pixmap
-                                    
+
                                     # Limpar cache se necessário
                                     _cleanup_image_cache()
 
@@ -9033,8 +9895,6 @@ class CollectionPage(QWidget):
         )
 
         dialog.exec()
-
-
 
     # =====================================================
     # QUANTIDADE
@@ -9499,7 +10359,7 @@ class CollectionPage(QWidget):
     # =====================================================
 
     def export_collection(
-        self,
+            self,
     ):
 
         menu = QMenu(
@@ -9563,7 +10423,7 @@ class CollectionPage(QWidget):
         )
 
     def export_custom(
-        self,
+            self,
     ):
         cards = get_collection_for_export()
 
@@ -9581,15 +10441,15 @@ class CollectionPage(QWidget):
         )
 
         if (
-            dialog.exec()
-            != QDialog.DialogCode.Accepted
+                dialog.exec()
+                != QDialog.DialogCode.Accepted
         ):
             return
 
         dialog.export_cards()
 
     def export_backup_json(
-        self,
+            self,
     ):
 
         cards = get_collection_for_export()
@@ -9621,7 +10481,7 @@ class CollectionPage(QWidget):
             )
 
     def export_treated_json(
-        self,
+            self,
     ):
 
         cards = get_collection_for_export()
@@ -9653,7 +10513,7 @@ class CollectionPage(QWidget):
             )
 
     def export_treated_txt(
-        self,
+            self,
     ):
 
         cards = get_collection_for_export()
@@ -9685,7 +10545,7 @@ class CollectionPage(QWidget):
             )
 
     def export_csv(
-        self,
+            self,
     ):
 
         cards = get_collection_for_export()

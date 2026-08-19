@@ -370,8 +370,8 @@ class MainWindow(QMainWindow):
         )
 
         self.setMinimumSize(
-            1100,
-            680,
+            1360,
+            880,
         )
 
         # =================================================
