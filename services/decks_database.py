@@ -174,6 +174,40 @@ def initialize_decks_database():
                 """
             )
 
+        if "format" not in deck_columns:
+
+            cursor.execute(
+                """
+                ALTER TABLE decks
+                ADD COLUMN format TEXT DEFAULT 'livre'
+                """
+            )
+
+        if "favorite" not in deck_columns:
+
+            cursor.execute(
+                """
+                ALTER TABLE decks
+                ADD COLUMN favorite INTEGER DEFAULT 0
+                """
+            )
+
+        cursor.execute(
+            """
+            UPDATE decks
+            SET format = 'livre'
+            WHERE format IS NULL OR format = ''
+            """
+        )
+
+        cursor.execute(
+            """
+            UPDATE decks
+            SET favorite = 0
+            WHERE favorite IS NULL
+            """
+        )
+
         cursor.execute(
             """
             UPDATE decks
@@ -404,6 +438,9 @@ def get_deck(deck_id):
                 d.preview_card_id,
                 d.preview_image_path,
 
+                d.format,
+                d.favorite,
+
                 COALESCE(
                     SUM(dc.quantity),
                     0
@@ -477,6 +514,9 @@ def get_all_decks():
                 d.preview_card_id,
                 d.preview_image_path,
 
+                d.format,
+                d.favorite,
+
                 COALESCE(
                     SUM(dc.quantity),
                     0
@@ -484,12 +524,22 @@ def get_all_decks():
 
                 COUNT(
                     DISTINCT dc.card_id
-                ) AS unique_cards
+                ) AS unique_cards,
+
+                COALESCE(
+                    SUM(dc.quantity * COALESCE(c.price_usd, 0)),
+                    0
+                ) AS estimated_value,
+
+                GROUP_CONCAT(c.color_identity, '|') AS color_identities
 
             FROM decks d
 
             LEFT JOIN deck_cards dc
                 ON dc.deck_id = d.id
+
+            LEFT JOIN cards c
+                ON c.id = dc.card_id
 
             GROUP BY
                 d.id
@@ -564,6 +614,110 @@ def rename_deck(deck_id, name):
 
         print(
             "[DECKS DATABASE] Erro ao renomear deck:",
+            error
+        )
+
+        return False
+
+    finally:
+
+        connection.close()
+
+
+# =========================================================
+# FORMATO DO DECK
+# =========================================================
+
+def set_deck_format(deck_id, format_key):
+    deck_id = _to_int(deck_id)
+
+    format_key = _clean_name(format_key).lower()
+
+    if deck_id <= 0 or not format_key:
+        return False
+
+    connection = get_connection()
+
+    try:
+
+        cursor = connection.cursor()
+
+        cursor.execute(
+            """
+            UPDATE decks
+            SET
+                format = ?,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE id = ?
+            """,
+            (
+                format_key,
+                deck_id
+            )
+        )
+
+        changed = cursor.rowcount > 0
+
+        connection.commit()
+
+        return changed
+
+    except Exception as error:
+
+        connection.rollback()
+
+        print(
+            "[DECKS DATABASE] Erro ao definir formato:",
+            error
+        )
+
+        return False
+
+    finally:
+
+        connection.close()
+
+
+# =========================================================
+# FAVORITO
+# =========================================================
+
+def set_deck_favorite(deck_id, favorite):
+    deck_id = _to_int(deck_id)
+
+    if deck_id <= 0:
+        return False
+
+    connection = get_connection()
+
+    try:
+
+        cursor = connection.cursor()
+
+        cursor.execute(
+            """
+            UPDATE decks
+            SET favorite = ?
+            WHERE id = ?
+            """,
+            (
+                1 if favorite else 0,
+                deck_id
+            )
+        )
+
+        changed = cursor.rowcount > 0
+
+        connection.commit()
+
+        return changed
+
+    except Exception as error:
+
+        connection.rollback()
+
+        print(
+            "[DECKS DATABASE] Erro ao definir favorito:",
             error
         )
 
@@ -703,6 +857,15 @@ def get_deck_cards(deck_id):
 
                 c.type_line,
                 c.oracle_text,
+
+                c.rarity,
+                c.cmc,
+                c.colors,
+                c.color_identity,
+                c.legalities,
+
+                c.price_usd,
+                c.price_eur,
 
                 c.power,
                 c.toughness,

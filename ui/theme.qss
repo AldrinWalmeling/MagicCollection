@@ -3675,3 +3675,198 @@ QLabel#DashboardDeckCards {
 
     font-size: 10px;
 }
+/* =========================================================
+   DECKS — FILTROS, ESTATÍSTICAS E GRUPOS
+========================================================= */
+
+QFrame#DeckFilterBar {
+    background-color: #151821;
+    border: 1px solid #2c3342;
+    border-radius: 12px;
+}
+
+QLineEdit#DeckFilterSearch {
+    background-color: #12161f;
+    color: #eef0f5;
+    border: 1px solid #2c3342;
+    border-radius: 8px;
+    padding: 7px 10px;
+    font-size: 13px;
+}
+
+QLineEdit#DeckFilterSearch:focus {
+    border: 1px solid #d4a84b;
+}
+
+QComboBox#DeckFilterCombo,
+QComboBox#DeckFormatCombo {
+    background-color: #232936;
+    color: #d6dae3;
+    border: 1px solid #2f3646;
+    border-radius: 8px;
+    padding: 6px 10px;
+    font-size: 12px;
+}
+
+QComboBox#DeckFilterCombo:hover,
+QComboBox#DeckFormatCombo:hover {
+    border: 1px solid #455068;
+}
+
+QComboBox#DeckFilterCombo::drop-down,
+QComboBox#DeckFormatCombo::drop-down {
+    border: none;
+    width: 18px;
+}
+
+QComboBox#DeckFilterCombo QAbstractItemView,
+QComboBox#DeckFormatCombo QAbstractItemView {
+    background-color: #1a1e29;
+    color: #d6dae3;
+    border: 1px solid #2f3646;
+    selection-background-color: #2c3444;
+    outline: none;
+}
+
+QPushButton#DeckColorFilterButton {
+    background-color: #1a1e29;
+    color: #7b8394;
+    border: 1px solid #2f3646;
+    border-radius: 15px;
+    padding: 0px;
+    margin: 0px;
+    min-width: 0px;
+    font-size: 12px;
+    font-weight: 700;
+    text-align: center;
+}
+
+QPushButton#DeckColorFilterButton:hover {
+    border: 1px solid #455068;
+    color: #eef0f5;
+}
+
+QPushButton#DeckColorFilterButton[pip="w"]:checked {
+    background-color: #f2e6c8;
+    border: 1px solid #f2e6c8;
+    color: #1a1e29;
+}
+
+QPushButton#DeckColorFilterButton[pip="u"]:checked {
+    background-color: #4a86c8;
+    border: 1px solid #4a86c8;
+    color: #ffffff;
+}
+
+QPushButton#DeckColorFilterButton[pip="b"]:checked {
+    background-color: #6f5f80;
+    border: 1px solid #6f5f80;
+    color: #ffffff;
+}
+
+QPushButton#DeckColorFilterButton[pip="r"]:checked {
+    background-color: #d4574a;
+    border: 1px solid #d4574a;
+    color: #ffffff;
+}
+
+QPushButton#DeckColorFilterButton[pip="g"]:checked {
+    background-color: #4f9d68;
+    border: 1px solid #4f9d68;
+    color: #ffffff;
+}
+
+QPushButton#DeckColorFilterButton[pip="c"]:checked {
+    background-color: #8b93a3;
+    border: 1px solid #8b93a3;
+    color: #12161f;
+}
+
+QLabel#DeckColorPip {
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 700;
+    color: #12161f;
+}
+
+QLabel#DeckColorPip[pip="w"] { background-color: #f2e6c8; }
+QLabel#DeckColorPip[pip="u"] { background-color: #4a86c8; color: #ffffff; }
+QLabel#DeckColorPip[pip="b"] { background-color: #6f5f80; color: #ffffff; }
+QLabel#DeckColorPip[pip="r"] { background-color: #d4574a; color: #ffffff; }
+QLabel#DeckColorPip[pip="g"] { background-color: #4f9d68; color: #ffffff; }
+QLabel#DeckColorPip[pip="c"] { background-color: #8b93a3; color: #12161f; }
+
+QLabel#DeckColorPip[empty="true"] {
+    background-color: #1a1e29;
+    color: #4a5160;
+    border: 1px solid #272e3d;
+}
+
+QLabel#DeckValidationLabel {
+    background-color: #12161f;
+    border: 1px solid #272e3d;
+    border-radius: 8px;
+    padding: 8px 10px;
+    font-size: 12px;
+    color: #9aa2b1;
+}
+
+QLabel#DeckValidationLabel[state="ok"] {
+    background-color: #14241a;
+    border: 1px solid #2f6b43;
+    color: #7fd39b;
+}
+
+QLabel#DeckValidationLabel[state="warning"] {
+    background-color: #241f12;
+    border: 1px solid #6b5a2f;
+    color: #e6c77b;
+}
+
+QLabel#DeckValidationLabel[state="error"] {
+    background-color: #251517;
+    border: 1px solid #6b2f36;
+    color: #e79a9a;
+}
+
+QFrame#DeckGroupHeader {
+    background-color: transparent;
+    border: none;
+    border-bottom: 1px solid #272e3d;
+}
+
+QLabel#DeckGroupTitle {
+    background-color: transparent;
+    color: #eef0f5;
+    font-size: 14px;
+    font-weight: 700;
+}
+
+QLabel#DeckGroupCount {
+    background-color: #232936;
+    color: #b6bdcb;
+    border: 1px solid #2f3646;
+    border-radius: 8px;
+    padding: 1px 8px;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+QLabel#DeckFormatBadge {
+    background-color: #232936;
+    color: #b6bdcb;
+    border: 1px solid #2f3646;
+    border-radius: 8px;
+    padding: 2px 8px;
+    font-size: 10px;
+    font-weight: 700;
+}
+
+QScrollArea#DeckStatsSidebarScroll {
+    background-color: transparent;
+    border: none;
+}
+
+QScrollArea#DeckStatsSidebarScroll > QWidget > QWidget {
+    background-color: transparent;
+}
