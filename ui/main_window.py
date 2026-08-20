@@ -29,6 +29,10 @@ from profile_manager import ProfileManager
 
 from ui.theme import DARK_THEME
 
+from components.card_details_dialog import (
+    CardDetailsDialog,
+)
+
 
 # =========================================================
 # CAMINHOS DOS ASSETS
@@ -365,13 +369,13 @@ class MainWindow(QMainWindow):
         )
 
         self.resize(
-            1440,
+            1500,
             920,
         )
 
         self.setMinimumSize(
-            1360,
-            880,
+            1230,
+            920,
         )
 
         # =================================================
@@ -496,7 +500,7 @@ class MainWindow(QMainWindow):
         )
 
         self.sidebar.setFixedWidth(
-            240
+            200
         )
 
         sidebar_layout = QVBoxLayout(
@@ -1806,6 +1810,48 @@ class MainWindow(QMainWindow):
 
                 pass
 
+        if not getattr(
+            self,
+            "_dashboard_card_signal_connected",
+            False,
+        ):
+
+            try:
+
+                self.dashboard_page.card_clicked.connect(
+                    self._open_dashboard_card
+                )
+
+                self._dashboard_card_signal_connected = True
+
+            except (
+                    TypeError,
+                    RuntimeError,
+            ):
+
+                pass
+
+        if not getattr(
+            self,
+            "_dashboard_view_all_signal_connected",
+            False,
+        ):
+
+            try:
+
+                self.dashboard_page.view_all_cards.connect(
+                    self.show_collection
+                )
+
+                self._dashboard_view_all_signal_connected = True
+
+            except (
+                    TypeError,
+                    RuntimeError,
+            ):
+
+                pass
+
         # =================================================
         # ATUALIZAR DASHBOARD
         # =================================================
@@ -1863,6 +1909,57 @@ class MainWindow(QMainWindow):
                 "Erro ao abrir deck:",
                 error,
             )
+
+    def _open_dashboard_card(
+            self,
+            card,
+    ):
+
+        if not card:
+            return
+
+        pixmap = None
+
+        try:
+
+            image_path = card.get(
+                "image_path"
+            )
+
+            if image_path:
+
+                path = Path(
+                    str(image_path)
+                )
+
+                if (
+                    path.exists()
+                    and path.stat().st_size > 0
+                ):
+
+                    loaded = QPixmap(
+                        str(path)
+                    )
+
+                    if not loaded.isNull():
+
+                        pixmap = loaded
+
+        except Exception as error:
+
+            print(
+                "[DASHBOARD] "
+                "Erro ao carregar imagem da carta:",
+                error,
+            )
+
+        dialog = CardDetailsDialog(
+            card,
+            pixmap,
+            self,
+        )
+
+        dialog.exec()
 
     # =====================================================
     # DECKS

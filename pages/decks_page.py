@@ -1245,6 +1245,302 @@ def deck_exists(deck_id):
 
 
 # =========================================================
+# IMPORTAÇÃO DE DECK — PARSE DOS ARQUIVOS DO EXPORTAR
+# =========================================================
+
+_EXPORT_FIELD_LABELS = {
+    "name": "Nome",
+    "printed_name": "Nome impresso",
+    "mana_cost": "Custo de mana",
+    "type_line": "Tipo",
+    "oracle_text": "Texto / efeito",
+    "power": "Poder",
+    "toughness": "Resistência",
+    "power_toughness": "Poder / Resistência",
+    "loyalty": "Lealdade",
+    "defense": "Defesa",
+    "quantity": "Quantidade",
+    "decks": "Decks",
+    "set_name": "Edição",
+    "set_code": "Código da edição",
+    "collector_number": "Número coletor",
+    "lang": "Idioma",
+    "scryfall_id": "Scryfall ID",
+    "image_url": "URL da imagem",
+    "image_path": "Caminho da imagem",
+}
+
+_LABEL_TO_FIELD = {
+    label: key
+    for key, label in _EXPORT_FIELD_LABELS.items()
+}
+
+_SEPARATOR_LINE = "─" * 62
+
+_TITLE_LINE = "═" * 62
+
+
+def _to_int(value, default=0):
+    try:
+        return int(float(value))
+    except (TypeError, ValueError):
+        return default
+
+
+def _normalize_export_card(item):
+    """
+    Converte um registro de carta exportado
+    (chaves em inglês ou rótulos em português)
+    para um dicionário canônico.
+    """
+
+    card = {}
+
+    for field in _EXPORT_FIELD_LABELS:
+        value = item.get(field)
+        if value is None:
+            value = item.get(
+                _LABEL_TO_FIELD.get(field) or ""
+            )
+        if value is not None:
+            card[field] = value
+
+    return card
+
+
+def _parse_deck_import_file(filepath):
+    """
+    Lê um arquivo gerado pelo Exportar (JSON/CSV/TXT)
+    e devolve:
+
+        (nome_sugerido, [carta, ...])
+    """
+
+    path = Path(filepath)
+
+    if not path.exists():
+        return None, []
+
+    try:
+        text = path.read_text(
+            encoding="utf-8-sig",
+            errors="replace",
+        )
+    except Exception:
+        return None, []
+
+    suffix = path.suffix.lower()
+
+    if suffix == ".json":
+        return _parse_deck_json(text)
+
+    if suffix == ".csv":
+        return _parse_deck_csv(text)
+
+    return _parse_deck_txt(text)
+
+
+def _parse_deck_json(text):
+    import json
+
+    try:
+        data = json.loads(text)
+    except (TypeError, ValueError, json.JSONDecodeError):
+        return None, []
+
+    if isinstance(data, dict):
+        items = data.get("cartas") or []
+        summary = data.get("resumo") or {}
+        suggested = summary.get("nome") or summary.get("titulo")
+    else:
+        items = data or []
+        suggested = None
+
+    cards = []
+
+    for item in items:
+
+        if not isinstance(item, dict):
+            continue
+
+        card = _normalize_export_card(item)
+
+        name = str(card.get("name") or "").strip()
+        scryfall_id = str(card.get("scryfall_id") or "").strip()
+
+        if not (name or scryfall_id):
+            continue
+
+        cards.append(card)
+
+    return suggested, cards
+
+
+def _parse_deck_csv(text):
+    import csv
+    import io
+
+    try:
+        reader = csv.reader(io.StringIO(text))
+        rows = [row for row in reader if row]
+    except Exception:
+        return None, []
+
+    if not rows:
+        return None, []
+
+    header = [col.strip() for col in rows[0]]
+
+    field_keys = [
+        _LABEL_TO_FIELD.get(col, col)
+        for col in header
+    ]
+
+    cards = []
+
+    for row in rows[1:]:
+
+        if len(row) != len(field_keys):
+            continue
+
+        item = {}
+
+        for field, value in zip(field_keys, row):
+            item[field] = value
+
+        card = _normalize_export_card(item)
+
+        name = str(card.get("name") or "").strip()
+        scryfall_id = str(card.get("scryfall_id") or "").strip()
+
+        if not (name or scryfall_id):
+            continue
+
+        cards.append(card)
+
+    return None, cards
+
+
+def _parse_deck_txt(text):
+    cards = []
+
+    current = {}
+
+    title = None
+
+    awaiting_title = False
+
+    for raw_line in text.splitlines():
+
+        stripped = raw_line.strip()
+
+        if not stripped:
+            continue
+
+        if stripped == _TITLE_LINE:
+
+            if title is None:
+                awaiting_title = True
+
+            continue
+
+        if awaiting_title:
+
+            title = stripped
+
+            awaiting_title = False
+
+            continue
+
+        if stripped == _SEPARATOR_LINE:
+
+            if current.get("name") or current.get(
+                "scryfall_id"
+            ):
+                cards.append(current)
+
+            current = {}
+
+            continue
+
+        if ":" not in raw_line:
+            continue
+
+        label, _, value = raw_line.partition(":")
+
+        field = _LABEL_TO_FIELD.get(
+            label.strip()
+        )
+
+        if field is None:
+            continue
+
+        current[field] = value.strip()
+
+    if current.get("name") or current.get(
+        "scryfall_id"
+    ):
+        cards.append(current)
+
+    return title, cards
+
+
+def _find_collection_card_id(
+    scryfall_id,
+    name,
+):
+    """
+    Localiza uma carta na coleção local pelo
+    scryfall_id (prioridade) ou pelo nome.
+    """
+
+    if scryfall_id:
+
+        card_id = get_card_id_by_scryfall_id(
+            scryfall_id
+        )
+
+        if card_id:
+            return card_id
+
+    if not name:
+        return None
+
+    connection = get_connection()
+
+    try:
+        cursor = connection.cursor()
+
+        cursor.execute(
+            """
+            SELECT id
+            FROM cards
+            WHERE name = ? COLLATE NOCASE
+               OR printed_name = ? COLLATE NOCASE
+            ORDER BY id
+            LIMIT 1
+            """,
+            (
+                name,
+                name,
+            ),
+        )
+
+        row = cursor.fetchone()
+
+        if not row:
+            return None
+
+        return int(row["id"])
+
+    except Exception:
+        return None
+
+    finally:
+        connection.close()
+
+
+# =========================================================
 # TASK DE IMAGEM
 # =========================================================
 
@@ -2239,13 +2535,13 @@ class DeckPreviewFrame(QFrame):
         layout = QVBoxLayout(self)
 
         layout.setContentsMargins(
-            12,
-            12,
-            12,
-            12,
+            14,
+            14,
+            14,
+            14,
         )
 
-        layout.setSpacing(8)
+        layout.setSpacing(9)
 
         self.preview_frame = QFrame()
 
@@ -2254,7 +2550,7 @@ class DeckPreviewFrame(QFrame):
         )
 
         self.preview_frame.setFixedHeight(
-            260
+            250
         )
 
         preview_layout = QVBoxLayout(
@@ -2271,8 +2567,8 @@ class DeckPreviewFrame(QFrame):
         self.image_label = QLabel()
 
         self.image_label.setFixedSize(
-            180,
-            252,
+            176,
+            240,
         )
 
         self.image_label.setScaledContents(False)
@@ -2296,10 +2592,10 @@ class DeckPreviewFrame(QFrame):
         if CARD_ICON_PATH.exists():
             pixmap = QPixmap(str(CARD_ICON_PATH))
             if not pixmap.isNull():
-                # Usar mesma proporção que DeckCardFrame (156x226 ajustado para 180x252)
+                # Mesma proporção da imagem do preview
                 scaled = pixmap.scaled(
-                    180,
-                    252,
+                    176,
+                    240,
                     Qt.AspectRatioMode.KeepAspectRatio,
                     Qt.TransformationMode.SmoothTransformation,
                 )
@@ -2342,7 +2638,7 @@ class DeckPreviewFrame(QFrame):
         )
 
         self.favorite_button.move(
-            176,
+            152,
             8,
         )
 
@@ -2457,10 +2753,10 @@ class DeckPreviewFrame(QFrame):
         ):
             return
 
-        # Usar o tamanho do label (180x252) para escala consistente
+        # Usar o tamanho do label (176x240) para escala consistente
         scaled = pixmap.scaled(
-            180,
-            252,
+            176,
+            240,
             Qt.AspectRatioMode.KeepAspectRatio,
             Qt.TransformationMode.SmoothTransformation,
         )
@@ -2550,7 +2846,7 @@ class NewDeckFrame(QFrame):
 
         self.setFixedSize(
             220,
-            315,
+            360,
         )
 
         self.setCursor(
@@ -6439,13 +6735,13 @@ class DecksPage(QWidget):
         )
 
         decks_toolbar_layout.setContentsMargins(
+            16,
             12,
-            10,
+            16,
             12,
-            10,
         )
 
-        decks_toolbar_layout.setSpacing(8)
+        decks_toolbar_layout.setSpacing(10)
 
         self.decks_search = QLineEdit()
 
@@ -6512,6 +6808,31 @@ class DecksPage(QWidget):
             self.decks_favorites_button
         )
 
+        self.decks_import_button = QPushButton(
+            "Importar"
+        )
+
+        self.decks_import_button.setObjectName(
+            "DeckToolbarButton"
+        )
+
+        self.decks_import_button.setCursor(
+            Qt.CursorShape.PointingHandCursor
+        )
+
+        self.decks_import_button.setToolTip(
+            "Importar um deck de um arquivo "
+            "(compatível com o Exportar)"
+        )
+
+        self.decks_import_button.clicked.connect(
+            self.import_deck
+        )
+
+        decks_toolbar_layout.addWidget(
+            self.decks_import_button
+        )
+
         decks_layout.addWidget(
             decks_toolbar
         )
@@ -6533,18 +6854,18 @@ class DecksPage(QWidget):
         )
 
         self.decks_grid.setContentsMargins(
-            5,
-            5,
-            5,
-            20,
+            16,
+            16,
+            16,
+            24,
         )
 
         self.decks_grid.setHorizontalSpacing(
-            18
+            22
         )
 
         self.decks_grid.setVerticalSpacing(
-            18
+            22
         )
 
         self.decks_grid.setAlignment(
@@ -8678,6 +8999,23 @@ class DecksPage(QWidget):
 
             return
 
+        # As cartas do deck trazem "deck_quantity".
+        # Garantir que a exportação use a quantidade do deck.
+        for card in cards:
+
+            if isinstance(
+                card,
+                dict,
+            ):
+
+                deck_quantity = card.get(
+                    "deck_quantity"
+                )
+
+                if deck_quantity is not None:
+
+                    card["quantity"] = deck_quantity
+
         dialog = CollectionExportDialog(
             cards,
             self,
@@ -8699,6 +9037,315 @@ class DecksPage(QWidget):
             return
 
         dialog.export_cards()
+
+    # =====================================================
+    # IMPORTAR DECK
+    # =====================================================
+
+    def import_deck(
+            self,
+    ):
+        file_path, _ = QFileDialog.getOpenFileName(
+            self,
+            "Importar deck",
+            "",
+            "Arquivos de deck (*.json *.csv *.txt);;"
+            "JSON (*.json);;"
+            "CSV (*.csv);;"
+            "Texto (*.txt);;"
+            "Todos os arquivos (*.*)",
+        )
+
+        if not file_path:
+            return
+
+        suggested_name, cards = _parse_deck_import_file(
+            file_path
+        )
+
+        if not cards:
+            QMessageBox.warning(
+                self,
+                "Importar deck",
+                "Nenhuma carta reconhecida no arquivo. "
+                "O arquivo precisa ter sido gerado pelo "
+                "botão 'Exportar'.",
+            )
+
+            return
+
+        deck_name = self._ask_import_deck_name(
+            suggested_name,
+            len(cards),
+        )
+
+        if not deck_name:
+            return
+
+        existing = get_all_decks()
+
+        existing_names = {
+            str(item.get("name") or "").strip()
+            for item in existing
+        }
+
+        if deck_name in existing_names:
+            deck_name = self._resolve_import_name_conflict(
+                deck_name,
+                existing,
+            )
+
+            if deck_name is None:
+                return
+
+        deck_id = create_deck(
+            deck_name
+        )
+
+        if not deck_id:
+            QMessageBox.warning(
+                self,
+                "Importar deck",
+                "Não foi possível criar o deck.",
+            )
+
+            return
+
+        imported = 0
+        missing = []
+
+        for card in cards:
+
+            quantity = _to_int(
+                card.get("quantity"),
+                1,
+            )
+
+            if quantity <= 0:
+                quantity = 1
+
+            scryfall_id = str(
+                card.get("scryfall_id") or ""
+            ).strip()
+
+            name = str(
+                card.get("name") or ""
+            ).strip()
+
+            card_id = _find_collection_card_id(
+                scryfall_id,
+                name,
+            )
+
+            if card_id is None and name:
+
+                from services.scryfall import get_card_by_name
+
+                try:
+                    card_data = get_card_by_name(
+                        name
+                    )
+                except Exception:
+                    card_data = None
+
+                if card_data:
+
+                    try:
+                        card_id = ensure_card_exists(
+                            card_data
+                        )
+                    except Exception:
+                        card_id = None
+
+            if card_id is None:
+                missing.append(
+                    name or scryfall_id or "?"
+                )
+
+                continue
+
+            try:
+                ok = add_card_to_deck(
+                    deck_id,
+                    card_id=card_id,
+                    quantity=quantity,
+                )
+            except Exception:
+                ok = False
+
+            if ok:
+                imported += 1
+
+            else:
+                missing.append(
+                    name or scryfall_id or "?"
+                )
+
+        self.open_deck(
+            deck_id
+        )
+
+        message = (
+            f"Deck '{deck_name}' importado "
+            f"com {imported} carta(s)."
+        )
+
+        if missing:
+            message += (
+                f"\n\n{len(missing)} carta(s) não encontrada(s):\n"
+                + ", ".join(missing[:10])
+            )
+
+            if len(missing) > 10:
+                message += (
+                    f"\ne mais {len(missing) - 10} carta(s)."
+                )
+
+        QMessageBox.information(
+            self,
+            "Importar deck",
+            message,
+        )
+
+    # =====================================================
+    # IMPORTAR DECK — NOME
+    # =====================================================
+
+    def _ask_import_deck_name(
+            self,
+            suggested_name,
+            card_count,
+    ):
+        from PySide6.QtWidgets import QInputDialog
+
+        label = (
+            f"O arquivo contém {card_count} carta(s).\n\n"
+            "Nome do deck:"
+        )
+
+        name, ok = QInputDialog.getText(
+            self,
+            "Importar deck",
+            label,
+            text=suggested_name or "",
+        )
+
+        if not ok:
+            return None
+
+        return str(name or "").strip()
+
+    # =====================================================
+    # IMPORTAR DECK — CONFLITO DE NOME
+    # =====================================================
+
+    def _resolve_import_name_conflict(
+            self,
+            deck_name,
+            existing,
+    ):
+        from PySide6.QtWidgets import QInputDialog
+
+        while True:
+
+            box = QMessageBox(
+                self
+            )
+
+            box.setWindowTitle(
+                "Importar deck"
+            )
+
+            box.setText(
+                f"Já existe um deck chamado '{deck_name}'."
+            )
+
+            box.setInformativeText(
+                "O que deseja fazer?"
+            )
+
+            replace_button = box.addButton(
+                "Substituir",
+                QMessageBox.ButtonRole.DestructiveRole,
+            )
+
+            copy_button = box.addButton(
+                "Criar cópia",
+                QMessageBox.ButtonRole.AcceptRole,
+            )
+
+            rename_button = box.addButton(
+                "Outro nome",
+                QMessageBox.ButtonRole.ActionRole,
+            )
+
+            box.addButton(
+                QMessageBox.StandardButton.Cancel
+            )
+
+            box.exec()
+
+            clicked = box.clickedButton()
+
+            names = {
+                str(item.get("name") or "").strip()
+                for item in existing
+            }
+
+            if clicked == replace_button:
+
+                for item in existing:
+
+                    if (
+                        str(item.get("name") or "").strip()
+                        == deck_name
+                    ):
+                        delete_deck(
+                            item.get("id")
+                        )
+
+                        break
+
+                return deck_name
+
+            if clicked == copy_button:
+
+                counter = 2
+
+                while True:
+
+                    candidate = (
+                        f"{deck_name} (cópia {counter})"
+                    )
+
+                    if candidate not in names:
+                        return candidate
+
+                    counter += 1
+
+            if clicked == rename_button:
+
+                name, ok = QInputDialog.getText(
+                    self,
+                    "Importar deck",
+                    "Novo nome:",
+                    text=deck_name,
+                )
+
+                if not ok:
+                    continue
+
+                name = str(name or "").strip()
+
+                if not name:
+                    continue
+
+                if name in names:
+                    continue
+
+                return name
+
+            return None
 
     # =====================================================
     # EXCLUIR

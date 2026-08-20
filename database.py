@@ -555,6 +555,21 @@ def migrate_database():
             "price_eur_foil": "REAL",
             "price_tix": "REAL",
 
+            # Referência de preço em Inglês (Imprint).
+            # A carta original da coleção NÃO é alterada:
+            # o idioma, print, quantidade, favoritos, tags e decks
+            # continuam intactos.
+            # Estas colunas armazenam APENAS a referência inglesa
+            # usada para calcular valores quando o modo
+            # "Inglês (Imprint)" está ativo.
+            "price_reference_scryfall_id": "TEXT",
+            "price_reference_name": "TEXT",
+            "price_ref_usd": "REAL",
+            "price_ref_usd_foil": "REAL",
+            "price_ref_eur": "REAL",
+            "price_ref_tix": "REAL",
+            "price_ref_rarity": "TEXT",
+
             # Datas
             "created_at": "TIMESTAMP",
             "updated_at": "TIMESTAMP",
@@ -2826,7 +2841,10 @@ def get_all_cards():
                 favorite,
                 custom_tags,
                 last_view,
-                rarity
+                rarity,
+                colors,
+                color_identity,
+                cmc
             FROM cards
             WHERE quantity > 0
             ORDER BY
@@ -2894,7 +2912,10 @@ def search_cards(text):
                 favorite,
                 custom_tags,
                 last_view,
-                rarity
+                rarity,
+                colors,
+                color_identity,
+                cmc
             FROM cards
             WHERE
                 quantity > 0

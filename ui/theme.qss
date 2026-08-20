@@ -241,6 +241,31 @@ QPushButton#ExportButton:hover {
     color: #ffffff;
 }
 
+QPushButton#PriceReferenceButton {
+    background-color: #232936;
+    color: #e4c36b;
+    border: 1px solid #3d3a26;
+    border-radius: 8px;
+    padding: 7px 14px;
+    font-weight: 600;
+}
+
+QPushButton#PriceReferenceButton:hover {
+    background-color: #26291f;
+    border: 1px solid #d4a84b;
+    color: #f0d589;
+}
+
+QPushButton#PriceReferenceButton:pressed {
+    background-color: #2e311f;
+}
+
+QPushButton#PriceReferenceButton:disabled {
+    background-color: #161a23;
+    color: #7a7040;
+    border: 1px solid #2f3646;
+}
+
 QPushButton#DeckDeleteButton {
     background-color: transparent;
     color: #8a93a3;
@@ -948,9 +973,8 @@ QFrame#DeckPreviewFrame[hover="true"] {
 }
 
 QFrame#DeckPreviewImageArea {
-    background-color: #12161f;
-    border: 1px solid #262d3b;
-    border-radius: 10px;
+    background-color: transparent;
+    border: none;
 }
 
 QLabel#DeckPreviewCard {
@@ -1487,35 +1511,12 @@ QFrame#DeckCardFrame {
     border: none;
 }
 
-QFrame#DeckCardFrame:hover {
+QFrame#DeckCardItem,
+QFrame#DeckCardItem:hover,
+QFrame#DeckCardItem[selected="true"],
+QFrame#DeckCardItem[isPrimary="true"] {
     background-color: transparent;
     border: none;
-}
-
-QFrame#DeckCardFrame:hover {
-    background-color: #191B1F;
-    border: 1px solid #3A3D43;
-}
-
-QFrame#DeckCardItem {
-    background-color: #15171A;
-    border: 1px solid #272A2E;
-    border-radius: 10px;
-}
-
-QFrame#DeckCardItem:hover {
-    background-color: #191B1F;
-    border: 1px solid #3A3D43;
-}
-
-QFrame#DeckCardItem[selected="true"] {
-    border: 1px solid #777A80;
-    background-color: #191B1F;
-}
-
-QFrame#DeckCardItem[isPrimary="true"] {
-    border: 1px solid #8A8D93;
-    background-color: #191B1F;
 }
 
 QLabel#DeckQuantityBadge,
@@ -1777,19 +1778,19 @@ QPushButton#DeckPreviewSelectorCard:hover {
 ========================================================= */
 
 QFrame#GridCardFrame {
-    background-color: #181c26;
-    border: 1px solid #272e3d;
+    background-color: transparent;
+    border: none;
     border-radius: 10px;
 }
 
 QFrame#GridCardFrame[hover="true"] {
-    background-color: #1d2230;
-    border: 1px solid #3d4557;
+    background-color: transparent;
+    border: none;
 }
 
 QFrame#GridCardFrame[selected="true"] {
-    background-color: #221f15;
-    border: 2px solid #d4a84b;
+    background-color: transparent;
+    border: none;
 }
 
 QLabel#GridCardImage {
@@ -1891,15 +1892,15 @@ QLineEdit#GridQuantityInput {
     border: 1px solid #454850;
     border-radius: 6px;
 
-    min-width: 34px;
-    max-width: 34px;
+    min-width: 46px;
+    max-width: 46px;
 
     min-height: 30px;
     max-height: 30px;
 
     padding: 0;
 
-    font-size: 13px;
+    font-size: 14px;
     font-weight: 700;
 
     selection-background-color: #3a4253;
@@ -2145,6 +2146,26 @@ QLabel#CardDetailMuted {
     font-size: 13px;
 }
 
+QPushButton#CardDetailMutedButton {
+    background-color: #161a23;
+    color: #b6bdcb;
+    border: 1px solid #2a3040;
+    border-radius: 8px;
+    padding: 8px 14px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+QPushButton#CardDetailMutedButton:hover {
+    background-color: #1a1f2a;
+    border: 1px solid #d4a84b;
+    color: #e4c36b;
+}
+
+QPushButton#CardDetailMutedButton:pressed {
+    background-color: #202632;
+}
+
 QFrame#CardDetailSeparator {
     background-color: #2c3342;
     border: none;
@@ -2285,6 +2306,7 @@ QLabel#DetailMarketTotal {
 QTabWidget#CardDetailTabs::pane {
     background-color: transparent;
     border: none;
+    padding-top: 10px;
 }
 
 QTabWidget#CardDetailTabs QTabBar::tab {
@@ -3675,9 +3697,97 @@ QLabel#DashboardDeckCards {
 
     font-size: 10px;
 }
+
+QFrame#DashboardDeckCurveBar {
+    background-color: #1a1f2a;
+    border-radius: 2px;
+}
+
+QFrame#DashboardDeckCurveFill {
+    background-color: #d4a84b;
+    border-radius: 2px;
+}
+
+/* =========================================================
+   CARTAS MAIS VALIOSAS
+   ========================================================= */
+
+QFrame#DashboardTopCards {
+    background-color: #15171B;
+    border: 1px solid #292D34;
+    border-radius: 12px;
+}
+
+QLabel#DashboardTopHeroImage {
+    background-color: #0c0f14;
+    border: 1px solid #3d3a26;
+    border-radius: 5px;
+}
+
+QLabel#DashboardTopHeroName {
+    background: transparent;
+    color: #f0f2f6;
+    font-size: 17px;
+    font-weight: 700;
+}
+
+QLabel#DashboardTopHeroPrice {
+    background: transparent;
+    color: #e4c36b;
+    font-size: 22px;
+    font-weight: 800;
+}
+
+QLabel#DashboardTopRarity {
+    background-color: #232936;
+    color: #c9a84e;
+    border: 1px solid #3a4253;
+    border-radius: 5px;
+    padding: 2px 8px;
+    font-size: 10px;
+    font-weight: 700;
+}
+
+QFrame#DashboardTopSmallCard {
+    background-color: #12151b;
+    border: 1px solid #3d3a26;
+    border-radius: 9px;
+}
+
+QFrame#DashboardTopSmallCard:hover {
+    background-color: #1c2029;
+    border: 1px solid #d4a84b;
+}
+
+QLabel#DashboardTopSmallImage {
+    background-color: #0c0f14;
+    border: 1px solid #2b3240;
+    border-radius: 4px;
+}
+
+QLabel#DashboardTopSmallName {
+    background: transparent;
+    color: #d8dce3;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+QLabel#DashboardTopSmallPrice {
+    background: transparent;
+    color: #e4c36b;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+QLabel#DashboardTypeIcon {
+    background: transparent;
+    color: #8b93a3;
+    font-size: 14px;
+}
+
 /* =========================================================
    DECKS — FILTROS, ESTATÍSTICAS E GRUPOS
-========================================================= */
+   ========================================================= */
 
 QFrame#DeckFilterBar {
     background-color: #151821;
@@ -3730,56 +3840,45 @@ QComboBox#DeckFormatCombo QAbstractItemView {
 
 QPushButton#DeckColorFilterButton {
     background-color: #1a1e29;
-    color: #7b8394;
     border: 1px solid #2f3646;
     border-radius: 15px;
     padding: 0px;
     margin: 0px;
     min-width: 0px;
-    font-size: 12px;
-    font-weight: 700;
-    text-align: center;
 }
 
 QPushButton#DeckColorFilterButton:hover {
     border: 1px solid #455068;
-    color: #eef0f5;
 }
 
 QPushButton#DeckColorFilterButton[pip="w"]:checked {
     background-color: #f2e6c8;
-    border: 1px solid #f2e6c8;
-    color: #1a1e29;
+    border: 2px solid #ffffff;
 }
 
 QPushButton#DeckColorFilterButton[pip="u"]:checked {
     background-color: #4a86c8;
-    border: 1px solid #4a86c8;
-    color: #ffffff;
+    border: 2px solid #ffffff;
 }
 
 QPushButton#DeckColorFilterButton[pip="b"]:checked {
     background-color: #6f5f80;
-    border: 1px solid #6f5f80;
-    color: #ffffff;
+    border: 2px solid #ffffff;
 }
 
 QPushButton#DeckColorFilterButton[pip="r"]:checked {
     background-color: #d4574a;
-    border: 1px solid #d4574a;
-    color: #ffffff;
+    border: 2px solid #ffffff;
 }
 
 QPushButton#DeckColorFilterButton[pip="g"]:checked {
     background-color: #4f9d68;
-    border: 1px solid #4f9d68;
-    color: #ffffff;
+    border: 2px solid #ffffff;
 }
 
 QPushButton#DeckColorFilterButton[pip="c"]:checked {
     background-color: #8b93a3;
-    border: 1px solid #8b93a3;
-    color: #12161f;
+    border: 2px solid #ffffff;
 }
 
 QLabel#DeckColorPip {
@@ -3869,4 +3968,622 @@ QScrollArea#DeckStatsSidebarScroll {
 
 QScrollArea#DeckStatsSidebarScroll > QWidget > QWidget {
     background-color: transparent;
+}
+
+/* =========================================================
+   DASHBOARD — REDESIGN (ícones, hover, ranking, chips)
+   ========================================================= */
+
+/* ---------- HOVER SUTIL DOS PAINÉIS ---------- */
+
+QFrame#DashboardDistributionPanel:hover,
+QFrame#DashboardBottomPanel:hover,
+QFrame#DashboardManaCurvePanel:hover,
+QFrame#DashboardTopCards:hover {
+    background-color: #191d26;
+    border: 1px solid #323b4b;
+}
+
+/* ---------- ÍCONES CIRCULARES DOS STAT CARDS ---------- */
+
+QFrame#DashboardStatIcon {
+    border-radius: 29px;
+    border: 1px solid #2b3240;
+    background-color: #161a23;
+}
+
+QFrame#DashboardStatIcon[variant="collection"] {
+    border: 1px solid #4a4128;
+    background: qradialgradient(
+        cx: 0.5, cy: 0.5, radius: 0.65, fx: 0.5, fy: 0.4,
+        stop: 0 rgba(212, 168, 75, 0.38),
+        stop: 1 rgba(22, 26, 35, 0.92)
+    );
+}
+
+QFrame#DashboardStatIcon[variant="unique"] {
+    border: 1px solid #24364c;
+    background: qradialgradient(
+        cx: 0.5, cy: 0.5, radius: 0.65, fx: 0.5, fy: 0.4,
+        stop: 0 rgba(92, 132, 189, 0.38),
+        stop: 1 rgba(22, 26, 35, 0.92)
+    );
+}
+
+QFrame#DashboardStatIcon[variant="decks"] {
+    border: 1px solid #2a3d2c;
+    background: qradialgradient(
+        cx: 0.5, cy: 0.5, radius: 0.65, fx: 0.5, fy: 0.4,
+        stop: 0 rgba(102, 139, 103, 0.38),
+        stop: 1 rgba(22, 26, 35, 0.92)
+    );
+}
+
+QFrame#DashboardStatIcon[variant="value"] {
+    border: 1px solid #4a2e26;
+    background: qradialgradient(
+        cx: 0.5, cy: 0.5, radius: 0.65, fx: 0.5, fy: 0.4,
+        stop: 0 rgba(199, 107, 60, 0.38),
+        stop: 1 rgba(22, 26, 35, 0.92)
+    );
+}
+
+QLabel#DashboardStatIconGlyph {
+    background: transparent;
+    color: #b9c0cc;
+    font-size: 20px;
+    font-weight: 700;
+}
+
+QFrame#DashboardStatIcon[variant="collection"] QLabel#DashboardStatIconGlyph {
+    color: #e4c36b;
+}
+
+QFrame#DashboardStatIcon[variant="unique"] QLabel#DashboardStatIconGlyph {
+    color: #7ba6d8;
+}
+
+QFrame#DashboardStatIcon[variant="decks"] QLabel#DashboardStatIconGlyph {
+    color: #86b388;
+}
+
+QFrame#DashboardStatIcon[variant="value"] QLabel#DashboardStatIconGlyph {
+    color: #e08a5c;
+}
+
+QFrame#DashboardStatCard:hover {
+    background-color: #1a1e27;
+    border: 1px solid #3d4759;
+}
+
+/* ---------- RANKING ---------- */
+
+QLabel#DashboardRankBadge {
+    background-color: #2a2f3a;
+    border: 1px solid #3a4253;
+    border-radius: 13px;
+    color: #e4c36b;
+    font-size: 10px;
+    font-weight: 800;
+}
+
+/* ---------- CARTA DESTAQUE (TOP 1) ---------- */
+
+QFrame#DashboardTopHeroCard {
+    background-color: transparent;
+    border: 1px solid transparent;
+    border-radius: 12px;
+}
+
+QFrame#DashboardTopHeroCard:hover {
+    background-color: #171b24;
+    border: 1px solid #3d4759;
+}
+
+QFrame#DashboardTopHeroCard:hover QLabel#DashboardTopHeroImage {
+    border: 1px solid #d4a84b;
+}
+
+QFrame#DashboardTopHeroCard:hover QLabel#DashboardTopHeroPrice {
+    color: #f0d589;
+}
+
+QLabel#DashboardTopSetChip {
+    background-color: #232936;
+    color: #9aa4b5;
+    border: 1px solid #2f3646;
+    border-radius: 5px;
+    padding: 2px 8px;
+    font-size: 10px;
+}
+
+QLabel#DashboardTopMeta {
+    background: transparent;
+    color: #727d8f;
+    font-size: 11px;
+}
+
+QLabel#DashboardTopTrend {
+    background-color: #1c2420;
+    color: #7fc98a;
+    border: 1px solid #2a3a2e;
+    border-radius: 5px;
+    padding: 2px 8px;
+    font-size: 10px;
+    font-weight: 700;
+}
+
+QLabel#DashboardTopTrend[trend="down"] {
+    background-color: #241c1c;
+    color: #d97a6a;
+    border: 1px solid #3a2a2a;
+}
+
+QLabel#DashboardTopTrend[trend="flat"] {
+    background-color: #1c1e24;
+    color: #8b93a3;
+    border: 1px solid #2b3038;
+}
+
+/* ---------- CARDS #2 E #3 ---------- */
+
+QFrame#DashboardTopSmallCard:hover QLabel#DashboardTopSmallImage {
+    border: 1px solid #d4a84b;
+}
+
+QFrame#DashboardTopSmallCard:hover QLabel#DashboardTopSmallPrice {
+    color: #f0d589;
+}
+
+QLabel#DashboardTopSmallRarity {
+    background: transparent;
+    color: #8b93a3;
+    font-size: 10px;
+}
+
+/* ---------- RARIDADE: INCOMUM AZUL ---------- */
+
+QProgressBar#DashboardRarityBar[rarity="Incomum"]::chunk {
+    background-color: #4B82C4;
+}
+
+/* ---------- TIPOS DE CARTA ---------- */
+
+QLabel#DashboardTypeIcon[type="Criaturas"] {
+    color: #d4a84b;
+}
+
+QLabel#DashboardTypeIcon[type="Mágicas"] {
+    color: #5c84bd;
+}
+
+QLabel#DashboardTypeIcon[type="Artefatos"] {
+    color: #8a93a3;
+}
+
+QLabel#DashboardTypeIcon[type="Encantamentos"] {
+    color: #9a6caf;
+}
+
+QLabel#DashboardTypeIcon[type="Planeswalkers"] {
+    color: #d97a5a;
+}
+
+QLabel#DashboardTypeIcon[type="Terrenos"] {
+    color: #668b67;
+}
+
+QLabel#DashboardTypeIcon[type="Outros"] {
+    color: #717d8e;
+}
+
+/* ---------- MANA CURVE — COMPACTA ---------- */
+
+QFrame#DashboardManaCurvePanel {
+    background-color: #15171B;
+    border: 1px solid #292D34;
+    border-radius: 10px;
+}
+
+QFrame#DashboardManaCurvePanel QLabel#DashboardPanelTitle {
+    font-size: 13px;
+}
+
+QFrame#DashboardManaCurvePanel QLabel#DashboardPanelSubtitle {
+    font-size: 9px;
+}
+
+/* ---------- INDICADOR "DADOS DA COLEÇÃO" ---------- */
+
+QLabel#DashboardUpdated {
+    background-color: #161a23;
+    border: 1px solid #2b3240;
+    border-radius: 9px;
+    padding: 4px 12px;
+    color: #8b93a3;
+    font-size: 10px;
+    font-weight: 600;
+}
+
+/* =========================================================
+   DASHBOARD — CAIXAS CONSISTENTES (corrige painéis sem box)
+   ========================================================= */
+
+QFrame#DashboardDistributionPanel,
+QFrame#DashboardBottomPanel,
+QFrame#DashboardManaCurvePanel,
+QFrame#DashboardTopCards,
+QFrame#DashboardPanel {
+    background-color: #181c25;
+    border: 1px solid #2a3140;
+    border-radius: 10px;
+}
+
+QFrame#DashboardDistributionPanel:hover,
+QFrame#DashboardBottomPanel:hover,
+QFrame#DashboardManaCurvePanel:hover,
+QFrame#DashboardTopCards:hover,
+QFrame#DashboardPanel:hover {
+    background-color: #1f2430;
+    border: 1px solid #3a445a;
+    border-radius: 10px;
+}
+
+QFrame#DashboardDistributionPanel QLabel#DashboardPanelTitle,
+QFrame#DashboardBottomPanel QLabel#DashboardPanelTitle,
+QFrame#DashboardManaCurvePanel QLabel#DashboardPanelTitle,
+QFrame#DashboardTopCards QLabel#DashboardPanelTitle {
+    font-size: 14px;
+    font-weight: 700;
+}
+
+/* ---------- HERO CARD — CONTAINER VISÍVEL ---------- */
+
+QFrame#DashboardTopHeroCard {
+    background-color: #141822;
+    border: 1px solid #222a38;
+    border-radius: 12px;
+}
+
+QFrame#DashboardTopHeroCard:hover {
+    background-color: #191f2c;
+    border: 1px solid #3d4759;
+}
+
+QFrame#DashboardTopHeroCard:hover QLabel#DashboardTopHeroImage {
+    border: 1px solid #d4a84b;
+}
+
+QFrame#DashboardTopHeroCard:hover QLabel#DashboardTopHeroPrice {
+    color: #f0d589;
+}
+
+QLabel#DashboardTopType {
+    background: transparent;
+    color: #828b9c;
+    font-size: 11px;
+}
+
+QLabel#DashboardTopManaCost {
+    background: transparent;
+}
+
+QLabel#DashboardDeckColor {
+    background: transparent;
+    font-size: 9px;
+    font-weight: 700;
+}
+
+QLabel#DashboardTopFoil {
+    background: transparent;
+    color: #8f9aac;
+    font-size: 10px;
+    font-weight: 600;
+}
+
+QLabel#DashboardTopBest {
+    background-color: #26291f;
+    color: #e4c36b;
+    border: 1px solid #3d3a26;
+    border-radius: 5px;
+    padding: 2px 8px;
+    font-size: 9px;
+    font-weight: 700;
+}
+
+/* ---------- HOVER SEM CANTOS QUADRADOS ---------- */
+
+QFrame#DashboardDeckCard:hover,
+QFrame#DashboardTopSmallCard:hover {
+    border-radius: 9px;
+}
+
+QFrame#DashboardRecentCard:hover {
+    border-radius: 8px;
+}
+
+QFrame#DashboardTopHeroCard:hover {
+    border-radius: 12px;
+}
+
+/* =========================================================
+   TOP 5 CARTAS MAIS VALIOSAS (RANKING COMPACTO)
+   ========================================================= */
+
+QFrame#valuableCardsCard {
+    background-color: #181c25;
+    border: 1px solid #2a3140;
+    border-radius: 10px;
+}
+
+QFrame#valuableCardsCard:hover {
+    background-color: #1f2430;
+    border: 1px solid #3a445a;
+}
+
+QLabel#valuableCardsTitle {
+    background: transparent;
+    color: #E8E9EC;
+    font-size: 15px;
+    font-weight: 700;
+}
+
+QLabel#valuableCardsSubtitle {
+    background: transparent;
+    color: #8b93a3;
+    font-size: 10px;
+}
+
+QLabel#valuableCardsEmpty {
+    background: transparent;
+    color: #666B74;
+    font-size: 12px;
+    padding: 12px 0;
+}
+
+QFrame#valuableCardRow {
+    background-color: #12151b;
+    border: 1px solid #232a37;
+    border-radius: 7px;
+}
+
+QFrame#valuableCardRow:hover {
+    background-color: #1c2029;
+    border: 1px solid #3a4253;
+}
+
+QLabel#valuableCardRank {
+    background-color: #2a2f3a;
+    color: #e4c36b;
+    border: 1px solid #3d4759;
+    border-radius: 11px;
+    font-size: 10px;
+    font-weight: 800;
+}
+
+QFrame#valuableCardRow:hover QLabel#valuableCardRank {
+    background-color: #3a3a26;
+    border: 1px solid #d4a84b;
+    color: #f0d589;
+}
+
+QLabel#valuableCardImage {
+    background-color: #0c0f14;
+    border: 1px solid #2b3240;
+    border-radius: 4px;
+    color: #666B74;
+    font-size: 16px;
+}
+
+QFrame#valuableCardRow:hover QLabel#valuableCardImage {
+    border: 1px solid #3d3a26;
+}
+
+QLabel#valuableCardName {
+    background: transparent;
+    color: #E7E9EC;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+QLabel#valuableCardRarity {
+    background: transparent;
+    color: #8f9aac;
+    font-size: 10px;
+}
+
+QLabel#valuableCardQuantity {
+    background: transparent;
+    color: #A9AEB7;
+    font-size: 10px;
+    font-weight: 600;
+}
+
+QLabel#valuableCardPrice {
+    background: transparent;
+    color: #E7E9EC;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+QLabel#valuableCardTotal {
+    background: transparent;
+    color: #e4c36b;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+QPushButton#valuableCardsViewAll {
+    background-color: transparent;
+    color: #d4a84b;
+    border: 1px solid #3d3a26;
+    border-radius: 6px;
+    padding: 6px 14px;
+    font-size: 10px;
+    font-weight: 700;
+}
+
+QPushButton#valuableCardsViewAll:hover {
+    background-color: #26291f;
+    border: 1px solid #d4a84b;
+    color: #f0d589;
+}
+
+QPushButton#valuableCardsViewAll:pressed {
+    background-color: #2e311f;
+}
+
+/* =========================================================
+   TOP 6 — ALTERNÂNCIA DE MODO (Individual / Coleção)
+   ========================================================= */
+
+QPushButton#valuableCardModeButton {
+    background-color: #161a23;
+    color: #9aa2b2;
+    border: 1px solid #2f3646;
+    border-radius: 6px;
+    padding: 3px 10px;
+    font-size: 10px;
+    font-weight: 600;
+}
+
+QPushButton#valuableCardModeButton:hover {
+    color: #d9dde6;
+    border: 1px solid #3d4759;
+}
+
+QPushButton#valuableCardModeButton:checked {
+    background-color: #26291f;
+    color: #e4c36b;
+    border: 1px solid #d4a84b;
+    font-weight: 700;
+}
+
+QPushButton#valuableCardModeButton:checked:hover {
+    color: #f0d589;
+    border: 1px solid #e4c36b;
+}
+
+/* =========================================================
+   VALOR ESTIMADO — MOEDA + REFERÊNCIA SECUNDÁRIA
+   ========================================================= */
+
+QLabel#DashboardStatSecondary {
+    background: transparent;
+    color: #8b93a3;
+    font-size: 11px;
+}
+
+QPushButton#currencySelectorButton {
+    background-color: #161a23;
+    color: #e4c36b;
+    border: 1px solid #3d4759;
+    border-radius: 6px;
+    padding: 4px 10px;
+    font-size: 10px;
+    font-weight: 700;
+}
+
+QPushButton#currencySelectorButton:hover {
+    background-color: #26291f;
+    border: 1px solid #d4a84b;
+    color: #f0d589;
+}
+
+QPushButton#currencySelectorButton:pressed {
+    background-color: #2e311f;
+}
+
+QMenu#currencyMenu {
+    background-color: #1a1e29;
+    color: #e8ebf2;
+    border: 1px solid #2f3646;
+    border-radius: 8px;
+    padding: 5px;
+}
+
+QMenu#currencyMenu::item {
+    padding: 7px 26px 7px 12px;
+    border-radius: 6px;
+    color: #cfd4df;
+}
+
+QMenu#currencyMenu::item:selected {
+    background-color: #292f3d;
+    color: #ffffff;
+}
+
+QMenu#currencyMenu::item:checked {
+    color: #e4c36b;
+    font-weight: 700;
+}
+
+/* =========================================================
+   BARRA DISCRETA — REFERÊNCIA DE PREÇOS (IMPRINT)
+   ========================================================= */
+
+QFrame#dashboardPricingBar {
+    background-color: #141822;
+    border: 1px solid #2a3140;
+    border-radius: 9px;
+}
+
+QFrame#dashboardPricingBar:hover {
+    border: 1px solid #3d4759;
+}
+
+QLabel#pricingBarTitle {
+    background: transparent;
+    color: #E8E9EC;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+QLabel#pricingBarValue {
+    background: transparent;
+    color: #8b93a3;
+    font-size: 11px;
+}
+
+QPushButton#pricingBarButton {
+    background-color: transparent;
+    color: #d4a84b;
+    border: 1px solid #3d3a26;
+    border-radius: 6px;
+    padding: 4px 12px;
+    font-size: 10px;
+    font-weight: 700;
+}
+
+QPushButton#pricingBarButton:hover {
+    background-color: #26291f;
+    border: 1px solid #d4a84b;
+    color: #f0d589;
+}
+
+QPushButton#pricingBarButton:pressed {
+    background-color: #2e311f;
+}
+
+/* =========================================================
+   DONUT — LEGENDA
+   ========================================================= */
+
+QLabel#DashboardDonutLegendName {
+    background: transparent;
+    color: #d3d7de;
+    font-size: 11px;
+}
+
+QLabel#DashboardDonutLegendValue {
+    background: transparent;
+    color: #E8E9EC;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+QLabel#DashboardDonutLegendPercent {
+    background: transparent;
+    color: #8b93a3;
+    font-size: 10px;
 }

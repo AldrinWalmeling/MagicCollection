@@ -25,6 +25,7 @@ from PySide6.QtWidgets import (
 
 from PySide6.QtCore import (
     QEasingCurve,
+    QRectF,
     QSize,
     QTimer,
     QVariantAnimation,
@@ -34,10 +35,16 @@ from PySide6.QtCore import (
 
 from PySide6.QtGui import (
     QColor,
+    QIcon,
     QLinearGradient,
     QPainter,
     QPen,
+    QPixmap,
 )
+
+from PySide6.QtSvg import QSvgRenderer
+
+from PySide6.QtCore import QByteArray
 
 from services.deck_formats import (
     card_color_identity,
@@ -79,6 +86,126 @@ COLOR_LABELS = {
 }
 
 COLOR_ORDER = ("W", "U", "B", "R", "G", "C")
+
+
+# =========================================================
+# ÍCONE DE MANA
+# =========================================================
+
+_MANA_SYMBOL_CACHE = {}
+
+
+def _mana_symbol_pixmap(color, size=22):
+    """
+    Gera o ícone do símbolo de mana (W/U/B/R/G/C).
+
+    Usa o SVG baixado do Scryfall quando disponível;
+    caso contrário desenha um círculo na cor da carta.
+    """
+    key = (color, size)
+
+    if key in _MANA_SYMBOL_CACHE:
+        return _MANA_SYMBOL_CACHE[key]
+
+    from services.scryfall_symbols import load_local_symbol
+
+    pixmap = None
+
+    if color in COLOR_HEX:
+        local = load_local_symbol(
+            "{" + color + "}"
+        )
+
+        if local:
+
+            try:
+                renderer = QSvgRenderer(
+                    QByteArray(local["data"])
+                )
+
+                if renderer.isValid():
+
+                    pm = QPixmap(
+                        size,
+                        size,
+                    )
+
+                    pm.fill(
+                        Qt.GlobalColor.transparent
+                    )
+
+                    painter = QPainter(pm)
+
+                    renderer.render(painter)
+
+                    painter.end()
+
+                    if not pm.isNull():
+                        pixmap = pm
+
+            except Exception:
+                pixmap = None
+
+    # -------------------------------------------------
+    # FALLBACK: círculo colorido
+    # -------------------------------------------------
+
+    if pixmap is None:
+
+        pm = QPixmap(
+            size,
+            size,
+        )
+
+        pm.fill(
+            Qt.GlobalColor.transparent
+        )
+
+        painter = QPainter(pm)
+
+        painter.setRenderHint(
+            QPainter.RenderHint.Antialiasing,
+            True
+        )
+
+        hex_color = COLOR_HEX.get(
+            color,
+            "#8b93a3",
+        )
+
+        color_q = QColor(hex_color)
+
+        painter.setBrush(color_q)
+        painter.setPen(
+            QPen(
+                QColor("#ffffff"),
+                2,
+            )
+        )
+
+        painter.drawEllipse(
+            2,
+            2,
+            size - 4,
+            size - 4,
+        )
+
+        painter.end()
+
+        pixmap = pm
+
+    _MANA_SYMBOL_CACHE[key] = pixmap
+
+    return pixmap
+
+
+def _mana_symbol_icon(color, size=22):
+    return QIcon(
+        _mana_symbol_pixmap(
+            color,
+            size,
+        )
+    )
 
 
 def identity_colors(card):
@@ -156,13 +283,14 @@ class CardBorderOverlay(QWidget):
         painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
 
         width = 3.0 * self._progress
+        half_w = width / 2.0
 
-        rect = self.rect().adjusted(2, 2, -2, -2)
+        rect = QRectF(self.rect()).adjusted(half_w, half_w, -half_w, -half_w)
 
         if len(self._colors) == 1:
             color = QColor(self._colors[0])
             color.setAlphaF(min(1.0, 0.35 + 0.65 * self._progress))
-            pen = QPen(color)
+            pen = QPen(color, width)
         else:
             gradient = QLinearGradient(
                 rect.topLeft(),
@@ -178,10 +306,14 @@ class CardBorderOverlay(QWidget):
 
             pen = QPen(gradient, width)
 
-        pen.setWidthF(width)
+        pen.setCapStyle(Qt.PenCapStyle.RoundCap)
+        pen.setJoinStyle(Qt.PenJoinStyle.RoundJoin)
         painter.setPen(pen)
         painter.setBrush(Qt.BrushStyle.NoBrush)
-        painter.drawRoundedRect(rect, 9, 9)
+        
+        # Borda arredondada suave correspondente aos cantos da carta
+        corner_radius = max(6.0, min(12.0, rect.width() * 0.06))
+        painter.drawRoundedRect(rect, corner_radius, corner_radius)
         painter.end()
 
 
@@ -673,13 +805,15 @@ class DeckFilterBar(QFrame):
         self.color_buttons = {}
 
         for color in COLOR_ORDER:
-            button = QPushButton(color)
+            button = QPushButton()
             button.setObjectName("DeckColorFilterButton")
             button.setProperty("pip", color.lower())
             button.setCheckable(True)
             button.setCursor(Qt.CursorShape.PointingHandCursor)
             button.setToolTip(COLOR_LABELS[color])
             button.setFixedSize(QSize(32, 30))
+            button.setIcon(_mana_symbol_icon(color, 20))
+            button.setIconSize(QSize(20, 20))
             button.toggled.connect(lambda _c: self.filtersChanged.emit())
             layout.addWidget(button)
             self.color_buttons[color] = button

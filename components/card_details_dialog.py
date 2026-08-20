@@ -323,11 +323,11 @@ class DetailCard(QFrame):
             14,
             12,
             14,
-            12,
+            14,
         )
 
         self.card_layout.setSpacing(
-            6
+            7
         )
 
         # =====================================================
@@ -810,17 +810,34 @@ class CardDetailsDialog(QDialog):
             self.printings_sync_label
         )
 
-        tools_layout = QHBoxLayout()
-        tools_layout.setContentsMargins(0, 0, 0, 0)
-        tools_layout.setSpacing(8)
+        self.check_imprints_button = QPushButton(
+            "Verificar novos imprints"
+        )
 
-        self.save_image_button = QPushButton("Salvar imagem")
-        self.save_image_button.setEnabled(False)
-        self.zoom_button = QPushButton("Zoom")
-        self.zoom_button.setEnabled(False)
-        tools_layout.addWidget(self.save_image_button)
-        tools_layout.addWidget(self.zoom_button)
-        left_layout.addLayout(tools_layout)
+        self.check_imprints_button.setObjectName(
+            "CardDetailMutedButton"
+        )
+
+        self.check_imprints_button.setCursor(
+            Qt.CursorShape.PointingHandCursor
+        )
+
+        self.check_imprints_button.setFocusPolicy(
+            Qt.FocusPolicy.NoFocus
+        )
+
+        self.check_imprints_button.clicked.connect(
+            lambda: self._start_printings_sync(
+                force=True
+            )
+        )
+
+        self.check_imprints_button.hide()
+
+        left_layout.addWidget(
+            self.check_imprints_button
+        )
+
         left_layout.addStretch()
 
         root.addWidget(self.left_panel, 0, Qt.AlignmentFlag.AlignTop)
@@ -829,7 +846,7 @@ class CardDetailsDialog(QDialog):
         self.right_panel.setObjectName("CardDetailRightPanel")
         right_layout = QVBoxLayout(self.right_panel)
         right_layout.setContentsMargins(0, 0, 0, 0)
-        right_layout.setSpacing(14)
+        right_layout.setSpacing(16)
 
         self.face_buttons = QButtonGroup(self)
         self.face_buttons.setExclusive(True)
@@ -993,29 +1010,112 @@ class CardDetailsDialog(QDialog):
             0,
             self._refresh_layouts_after_show,
         )
-    def _start_printings_sync(self):
 
+    def _start_printings_sync(
+            self,
+            force=False,
+    ):
         # =====================================================
         # EVITAR DUAS CONSULTAS SIMULTÂNEAS
         # =====================================================
 
         if self.printings_sync_running:
+            print(
+                "[DETAILS] Sincronização de impressões "
+                "já está em andamento."
+            )
             return
 
         self.printings_sync_running = True
 
-        # Mostrar indicador de carregamento
+        # =====================================================
+        # IMPRESSÕES LOCAIS
+        # =====================================================
+
+        cached = _parse_printings(
+            self.card.get("card_printings")
+        )
+
+        # =====================================================
+        # CACHE NORMAL
+        #
+        # Na abertura normal:
+        #   - se temos cache, usamos cache
+        #   - não consultamos a API
+        #
+        # IMPORTANTE:
+        # force=True ignora completamente este bloco.
+        # =====================================================
+
+        if cached and not force:
+            self.printings_sync_running = False
+
+            self.printings_sync_label.setText(
+                f"✓ {len(cached)} impressões disponíveis "
+                "em cache."
+            )
+
+            self.printings_sync_label.show()
+
+            self.check_imprints_button.show()
+            self.check_imprints_button.setEnabled(
+                True
+            )
+
+            print(
+                "[DETAILS] Impressões carregadas do cache "
+                "sem consulta à API."
+            )
+
+            return
+
+        # =====================================================
+        # CONSULTA FORÇADA À API
+        # =====================================================
+
+        if force:
+            print(
+                "[DETAILS] Verificação FORÇADA de "
+                "impressões iniciada."
+            )
+
+            print(
+                "[DETAILS] Ignorando cache local."
+            )
+
+        else:
+            print(
+                "[DETAILS] Nenhum cache de impressões "
+                "disponível. Consultando Scryfall."
+            )
+
+        # =====================================================
+        # ATUALIZAR STATUS DA INTERFACE
+        # =====================================================
+
         self.printings_sync_label.setText(
-            "🔄 Verificando idiomas e artes..."
+            "🔄 Verificando novos imprints no Scryfall..."
         )
 
         self.printings_sync_label.show()
 
         # =====================================================
-        # COPIAR OS DADOS DA CARTA
+        # DESABILITAR BOTÃO DURANTE A CONSULTA
         # =====================================================
 
-        card = dict(self.card)
+        self.check_imprints_button.setEnabled(
+            False
+        )
+
+        # =====================================================
+        # COPIAR DADOS DA CARTA
+        #
+        # Não mandar self.card diretamente para a thread.
+        # =====================================================
+
+        card = dict(
+            self.card
+        )
 
         # =====================================================
         # CRIAR WORKER
@@ -1040,6 +1140,9 @@ class CardDetailsDialog(QDialog):
         QThreadPool.globalInstance().start(
             self.printings_worker
         )
+
+
+
     def _on_printings_loaded(self, printings):
 
         # =====================================================
@@ -1047,6 +1150,10 @@ class CardDetailsDialog(QDialog):
         # =====================================================
 
         self.printings_sync_running = False
+
+        self.check_imprints_button.setEnabled(
+            True
+        )
 
         # =====================================================
         # NENHUM RESULTADO
@@ -1315,6 +1422,8 @@ class CardDetailsDialog(QDialog):
 
         self.printings_sync_label.show()
 
+        self.check_imprints_button.show()
+
         # =====================================================
         # ATUALIZAR ABA "OUTRAS IMPRESSÕES"
         # =====================================================
@@ -1328,9 +1437,16 @@ class CardDetailsDialog(QDialog):
                 f"{len(remote_ids)} impressões encontradas."
             )
 
-    def _on_printings_error(self, error):
+    def _on_printings_error(
+            self,
+            error,
+    ):
 
         self.printings_sync_running = False
+
+        self.check_imprints_button.setEnabled(
+            True
+        )
 
         self.printings_sync_label.setText(
             "⚠ Não foi possível verificar as impressões."
@@ -1342,7 +1458,6 @@ class CardDetailsDialog(QDialog):
             "[DETAILS] Sincronização de impressões falhou:",
             error,
         )
-
     def _build_main_tab(self):
 
         content = QWidget()
@@ -2935,75 +3050,157 @@ class CardDetailsDialog(QDialog):
 
             return None
 
-    def _set_face_image(self, face):
-        card_lang = str(self.card.get("lang") or "en").casefold()
+    def _set_face_image(
+            self,
+            face,
+    ):
+        # =====================================================
+        # DEFINIR A IMAGEM DA FACE ATUAL
+        #
+        # IMPORTANTE:
+        # A imagem do imprint selecionado tem prioridade.
+        #
+        # Não usamos initial_pixmap nem image_path antes dela,
+        # porque ambos podem representar uma impressão anterior.
+        # =====================================================
 
-        # =====================================================
-        # PRIMEIRO: usar a imagem que já veio da coleção
-        # =====================================================
         pixmap = None
 
+        image_url = _best_image_url(
+            face
+        )
+
+        # =====================================================
+        # FALLBACK PARA A CARTA
+        #
+        # Algumas cartas podem ter a imagem no objeto principal
+        # em vez da própria face.
+        # =====================================================
+
+        if not image_url:
+            image_url = _best_image_url(
+                self.card
+            )
+
+        # =====================================================
+        # TENTAR CARREGAR A IMAGEM DO IMPRINT ATUAL
+        #
+        # _download_pixmap já possui cache por URL.
+        #
+        # Portanto:
+        #
+        #   URL já conhecida → imagem local/cache
+        #
+        #   URL nova → baixa e coloca no cache
+        # =====================================================
+
+        if image_url:
+
+            try:
+
+                pixmap = _download_pixmap(
+                    image_url
+                )
+
+            except Exception as error:
+
+                print(
+                    "[DETAILS] Erro ao carregar "
+                    "imagem do imprint atual:",
+                    error,
+                )
+
+        # =====================================================
+        # FALLBACK SOMENTE SE O IMPRINT ATUAL NÃO POSSUI
+        # IMAGEM
+        #
+        # Aqui sim podemos usar a imagem inicial da coleção.
+        #
+        # IMPORTANTE:
+        # Isso só acontece quando realmente não conseguimos
+        # obter a imagem do imprint selecionado.
+        # =====================================================
+
         if (
-                self.current_face_index == 0
+                (pixmap is None or pixmap.isNull())
+                and self.current_face_index == 0
                 and self.initial_pixmap
                 and not self.initial_pixmap.isNull()
         ):
+            print(
+                "[DETAILS] Usando imagem inicial como "
+                "fallback."
+            )
+
             pixmap = self.initial_pixmap
 
         # =====================================================
-        # SEGUNDO: tentar imagem local da carta
+        # FALLBACK FINAL: IMAGE_PATH
+        #
+        # Também só usamos se a imagem específica do imprint
+        # não estiver disponível.
         # =====================================================
-        if pixmap is None or pixmap.isNull():
-            image_path = self.card.get("image_path")
+
+        if (
+                pixmap is None
+                or pixmap.isNull()
+        ):
+
+            image_path = self.card.get(
+                "image_path"
+            )
 
             if image_path:
+
                 try:
-                    path = Path(image_path)
 
-                    if path.exists() and path.stat().st_size > 0:
-                        local_pixmap = QPixmap(str(path))
+                    path = Path(
+                        image_path
+                    )
 
-                        if not local_pixmap.isNull():
+                    if (
+                            path.exists()
+                            and path.stat().st_size > 0
+                    ):
+
+                        local_pixmap = QPixmap(
+                            str(path)
+                        )
+
+                        if (
+                                local_pixmap
+                                and not local_pixmap.isNull()
+                        ):
                             pixmap = local_pixmap
 
                 except Exception as error:
-                    print(
-                        "[DETAILS] Erro ao carregar imagem local:",
-                        error,
-                    )
 
-        # =====================================================
-        # TERCEIRO: fallback para cache da face
-        #
-        # IMPORTANTE:
-        # NÃO baixar da internet ao abrir a janela.
-        # =====================================================
-        if (
-                (pixmap is None or pixmap.isNull())
-                and self.current_face_index != 0
-        ):
-            image_url = _best_image_url(face)
-
-            if image_url:
-                try:
-                    pixmap = _download_pixmap(image_url)
-                except Exception as error:
                     print(
-                        "[DETAILS] Erro ao carregar imagem da face:",
+                        "[DETAILS] Erro ao carregar "
+                        "imagem local:",
                         error,
                     )
 
         # =====================================================
         # MOSTRAR IMAGEM
         # =====================================================
-        if pixmap and not pixmap.isNull():
+
+        if (
+                pixmap
+                and not pixmap.isNull()
+        ):
+
             self.image_status_label.clear()
             self.image_status_label.hide()
 
-            target_size = self.image_label.size()
+            target_size = (
+                self.image_label.size()
+            )
 
-            # Garantir um tamanho válido caso o layout ainda
-            # esteja sendo calculado.
+            # =================================================
+            # GARANTIR TAMANHO VÁLIDO
+            # =================================================
+
             if (
                     target_size.width() <= 0
                     or target_size.height() <= 0
@@ -3014,8 +3211,17 @@ class CardDetailsDialog(QDialog):
 
             else:
 
-                target_width = target_size.width()
-                target_height = target_size.height()
+                target_width = (
+                    target_size.width()
+                )
+
+                target_height = (
+                    target_size.height()
+                )
+
+            # =================================================
+            # ATUALIZAR IMAGEM IMEDIATAMENTE
+            # =================================================
 
             self.image_label.setPixmap(
                 pixmap.scaled(
@@ -3025,15 +3231,26 @@ class CardDetailsDialog(QDialog):
                     Qt.TransformationMode.SmoothTransformation,
                 )
             )
-            self.image_label.setText("")
+
+            self.image_label.setText(
+                ""
+            )
+
+            print(
+                "[DETAILS] Imagem atualizada:",
+                image_url or "fallback local",
+            )
+
             return
 
         # =====================================================
-        # SEM IMAGEM
+        # NENHUMA IMAGEM DISPONÍVEL
         # =====================================================
+
         self.image_label.clear()
 
         self.image_status_label.setText(
-            "Imagem não disponível localmente."
+            "Imagem não disponível."
         )
-        sel
+
+        self.image_status_label.show()

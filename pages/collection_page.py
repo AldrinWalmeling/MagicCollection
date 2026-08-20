@@ -28,8 +28,9 @@ from PySide6.QtGui import (
     QIntValidator,
 )
 
-from components.card_details_dialog import (
-    CardDetailsDialog,
+from pages.deck_editor_widgets import (
+    CardBorderOverlay,
+    identity_colors,
 )
 
 # =========================================================
@@ -115,7 +116,17 @@ from services.collection_export import (
     EXPORT_FIELDS,
 )
 
+from services.price_reference import (
+    find_english_reference,
+    set_price_reference,
+    get_cards_pending_reference,
+)
+
 from export_dialog import CollectionExportDialog
+
+from components.card_details_dialog import (
+    CardDetailsDialog,
+)
 
 from database import (
     add_card,
@@ -330,6 +341,46 @@ def _cleanup_symbol_cache():
 
 
 # =========================================================
+# CMC A PARTIR DO CUSTO DE MANA
+# =========================================================
+
+def _parse_cmc_from_mana_cost(mana_cost):
+    text = str(mana_cost or "")
+
+    if not text:
+        return 0
+
+    total = 0
+
+    for symbol in text.replace("{", " ").replace("}", " ").split():
+        symbol = symbol.upper()
+
+        if symbol == "X":
+            continue
+
+        if symbol.isdigit():
+            total += int(symbol)
+            continue
+
+        if "/" in symbol:
+            parts = symbol.split("/")
+
+            digits = [
+                part
+                for part
+                in parts
+                if part.isdigit()
+            ]
+
+            total += int(digits[0]) if digits else 1
+            continue
+
+        total += 1
+
+    return total
+
+
+# =========================================================
 # FILTRO DE MÚLTIPLA SELEÇÃO
 # =========================================================
 
@@ -405,6 +456,13 @@ class MultiSelectFilterButton(QPushButton):
 
             scroll_height = 125
             menu_width = 125
+
+
+        elif self.title == "Mana":
+
+            scroll_height = 50
+            menu_width = 50
+
 
         elif self.title == "Edição":
 
@@ -1406,6 +1464,74 @@ class RefreshCardDataTask(QRunnable):
             )
 
 
+class PriceReferenceSignals(QObject):
+    progress = Signal(int, int, str)
+    finished = Signal(int, int, int)
+    failed = Signal(str)
+
+
+class PriceReferenceUpdateTask(QRunnable):
+    """
+    Consulta o Scryfall para encontrar a referência em Inglês
+    de cada carta pendente e armazena apenas a referência
+    (nunca altera a carta física da coleção).
+    """
+
+    def __init__(self, cards):
+        super().__init__()
+        self.cards = list(cards or [])
+        self.signals = PriceReferenceSignals()
+
+    def run(self):
+        total = len(self.cards)
+        checked = 0
+        found = 0
+
+        try:
+            for index, card in enumerate(
+                self.cards,
+                start=1,
+            ):
+
+                name = str(
+                    card.get("printed_name")
+                    or card.get("name")
+                    or ""
+                ).strip()
+
+                self.signals.progress.emit(
+                    index,
+                    total,
+                    name or "Carta",
+                )
+
+                reference = find_english_reference(
+                    card
+                )
+
+                checked += 1
+
+                if reference is None:
+                    continue
+
+                if set_price_reference(
+                    card.get("id"),
+                    reference,
+                ):
+                    found += 1
+
+            self.signals.finished.emit(
+                checked,
+                found,
+                total,
+            )
+
+        except Exception as error:
+            self.signals.failed.emit(
+                str(error)
+            )
+
+
 class ImageSignals(QObject):
     finished = Signal(str, str, bytes, object)
     failed = Signal(str, str, object)
@@ -1698,6 +1824,21 @@ class GridCardFrame(QFrame):
         )
 
         # =================================================
+        # BORDER OVERLAY (Hover colorido)
+        # =================================================
+
+        self.border_overlay = CardBorderOverlay(
+            self
+        )
+
+        self.border_overlay.setGeometry(
+            0,
+            0,
+            self._base_width,
+            self._base_height,
+        )
+
+        # =================================================
         # BADGE DE QUANTIDADE
         # =================================================
 
@@ -1740,14 +1881,14 @@ class GridCardFrame(QFrame):
         )
 
         controls_layout.setContentsMargins(
-            14,
-            14,
-            14,
-            14,
+            10,
+            10,
+            10,
+            10,
         )
 
         controls_layout.setSpacing(
-            14
+            6
         )
 
         controls_layout.setAlignment(
@@ -1768,8 +1909,8 @@ class GridCardFrame(QFrame):
         )
 
         self.minus_button.setFixedSize(
-            32,
-            32,
+            30,
+            30,
         )
 
         self.minus_button.setCursor(
@@ -1812,8 +1953,8 @@ class GridCardFrame(QFrame):
         )
 
         self.control_quantity.setFixedSize(
-            34,
-            32,
+            46,
+            30,
         )
 
         controls_layout.addWidget(
@@ -1836,8 +1977,8 @@ class GridCardFrame(QFrame):
         )
 
         self.plus_button.setFixedSize(
-            32,
-            32,
+            30,
+            30,
         )
 
         self.plus_button.setCursor(
@@ -1922,6 +2063,23 @@ class GridCardFrame(QFrame):
             width,
             height,
         )
+
+        # -------------------------------------------------
+        # BORDA COLORIDA
+        # -------------------------------------------------
+
+        if hasattr(
+                self,
+                "border_overlay",
+        ):
+            self.border_overlay.setGeometry(
+                0,
+                0,
+                width,
+                height,
+            )
+
+            self.border_overlay.raise_()
 
         # -------------------------------------------------
         # CONTROLES
@@ -2070,6 +2228,9 @@ class GridCardFrame(QFrame):
         self.card_data = card_data
         self.current_face_index = face_index
         self.current_art_index = art_index
+
+        colors = identity_colors(card_data)
+        self.border_overlay.set_identity(colors)
 
         print(
             "[GRID] Dados da carta atualizados:",
@@ -2246,10 +2407,12 @@ class GridCardFrame(QFrame):
         if hovering:
 
             self.controls.show()
+            self.border_overlay.set_active(True)
 
             # Ficar acima das cartas vizinhas
             self.raise_()
 
+            self.border_overlay.raise_()
             self.quantity_badge.raise_()
             self.controls.raise_()
 
@@ -2259,6 +2422,7 @@ class GridCardFrame(QFrame):
                 return
 
             self.controls.hide()
+            self.border_overlay.set_active(False)
 
         # Removida animação de zoom que causava reposicionamento
         # O hover agora é puramente visual via CSS
@@ -3136,6 +3300,28 @@ class CollectionPage(QWidget):
             self.refresh_data_button
         )
 
+        self.price_reference_button = QPushButton(
+            "Atualizar para Inglês (Imprint)"
+        )
+
+        self.price_reference_button.setObjectName(
+            "PriceReferenceButton"
+        )
+
+        self.price_reference_button.setToolTip(
+            "Consulta o Scryfall e armazena uma referência em "
+            "Inglês para cada carta. O print original da "
+            "coleção não é alterado."
+        )
+
+        self.price_reference_button.clicked.connect(
+            self.start_price_reference_update
+        )
+
+        actions_layout.addWidget(
+            self.price_reference_button
+        )
+
         # =================================================
         # CONTADOR DA COLEÇÃO
         # =================================================
@@ -3351,6 +3537,39 @@ class CollectionPage(QWidget):
 
         filters_layout.addWidget(
             self.supertype_filter
+        )
+
+        # -------------------------------------------------
+        # CUSTO DE MANA
+        # -------------------------------------------------
+
+        self.cmc_filter = MultiSelectFilterButton(
+            "Mana",
+            [
+                ("0", "0"),
+                ("1", "1"),
+                ("2", "2"),
+                ("3", "3"),
+                ("4", "4"),
+                ("5", "5"),
+                ("6", "6"),
+                ("7+", "7+"),
+            ],
+            self,
+        )
+
+        self.cmc_filter.setFixedWidth(
+            115
+        )
+
+
+
+        self.cmc_filter.selectionChanged.connect(
+            self.apply_collection_filters
+        )
+
+        filters_layout.addWidget(
+            self.cmc_filter
         )
 
         # -------------------------------------------------
@@ -4939,6 +5158,127 @@ class CollectionPage(QWidget):
         )
 
     # =====================================================
+    # REFERÊNCIA EM INGLÊS (IMPRINT)
+    # =====================================================
+
+    def start_price_reference_update(
+            self,
+    ):
+        try:
+            pending_cards = get_cards_pending_reference()
+        except Exception as error:
+            QMessageBox.warning(
+                self,
+                "Atualizar para Inglês (Imprint)",
+                (
+                    "Não foi possível ler as cartas "
+                    f"pendentes:\n{error}"
+                ),
+            )
+            return
+
+        if not pending_cards:
+            QMessageBox.information(
+                self,
+                "Atualizar para Inglês (Imprint)",
+                (
+                    "Todas as cartas da coleção já possuem "
+                    "referência em Inglês (ou já são em Inglês)."
+                ),
+            )
+            return
+
+        reply = QMessageBox.question(
+            self,
+            "Atualizar para Inglês (Imprint)",
+            (
+                f"{len(pending_cards)} cartas ainda não possuem "
+                "referência em Inglês.\n\n"
+                "Deseja consultar o Scryfall e buscar as "
+                "referências agora?\n\n"
+                "A carta física da coleção não será alterada."
+            ),
+            QMessageBox.StandardButton.Yes
+            | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.Yes,
+        )
+
+        if reply != QMessageBox.StandardButton.Yes:
+            return
+
+        self.price_reference_button.setEnabled(False)
+        self.price_reference_button.setText("Atualizando...")
+
+        task = PriceReferenceUpdateTask(
+            pending_cards
+        )
+        task.signals.progress.connect(
+            self.on_price_reference_progress
+        )
+        task.signals.finished.connect(
+            self.on_price_reference_finished
+        )
+        task.signals.failed.connect(
+            self.on_price_reference_failed
+        )
+
+        self.scryfall_pool.start(task)
+
+    def on_price_reference_progress(
+            self,
+            current,
+            total,
+            name,
+    ):
+        self.price_reference_button.setText(
+            f"Atualizando {current}/{total}"
+        )
+        self.collection_count_label.setText(
+            f"Analisando: {name}"
+        )
+
+    def on_price_reference_finished(
+            self,
+            checked,
+            found,
+            total,
+    ):
+        self.price_reference_button.setEnabled(True)
+        self.price_reference_button.setText(
+            "Atualizar para Inglês (Imprint)"
+        )
+        self.load_cards()
+
+        QMessageBox.information(
+            self,
+            "Atualizar para Inglês (Imprint)",
+            (
+                "Análise concluída.\n\n"
+                f"Cartas verificadas: {checked}\n"
+                f"Referências encontradas: {found}\n"
+                f"Total avaliado: {total}"
+            ),
+        )
+
+    def on_price_reference_failed(
+            self,
+            message,
+    ):
+        self.price_reference_button.setEnabled(True)
+        self.price_reference_button.setText(
+            "Atualizar para Inglês (Imprint)"
+        )
+
+        QMessageBox.warning(
+            self,
+            "Atualizar para Inglês (Imprint)",
+            (
+                "Não foi possível concluir a atualização:\n"
+                f"{message}"
+            ),
+        )
+
+    # =====================================================
     # PESQUISA DA COLEÇÃO
     # =====================================================
 
@@ -6460,7 +6800,7 @@ class CollectionPage(QWidget):
 
         try:
             rarity = str(
-                card[-1] or ""
+                card[25] or ""
             ).strip().lower()
 
         except (
@@ -6487,6 +6827,83 @@ class CollectionPage(QWidget):
                     in rarity_filter
                 ]
         )
+
+    # =====================================================
+    # FILTRO POR CUSTO DE MANA
+    # =====================================================
+
+    def card_matches_cmc(
+            self,
+            card,
+            cmc_filter,
+    ):
+        if (
+                not cmc_filter
+                or cmc_filter == "all"
+                or cmc_filter == []
+        ):
+            return True
+
+        if not card:
+            return False
+
+        # -------------------------------------------------
+        # OBTER CMC DA CARTA
+        # -------------------------------------------------
+
+        cmc = None
+
+        try:
+            if len(card) > 28:
+                cmc = card[28]
+        except (TypeError, IndexError):
+            cmc = None
+
+        if cmc is None:
+
+            try:
+                mana_cost = (
+                    card[6]
+                    if len(card) > 6
+                    else ""
+                )
+
+                cmc = _parse_cmc_from_mana_cost(
+                    mana_cost
+                )
+
+            except (TypeError, IndexError):
+                cmc = 0
+
+        try:
+            cmc = float(cmc or 0)
+        except (TypeError, ValueError):
+            cmc = 0.0
+
+        # -------------------------------------------------
+        # BUCKET
+        # -------------------------------------------------
+
+        bucket = str(
+            int(max(0, cmc))
+        )
+
+        if cmc >= 7:
+            bucket = "7+"
+
+        if isinstance(
+                cmc_filter,
+                str,
+        ):
+            cmc_filter = [
+                cmc_filter,
+            ]
+
+        return bucket in {
+            str(value)
+            for value
+            in cmc_filter
+        }
 
     def apply_collection_filters(
             self,
@@ -6528,6 +6945,12 @@ class CollectionPage(QWidget):
 
         if not hasattr(
                 self,
+                "cmc_filter",
+        ):
+            return
+
+        if not hasattr(
+                self,
                 "sort_filter",
         ):
             return
@@ -6554,6 +6977,10 @@ class CollectionPage(QWidget):
 
         set_name = (
             self.set_filter.get_selected_values()
+        )
+
+        cmc_values = (
+            self.cmc_filter.get_selected_values()
         )
 
         sort_mode = (
@@ -6583,6 +7010,10 @@ class CollectionPage(QWidget):
 
         self.active_set_filter = (
             set_name
+        )
+
+        self.active_cmc_filter = (
+            cmc_values
         )
 
         self.active_sort = (
@@ -6676,6 +7107,16 @@ class CollectionPage(QWidget):
                 continue
 
             # -------------------------------------------------
+            # CUSTO DE MANA
+            # -------------------------------------------------
+
+            if not self.card_matches_cmc(
+                    card,
+                    cmc_values,
+            ):
+                continue
+
+            # -------------------------------------------------
             # CARTA APROVADA
             # -------------------------------------------------
 
@@ -6740,6 +7181,10 @@ class CollectionPage(QWidget):
             True
         )
 
+        self.cmc_filter.blockSignals(
+            True
+        )
+
         self.sort_filter.blockSignals(
             True
         )
@@ -6753,6 +7198,8 @@ class CollectionPage(QWidget):
         self.rarity_filter.clear_selection()
 
         self.set_filter.clear_selection()
+
+        self.cmc_filter.clear_selection()
 
         self.sort_filter.setCurrentIndex(
             0
@@ -6775,6 +7222,10 @@ class CollectionPage(QWidget):
         )
 
         self.set_filter.blockSignals(
+            False
+        )
+
+        self.cmc_filter.blockSignals(
             False
         )
 
@@ -7468,6 +7919,30 @@ class CollectionPage(QWidget):
             else None
         )
 
+        rarity = (
+            card[25]
+            if len(card) > 25
+            else None
+        )
+
+        colors = (
+            card[26]
+            if len(card) > 26
+            else None
+        )
+
+        color_identity = (
+            card[27]
+            if len(card) > 27
+            else None
+        )
+
+        cmc = (
+            card[28]
+            if len(card) > 28
+            else None
+        )
+
         card_data = {
             "id": card_id,
             "name": name,
@@ -7494,6 +7969,10 @@ class CollectionPage(QWidget):
             "favorite": favorite,
             "custom_tags": custom_tags,
             "last_view": last_view,
+            "rarity": rarity,
+            "colors": colors,
+            "color_identity": color_identity,
+            "cmc": cmc,
         }
 
         # -----------------------------------------------------
@@ -7502,6 +7981,16 @@ class CollectionPage(QWidget):
 
         frame._virtual_card_id = card_id
         frame._virtual_card_data = card_data
+
+        if hasattr(
+                frame,
+                "border_overlay",
+        ):
+            frame.border_overlay.set_identity(
+                identity_colors(
+                    card_data
+                )
+            )
 
         # -----------------------------------------------------
         # TAMANHO
@@ -8153,6 +8642,30 @@ class CollectionPage(QWidget):
                     else None
                 )
 
+                rarity = (
+                    card[25]
+                    if len(card) > 25
+                    else None
+                )
+
+                colors = (
+                    card[26]
+                    if len(card) > 26
+                    else None
+                )
+
+                color_identity = (
+                    card[27]
+                    if len(card) > 27
+                    else None
+                )
+
+                cmc = (
+                    card[28]
+                    if len(card) > 28
+                    else None
+                )
+
             except (
                     IndexError,
                     TypeError,
@@ -8208,6 +8721,10 @@ class CollectionPage(QWidget):
                 "favorite": favorite,
                 "custom_tags": custom_tags,
                 "last_view": last_view,
+                "rarity": rarity,
+                "colors": colors,
+                "color_identity": color_identity,
+                "cmc": cmc,
             }
 
             # =================================================

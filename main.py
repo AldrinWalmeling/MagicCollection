@@ -13,6 +13,10 @@ from services.decks_database import (
     initialize_decks_database,
 )
 
+from services.currency_service import (
+    CurrencyService,
+)
+
 from ui.main_window import MainWindow
 
 
@@ -100,6 +104,13 @@ def main():
     window = MainWindow()
 
     window.show()
+
+
+    # =====================================================
+    # TAXAS DE CÂMBIO EM SEGUNDO PLANO
+    # =====================================================
+
+    CurrencyService.start_background_refresh()
 
 
     # =====================================================
