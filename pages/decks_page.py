@@ -92,6 +92,7 @@ from database import (
 from services.decks_database import (
     add_card_to_deck,
     change_deck_card_quantity,
+    get_deck_cards,
     set_deck_favorite,
     set_deck_format,
 )
@@ -7480,7 +7481,7 @@ class DecksPage(QWidget):
             5,
             5,
             5,
-            20,
+            8,
         )
 
         self.cards_grid.setHorizontalSpacing(
@@ -7685,20 +7686,162 @@ class DecksPage(QWidget):
             self,
             card_id,
     ):
+        """
+        Sincroniza imediatamente uma carta alterada
+        pelos painéis de Coleção ou Magic/Scryfall.
+
+        Não reconstrói o deck inteiro.
+        """
+
+        if not self.current_deck_id:
+            return
 
         try:
-            card_id = int(
-                card_id
-            )
+            card_id = int(card_id)
         except (
                 TypeError,
                 ValueError,
         ):
             return
 
-        # O painel já atualizou o próprio item.
-        # Aqui só sincronizamos o card que mudou
-        # no grid do deck.
+        if card_id <= 0:
+            return
+
+        # =====================================================
+        # BUSCAR O ESTADO REAL NO BANCO
+        # =====================================================
+
+        cards = get_deck_cards(
+            self.current_deck_id
+        )
+
+        updated_card = None
+
+        for card in cards:
+            current_id = int(
+                _get_card_value(
+                    card,
+                    "id",
+                    0,
+                    0,
+                )
+                or 0
+            )
+
+            if current_id == card_id:
+                updated_card = card
+                break
+
+        # =====================================================
+        # CARTA NÃO EXISTE MAIS NO DECK
+        # =====================================================
+
+        if updated_card is None:
+
+            # Remover do estado em memória
+            self.current_deck_cards = [
+                card
+                for card in (
+                        self.current_deck_cards
+                        or []
+                )
+                if int(
+                    _get_card_value(
+                        card,
+                        "id",
+                        0,
+                        0,
+                    )
+                    or 0
+                ) != card_id
+            ]
+
+            # Remover o frame visual
+            frame = (
+                self._deck_card_frames.pop(
+                    card_id,
+                    None,
+                )
+            )
+
+            if frame is not None:
+                frame.setParent(None)
+                frame.deleteLater()
+
+            # Atualizar total
+            total = sum(
+                max(
+                    0,
+                    int(
+                        _get_card_value(
+                            card,
+                            "deck_quantity",
+                            14,
+                            0,
+                        )
+                        or 0
+                    ),
+                )
+                for card in (
+                        self.current_deck_cards
+                        or []
+                )
+            )
+
+            self.deck_total_label.setText(
+                f"{total} "
+                f"{'carta' if total == 1 else 'cartas'}"
+            )
+
+            self.update_deck_analysis(
+                total
+            )
+
+            # Se não sobrou nenhuma carta,
+            # mostrar estado vazio.
+            if not self.current_deck_cards:
+                self.render_deck_cards([])
+
+            return
+
+        # =====================================================
+        # CARTA EXISTE → ATUALIZAR ESTADO
+        # =====================================================
+
+        found = False
+
+        for index, card in enumerate(
+                self.current_deck_cards or []
+        ):
+            current_id = int(
+                _get_card_value(
+                    card,
+                    "id",
+                    0,
+                    0,
+                )
+                or 0
+            )
+
+            if current_id != card_id:
+                continue
+
+            self.current_deck_cards[
+                index
+            ] = updated_card
+
+            found = True
+            break
+
+        # Carta nova: adicionar ao estado
+        if not found:
+            self.current_deck_cards.append(
+                updated_card
+            )
+
+        # =====================================================
+        # ATUALIZAR FRAME EXISTENTE
+        # =====================================================
 
         frame = (
             self._deck_card_frames.get(
@@ -7706,19 +7849,97 @@ class DecksPage(QWidget):
             )
         )
 
-        quantity = (
-            self.collection_panel
-            .deck_quantities
-            .get(
-                card_id,
+        quantity = int(
+            _get_card_value(
+                updated_card,
+                "deck_quantity",
+                14,
                 0,
             )
+            or 0
         )
 
         if frame is not None:
+
             frame.set_quantity(
                 quantity
             )
+
+        # =====================================================
+        # CARTA NOVA → PRECISA APARECER NO GRID
+        # =====================================================
+
+        else:
+            # Carta nova: reconstruir o grid para
+            # que ela apareça visualmente.
+            self.render_deck_cards(
+                self._filtered_deck_cards()
+            )
+
+            # Atualizar imediatamente total,
+            # estatísticas e validação.
+            total = sum(
+                max(
+                    0,
+                    int(
+                        _get_card_value(
+                            card,
+                            "deck_quantity",
+                            14,
+                            0,
+                        )
+                        or 0
+                    ),
+                )
+                for card in (
+                        self.current_deck_cards
+                        or []
+                )
+            )
+
+            self.deck_total_label.setText(
+                f"{total} "
+                f"{'carta' if total == 1 else 'cartas'}"
+            )
+
+            self.update_deck_analysis(
+                total
+            )
+
+            return
+
+
+        # =====================================================
+        # ATUALIZAR TOTAL / ESTATÍSTICAS
+        # =====================================================
+
+        total = sum(
+            max(
+                0,
+                int(
+                    _get_card_value(
+                        card,
+                        "deck_quantity",
+                        14,
+                        0,
+                    )
+                    or 0
+                ),
+            )
+            for card in (
+                    self.current_deck_cards
+                    or []
+            )
+        )
+
+        self.deck_total_label.setText(
+            f"{total} "
+            f"{'carta' if total == 1 else 'cartas'}"
+        )
+
+        self.update_deck_analysis(
+            total
+        )
 
     # =====================================================
     # LIMPAR GRID
@@ -8299,7 +8520,11 @@ class DecksPage(QWidget):
 
             spacing = 14
 
-            card_width = 160
+            # A largura real do card é 180 px.
+            # O cálculo precisa usar a mesma largura
+            # para nunca colocar uma carta além
+            # do espaço disponível.
+            card_width = 180
 
             columns = max(
                 1,
@@ -8642,26 +8867,24 @@ class DecksPage(QWidget):
             card_id,
             amount,
     ):
-
         if not self.current_deck_id:
             return
 
         try:
-
-            card_id = int(
-                card_id
-            )
-
-            amount = int(
-                amount
-            )
-
+            card_id = int(card_id)
+            amount = int(amount)
         except (
                 TypeError,
                 ValueError,
         ):
-
             return
+
+        if card_id <= 0 or amount == 0:
+            return
+
+        # =====================================================
+        # ALTERAR NO BANCO
+        # =====================================================
 
         success = change_deck_card_quantity(
             self.current_deck_id,
@@ -8673,136 +8896,12 @@ class DecksPage(QWidget):
             return
 
         # =====================================================
-        # ATUALIZAR MEMÓRIA DO DECK
+        # SINCRONIZAR A CARTA ALTERADA
         # =====================================================
 
-        current_quantity = 0
-
-        for card in (
-                self.current_deck_cards
-        ):
-
-            current_id = int(
-                _get_card_value(
-                    card,
-                    "id",
-                    0,
-                    0,
-                )
-                or 0
-            )
-
-            if current_id != card_id:
-                continue
-
-            current_quantity = int(
-                _get_card_value(
-                    card,
-                    "deck_quantity",
-                    14,
-                    0,
-                )
-                or 0
-            )
-
-            new_quantity = max(
-                0,
-                current_quantity + amount,
-            )
-
-            if isinstance(
-                    card,
-                    dict,
-            ):
-                card[
-                    "deck_quantity"
-                ] = new_quantity
-
-            break
-
-        # =====================================================
-        # ATUALIZAR TOTAL
-        # =====================================================
-
-        total = sum(
-            max(
-                0,
-                int(
-                    _get_card_value(
-                        card,
-                        "deck_quantity",
-                        14,
-                        0,
-                    )
-                    or 0
-                ),
-            )
-            for card in (
-                self.current_deck_cards
-            )
-        )
-
-        self.deck_total_label.setText(
-            f"{total} "
-            f"{'carta' if total == 1 else 'cartas'}"
-        )
-
-        # =====================================================
-        # ATUALIZAR ITEM DO PAINEL
-        # =====================================================
-
-        if (
-                self.collection_panel
-                and self.collection_panel.isVisible()
-        ):
-
-            old_quantity = int(
-                self.collection_panel.deck_quantities.get(
-                    card_id,
-                    0,
-                )
-                or 0
-            )
-
-            new_quantity = max(
-                0,
-                old_quantity + amount,
-            )
-
-            if new_quantity > 0:
-
-                self.collection_panel.deck_quantities[
-                    card_id
-                ] = new_quantity
-
-            else:
-
-                self.collection_panel.deck_quantities.pop(
-                    card_id,
-                    None,
-                )
-
-            self.collection_panel.update_card_quantity(
-                card_id,
-                new_quantity,
-            )
-
-        # =====================================================
-        # ATUALIZAR SOMENTE O CARD DO DECK
-        # =====================================================
-
-        frame = getattr(
-            self,
-            "_deck_card_frames",
-            {},
-        ).get(
+        self._panel_card_changed(
             card_id
         )
-
-        if frame is not None:
-            frame.set_quantity(
-                new_quantity
-            )
 
     # =====================================================
     # ABRIR PAINEL — COLEÇÃO

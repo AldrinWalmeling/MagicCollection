@@ -485,7 +485,7 @@ class DeckStatsSidebar(QScrollArea):
 
         layout = QVBoxLayout(container)
         layout.setContentsMargins(0, 0, 6, 0)
-        layout.setSpacing(12)
+        layout.setSpacing(8)
 
         # -------------------------------------------------
         # FORMATO
@@ -495,7 +495,7 @@ class DeckStatsSidebar(QScrollArea):
         format_panel.setObjectName("DeckStatsPanel")
 
         format_layout = QVBoxLayout(format_panel)
-        format_layout.setContentsMargins(14, 12, 14, 14)
+        format_layout.setContentsMargins(14, 10, 14, 12)
         format_layout.setSpacing(8)
 
         format_header = QHBoxLayout()
@@ -544,8 +544,8 @@ class DeckStatsSidebar(QScrollArea):
         stats_panel.setObjectName("DeckStatsPanel")
 
         stats_layout = QGridLayout(stats_panel)
-        stats_layout.setContentsMargins(14, 12, 14, 14)
-        stats_layout.setSpacing(10)
+        stats_layout.setContentsMargins(14, 10, 14, 12)
+        stats_layout.setSpacing(8)
 
         self.total_box = StatBox("Cartas")
         self.unique_box = StatBox("Únicas")
@@ -575,7 +575,7 @@ class DeckStatsSidebar(QScrollArea):
         colors_layout.addWidget(colors_title)
 
         self.color_row = QHBoxLayout()
-        self.color_row.setSpacing(6)
+        self.color_row.setSpacing(8)
         colors_layout.addLayout(self.color_row)
 
         self.color_pips = {}

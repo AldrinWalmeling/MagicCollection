@@ -71,27 +71,7 @@ DECK_COLOR_HEX = {
 # Cores suaves que combinam com o tema dark.
 # Nada de neon / cores extremamente saturadas.
 
-DONUT_COLOR_HEX = {
-    "Branco": "#cbbfa1",
-    "Azul": "#4a86c8",
-    "Preto": "#6f5f80",
-    "Vermelho": "#c45a4c",
-    "Verde": "#4f9d68",
-    "Incolor": "#8a94a6",
-    "Multicolor": "#d4a84b",
-}
 
-# =========================================================
-# CORES DOS DONUTS (raridades)
-# =========================================================
-
-RARITY_DONUT_HEX = {
-    "Comum": "#6b7c93",
-    "Incomum": "#4a86c8",
-    "Rara": "#d4a84b",
-    "Mítica": "#c0453e",
-    "Sem raridade": "#343b49",
-}
 
 # =========================================================
 # GRÁFICO DE PIZZA / DONUT (QPainter)
@@ -964,7 +944,7 @@ class ValuableCardsWidget(QFrame):
         )
 
         self._mode = (
-            self.MODE_COLLECTION
+            self.MODE_INDIVIDUAL
         )
 
         layout = QVBoxLayout(
@@ -1045,7 +1025,7 @@ class ValuableCardsWidget(QFrame):
             True
         )
 
-        self._collection_button.setChecked(
+        self._individual_button.setChecked(
             True
         )
 
@@ -1294,12 +1274,46 @@ class ValuableCardsWidget(QFrame):
             )
         )
 
+        # -------------------------------------------------
+        # RANKING REAL DO MODO ATUAL
+        #
+        # Individual = maior preço por unidade.
+        # Coleção   = maior valor total (preço x quantidade).
+        #
+        # O SQL fornece os candidatos dos dois rankings; aqui
+        # decidimos qual Top 6 deve ser exibido.
+        # -------------------------------------------------
+
+        if individual:
+
+            display_cards = sorted(
+                self._cards,
+                key=lambda card: self._safe_numeric(
+                    card.get("price")
+                ),
+                reverse=True,
+            )[:6]
+
+        else:
+
+            display_cards = sorted(
+                self._cards,
+                key=lambda card: self._safe_numeric(
+                    card.get("total_value")
+                ),
+                reverse=True,
+            )[:6]
+
         rows = []
 
-        for card in self._cards:
+        for rank, card in enumerate(
+            display_cards,
+            start=1,
+        ):
 
             row = self._build_row(
-                card
+                card,
+                rank,
             )
 
             self._rows_layout.addWidget(
@@ -1401,9 +1415,24 @@ class ValuableCardsWidget(QFrame):
                 _start,
             )
 
+    @staticmethod
+    def _safe_numeric(
+        value,
+    ):
+        try:
+            return float(
+                value or 0
+            )
+        except (
+            TypeError,
+            ValueError,
+        ):
+            return 0.0
+
     def _build_row(
         self,
         card,
+        rank=None,
     ):
 
         row = QFrame()
@@ -1441,9 +1470,13 @@ class ValuableCardsWidget(QFrame):
 
         rank = QLabel(
             str(
-                self._cards.index(
-                    card
-                ) + 1
+                rank
+                if rank is not None
+                else (
+                    self._cards.index(
+                        card
+                    ) + 1
+                )
             )
         )
 
@@ -2562,14 +2595,13 @@ class DashboardPage(QWidget):
             == "valuableCardsCard"
         ]
 
+        # O painel de Top 6 está dentro de um QLayout.
+        # Não animamos a propriedade "pos" dele, porque o layout
+        # controla sua geometria. Isso evitava o estado inicial
+        # incorreto que parecia se corrigir ao passar o mouse.
         for panel in top_cards:
-
-            self._animate_enter(
-                panel,
-                delay=360,
-                duration=420,
-                animate_opacity=False,
-            )
+            panel.update()
+            panel.layout().activate()
 
         # ---------------------------------------------
         # FASE 3 — DISTRIBUIÇÕES + BARRAS
@@ -2959,6 +2991,43 @@ class DashboardPage(QWidget):
                 delay,
                 _start,
             )
+
+        # ---------------------------------------------
+        # BARRAS VERTICAIS DE RARIDADE
+        # ---------------------------------------------
+
+        rarity_fills = [
+            fill
+            for fill in content.findChildren(QFrame)
+            if fill.objectName() == "DashboardRarityFill"
+        ]
+
+        for fill in rarity_fills:
+            target = int(fill.height())
+            if target <= 0:
+                continue
+
+            fill.setFixedHeight(0)
+            animation = QVariantAnimation(fill)
+            animation.setDuration(520)
+            animation.setStartValue(0)
+            animation.setEndValue(target)
+            animation.setEasingCurve(_QEasingCurve.OutCubic)
+
+            def _apply_rarity(value, fill=fill):
+                try:
+                    fill.setFixedHeight(int(value))
+                except RuntimeError:
+                    pass
+
+            animation.valueChanged.connect(_apply_rarity)
+            self._entrance_animations.append(animation)
+
+            QTimer.singleShot(
+                base_delay + index * 55,
+                animation.start,
+            )
+            index += 1
 
         # ---------------------------------------------
         # BARRAS VERTICAIS DA CURVA DE MANA
@@ -3418,11 +3487,23 @@ class DashboardPage(QWidget):
                     )
                 )
 
+                # -------------------------------------------------
+                # NORMALIZAÇÃO + AGREGAÇÃO
+                #
+                # Diferentes grafias/variações da mesma raridade
+                # precisam resultar em UMA única fatia do donut.
+                # -------------------------------------------------
                 result["rarities"][
                     rarity
-                ] = int(
-                    row["total"]
-                    or 0
+                ] = (
+                    result["rarities"].get(
+                        rarity,
+                        0,
+                    )
+                    + int(
+                        row["total"]
+                        or 0
+                    )
                 )
 
             # =================================================
@@ -3501,38 +3582,86 @@ class DashboardPage(QWidget):
                 alias="price_tix",
             )
 
+            # -------------------------------------------------
+            # BUSCAMOS OS DOIS RANKINGS
+            #
+            # Individual:
+            #   Top 6 pelo preço de UMA unidade.
+            #
+            # Coleção:
+            #   Top 6 pelo valor total da posição
+            #   (preço x quantidade).
+            #
+            # Precisamos dos dois conjuntos porque o Top 6 da
+            # coleção pode conter cartas que não estão no Top 6
+            # individual e vice-versa.
+            # -------------------------------------------------
+
             cursor.execute(
                 f"""
-                SELECT
-                    id,
-                    name,
-                    printed_name,
-                    rarity,
-                    set_name,
-                    image_path,
-                    price_usd_foil,
-                    quantity,
-                    mana_cost,
-                    type_line,
-                    {top_usd_expr},
-                    {top_eur_expr},
-                    {top_tix_expr}
+                SELECT *
+                FROM (
+                    SELECT
+                        id,
+                        name,
+                        printed_name,
+                        rarity,
+                        set_name,
+                        image_path,
+                        price_usd_foil,
+                        quantity,
+                        mana_cost,
+                        type_line,
+                        {top_usd_expr},
+                        {top_eur_expr},
+                        {top_tix_expr}
+                    FROM cards
+                    WHERE
+                        quantity > 0
+                        AND {price_column_expression("usd")} > 0
+                    ORDER BY
+                        {price_column_expression("usd")} DESC,
+                        quantity DESC
+                    LIMIT 6
+                )
 
-                FROM cards
+                UNION
 
-                WHERE
-                    quantity > 0
-                    AND {price_column_expression("usd")} > 0
-
-                ORDER BY
-                    quantity * {price_column_expression("usd")} DESC,
-                    {price_column_expression("usd")} DESC
-
-                LIMIT 6
+                SELECT *
+                FROM (
+                    SELECT
+                        id,
+                        name,
+                        printed_name,
+                        rarity,
+                        set_name,
+                        image_path,
+                        price_usd_foil,
+                        quantity,
+                        mana_cost,
+                        type_line,
+                        {top_usd_expr},
+                        {top_eur_expr},
+                        {top_tix_expr}
+                    FROM cards
+                    WHERE
+                        quantity > 0
+                        AND {price_column_expression("usd")} > 0
+                    ORDER BY
+                        quantity * {price_column_expression("usd")} DESC,
+                        {price_column_expression("usd")} DESC
+                    LIMIT 6
+                )
                 """
             )
 
+            # Pode haver cartas presentes nos dois rankings.
+            # Mantemos somente uma ocorrência por ID.
+            top_rows = {}
             for row in cursor.fetchall():
+                top_rows[row["id"]] = row
+
+            for row in top_rows.values():
 
                 price = float(
                     row["price_usd"]
@@ -3626,12 +3755,20 @@ class DashboardPage(QWidget):
             # =================================================
             # CURVA DE MANA
             # =================================================
+            # Terrenos NÃO entram na curva: o CMC/Mana Value de
+            # terrenos é 0 e isso inflava artificialmente a barra
+            # de custo 0. Um custo 0 real (ex.: uma mágica com
+            # mana value 0) continua sendo contabilizado.
+            # Valores de CMC ausentes/inválidos também não viram
+            # 0 automaticamente.
+            # =================================================
 
             cursor.execute(
                 """
                 SELECT
                     cmc,
-                    quantity
+                    quantity,
+                    type_line
 
                 FROM cards
 
@@ -3646,36 +3783,43 @@ class DashboardPage(QWidget):
                     or 0
                 )
 
+                if quantity <= 0:
+                    continue
+
+                type_line = str(
+                    row["type_line"]
+                    or ""
+                ).casefold()
+
+                # Terrenos não representam uma carta que você
+                # "paga" para conjurar e não devem ocupar CMC 0.
+                if (
+                    "land" in type_line
+                    or "terreno" in type_line
+                ):
+                    continue
+
+                raw_cmc = row["cmc"]
+
                 try:
-
-                    cmc = float(
-                        row["cmc"]
-                        or 0
-                    )
-
+                    if raw_cmc is None or str(raw_cmc).strip() == "":
+                        continue
+                    cmc = float(raw_cmc)
                 except (
                     TypeError,
                     ValueError,
                 ):
+                    continue
 
-                    cmc = 0
+                if cmc < 0:
+                    continue
 
                 if cmc >= 7:
-
                     key = "7+"
-
                 else:
+                    key = str(int(cmc))
 
-                    key = str(
-                        max(
-                            0,
-                            int(cmc)
-                        )
-                    )
-
-                result["mana_curve"][
-                    key
-                ] += quantity
+                result["mana_curve"][key] += quantity
 
             # =================================================
             # EDIÇÕES
@@ -3955,33 +4099,34 @@ class DashboardPage(QWidget):
                         or ""
                     ).casefold()
 
+                    # Terrenos não entram na curva de mana.
                     if (
                         "land" in type_line
                         or "terreno" in type_line
                     ):
                         continue
 
+                    raw_cmc = dc_row["cmc"]
+
                     try:
-                        cmc = float(
-                            dc_row["cmc"]
-                            or 0
-                        )
+                        if raw_cmc is None or str(raw_cmc).strip() == "":
+                            continue
+                        cmc = float(raw_cmc)
                     except (
                         TypeError,
                         ValueError,
                     ):
-                        cmc = 0
+                        continue
+
+                    if cmc < 0:
+                        continue
 
                     if cmc >= 7:
                         key = "7+"
                     else:
-                        key = str(
-                            int(max(0, cmc))
-                        )
+                        key = str(int(cmc))
 
-                    deck["mana_curve"][
-                        key
-                    ] += qty
+                    deck["mana_curve"][key] += qty
 
         except Exception as error:
 
@@ -4606,13 +4751,8 @@ class DashboardPage(QWidget):
                 )
             )
 
-            bar.setRange(
-                0,
-                max(
-                    total,
-                    1
-                )
-            )
+            maximum = max(value for _, value in data)
+            bar.setRange(0, maximum)
 
             bar.setValue(
                 value
@@ -4821,137 +4961,148 @@ class DashboardPage(QWidget):
             "Sem raridade",
         ]
 
+        # Consolida variações de nomenclatura e remove valores vazios.
+        consolidated = {}
+
+        for name, value in values.items():
+            canonical_name = self._rarity_label(name)
+
+            try:
+                numeric_value = int(value or 0)
+            except (
+                TypeError,
+                ValueError,
+            ):
+                numeric_value = 0
+
+            if numeric_value <= 0:
+                continue
+
+            consolidated[canonical_name] = (
+                consolidated.get(canonical_name, 0)
+                + numeric_value
+            )
+
         data = []
 
         for name in ordered:
-
-            value = values.get(
-                name,
-                0
-            )
-
+            value = consolidated.get(name, 0)
             if value > 0:
+                data.append((name, value))
 
-                data.append(
-                    (
-                        name,
-                        value
-                    )
-                )
+        known = set(ordered)
+        for name, value in consolidated.items():
+            if name not in known and value > 0:
+                data.append((name, value))
 
-        # ---------------------------------------------
-        # Caso existam raridades não previstas
-        # ---------------------------------------------
-
-        known = set(
-            ordered
+        maximum = max(
+            (value for _, value in data),
+            default=1,
         )
 
-        for name, value in values.items():
-
-            if (
-                name not in known
-                and value > 0
-            ):
-
-                data.append(
-                    (
-                        name,
-                        value
-                    )
-                )
-
-        total = sum(
-            value
-            for _, value in data
+        # =================================================
+        # BARRAS VERTICAIS — mesmo visual da curva de mana
+        # =================================================
+        graph = QHBoxLayout()
+        graph.setContentsMargins(
+            4,
+            6,
+            4,
+            2,
         )
+        graph.setSpacing(8)
 
-        donut_data = [
-            (
-                name,
-                value,
-                RARITY_DONUT_HEX.get(
-                    name,
-                    "#8a94a6",
-                ),
+        for rarity, value in data:
+            column = QVBoxLayout()
+            column.setContentsMargins(0, 0, 0, 0)
+            column.setSpacing(4)
+
+            count = QLabel(
+                self._format_number(value)
             )
-            for name, value in data
-        ]
+            count.setObjectName(
+                "DashboardRarityValue"
+            )
+            count.setAlignment(
+                Qt.AlignmentFlag.AlignCenter
+            )
+            column.addWidget(count)
 
-        content = QHBoxLayout()
+            track = QFrame()
+            track.setObjectName(
+                "DashboardRarityTrack"
+            )
+            track.setProperty(
+                "rarity",
+                rarity,
+            )
+            track.setFixedHeight(92)
+            track.setMinimumWidth(30)
+            track.setMaximumWidth(44)
 
-        content.setSpacing(
-            16
-        )
+            track_layout = QVBoxLayout(track)
+            track_layout.setContentsMargins(0, 0, 0, 0)
+            track_layout.setSpacing(0)
 
-        donut = DonutChart(
-            center_value=self._format_number(
-                total
-            ),
-            center_caption="cartas",
-        )
-
-        donut.set_data(
-            donut_data
-        )
-
-        donut.setFixedSize(
-            128,
-            128
-        )
-
-        content.addWidget(
-            donut,
-            0,
-            Qt.AlignmentFlag.AlignVCenter,
-        )
-
-        legend = QVBoxLayout()
-
-        legend.setSpacing(
-            7
-        )
-
-        legend.addStretch(
-            1
-        )
-
-        for name, value, color in donut_data:
-            legend.addLayout(
-                self._build_legend_row(
-                    name,
-                    value,
-                    total,
-                    color,
-                )
+            ratio = (
+                value / maximum
+                if maximum > 0
+                else 0
+            )
+            fill_height = max(
+                0,
+                int(92 * ratio),
             )
 
-        legend.addStretch(
-            1
-        )
+            fill = QFrame()
+            fill.setObjectName(
+                "DashboardRarityFill"
+            )
+            fill.setProperty(
+                "rarity",
+                rarity,
+            )
+            fill.setFixedHeight(fill_height)
 
-        content.addLayout(
-            legend,
-            1,
-        )
+            track_layout.addStretch()
+            track_layout.addWidget(
+                fill,
+                0,
+                Qt.AlignmentFlag.AlignBottom,
+            )
 
-        layout.addLayout(
-            content
-        )
+            column.addWidget(
+                track,
+                0,
+                Qt.AlignmentFlag.AlignHCenter,
+            )
+
+            label = QLabel(rarity)
+            label.setObjectName(
+                "DashboardRarityLabel"
+            )
+            label.setProperty(
+                "rarity",
+                rarity,
+            )
+            label.setAlignment(
+                Qt.AlignmentFlag.AlignCenter
+            )
+            label.setWordWrap(True)
+            column.addWidget(label)
+
+            graph.addLayout(column, 1)
 
         if not data:
-
             empty = QLabel(
                 "Nenhuma carta disponível."
             )
-
             empty.setObjectName(
                 "DashboardMuted"
             )
-
-            layout.addWidget(
-                empty
-            )
+            layout.addWidget(empty)
+        else:
+            layout.addLayout(graph)
 
         return panel
 
@@ -5065,13 +5216,8 @@ class DashboardPage(QWidget):
                 "DashboardRarityBar"
             )
 
-            bar.setRange(
-                0,
-                max(
-                    total,
-                    1
-                )
-            )
+            maximum = max(value for _, value in data)
+            bar.setRange(0, maximum)
 
             bar.setValue(
                 value

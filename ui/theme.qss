@@ -3536,18 +3536,58 @@ QProgressBar#DashboardRarityBar[rarity="Sem raridade"]::chunk {
    CURVA DE MANA — NOVO
    ========================================================= */
 
-QFrame#DashboardManaTrack {
+QFrame#DashboardManaTrack,
+QFrame#DashboardRarityTrack {
     background-color: #20242c;
 
     border: 1px solid #2b3240;
     border-radius: 6px;
 }
 
-QFrame#DashboardManaFill {
-    background-color: #d4a84b;
-
+QFrame#DashboardManaFill,
+QFrame#DashboardRarityFill {
     border: none;
     border-radius: 5px;
+}
+
+/* ---------- CORES DA CURVA DE MANA ---------- */
+QFrame#DashboardManaFill {
+    background-color: #d4a84b;
+}
+
+/* ---------- CORES DAS BARRAS DE RARIDADE ---------- */
+QFrame#DashboardRarityFill[rarity="Comum"] {
+    background-color: #858b95;
+}
+
+QFrame#DashboardRarityFill[rarity="Incomum"] {
+    background-color: #4B82C4;
+}
+
+QFrame#DashboardRarityFill[rarity="Rara"] {
+    background-color: #c9a84e;
+}
+
+QFrame#DashboardRarityFill[rarity="Mítica"] {
+    background-color: #c76b3c;
+}
+
+QFrame#DashboardRarityFill[rarity="Sem raridade"] {
+    background-color: #515866;
+}
+
+QLabel#DashboardRarityValue {
+    background: transparent;
+    color: #dfe3e9;
+    font-size: 10px;
+    font-weight: 700;
+}
+
+QLabel#DashboardRarityLabel {
+    background: transparent;
+    color: #858e9f;
+    font-size: 9px;
+    font-weight: 700;
 }
 
 QLabel#DashboardManaValue {
