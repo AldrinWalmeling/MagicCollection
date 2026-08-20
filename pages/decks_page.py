@@ -1,3 +1,4 @@
+from datetime import datetime
 from pathlib import Path
 import sqlite3
 import requests
@@ -92,6 +93,29 @@ from database import (
 from services.decks_database import (
     add_card_to_deck,
     change_deck_card_quantity,
+    set_deck_favorite,
+    set_deck_format,
+)
+
+from services.deck_formats import (
+    format_label,
+    normalize_format,
+    validate_deck,
+)
+
+from services.deck_stats import (
+    TYPE_LABELS,
+    TYPE_ORDER,
+    card_type_key,
+    compute_deck_stats,
+)
+
+from pages.deck_editor_widgets import (
+    CardBorderOverlay,
+    DeckFilterBar,
+    DeckGroupHeader,
+    DeckStatsSidebar,
+    identity_colors,
 )
 
 from services.scryfall_symbols import (
@@ -404,6 +428,22 @@ def initialize_decks_database():
                 """
             )
 
+        if "format" not in existing_columns:
+            cursor.execute(
+                """
+                ALTER TABLE decks
+                ADD COLUMN format TEXT DEFAULT 'livre'
+                """
+            )
+
+        if "favorite" not in existing_columns:
+            cursor.execute(
+                """
+                ALTER TABLE decks
+                ADD COLUMN favorite INTEGER DEFAULT 0
+                """
+            )
+
         cursor.execute(
             """
             CREATE TABLE IF NOT EXISTS deck_cards (
@@ -475,7 +515,9 @@ def get_all_decks():
                 created_at,
                 updated_at,
                 preview_card_id,
-                preview_image_path
+                preview_image_path,
+                COALESCE(format, 'livre') AS format,
+                COALESCE(favorite, 0) AS favorite
             FROM decks
             ORDER BY
                 updated_at DESC,
@@ -909,6 +951,12 @@ def get_deck_cards(deck_id):
                 c.image_path,
                 c.power,
                 c.toughness,
+                c.rarity,
+                c.cmc,
+                c.colors,
+                c.color_identity,
+                c.legalities,
+                c.price_usd,
                 dc.quantity AS deck_quantity
 
             FROM deck_cards dc
@@ -1447,6 +1495,17 @@ class DeckCardFrame(QFrame):
         # BADGE
         # =================================================
 
+        self.border_overlay = CardBorderOverlay(
+            self
+        )
+
+        self.border_overlay.setGeometry(
+            0,
+            0,
+            self._base_width,
+            self._base_height,
+        )
+
         self.quantity_badge = QLabel(
             "×0",
             self,
@@ -1653,6 +1712,19 @@ class DeckCardFrame(QFrame):
         )
 
     # =====================================================
+    # IDENTIDADE DE COR
+    # =====================================================
+
+    def set_color_identity(
+        self,
+        colors,
+    ):
+
+        self.border_overlay.set_identity(
+            colors
+        )
+
+    # =====================================================
     # QUANTIDADE
     # =====================================================
 
@@ -1726,6 +1798,19 @@ class DeckCardFrame(QFrame):
             width,
             height,
         )
+
+        # -------------------------------------------------
+        # BORDA COLORIDA
+        # -------------------------------------------------
+
+        self.border_overlay.setGeometry(
+            0,
+            0,
+            width,
+            height,
+        )
+
+        self.border_overlay.raise_()
 
         # -------------------------------------------------
         # CONTROLES HOVER
@@ -1815,6 +1900,10 @@ class DeckCardFrame(QFrame):
 
         self.style().unpolish(self)
         self.style().polish(self)
+
+        self.border_overlay.set_active(
+            bool(hovering or self._hover_locked)
+        )
 
         # -------------------------------------------------
         # Controles e Badge
@@ -2083,9 +2172,55 @@ class DeckPreviewCardDialog(QDialog):
 # PREVIEW DO DECK
 # =========================================================
 
+def _relative_time(value):
+    """Texto curto de atualização ("há 2 dias")."""
+
+    if not value:
+        return ""
+
+    text = str(value).strip()
+
+    for pattern in (
+        "%Y-%m-%d %H:%M:%S",
+        "%Y-%m-%d %H:%M:%S.%f",
+        "%Y-%m-%dT%H:%M:%S",
+    ):
+        try:
+            moment = datetime.strptime(text[:26], pattern)
+            break
+        except ValueError:
+            moment = None
+
+    if moment is None:
+        return text[:10]
+
+    delta = datetime.now() - moment
+
+    seconds = int(delta.total_seconds())
+
+    if seconds < 60:
+        return "agora"
+
+    if seconds < 3600:
+        return f"há {seconds // 60} min"
+
+    if seconds < 86400:
+        return f"há {seconds // 3600} h"
+
+    days = seconds // 86400
+
+    if days < 30:
+        return f"há {days} {'dia' if days == 1 else 'dias'}"
+
+    months = days // 30
+
+    return f"há {months} {'mês' if months == 1 else 'meses'}"
+
+
 class DeckPreviewFrame(QFrame):
 
     clicked = Signal()
+    favoriteToggled = Signal(int, bool)
 
     def __init__(
         self,
@@ -2103,7 +2238,7 @@ class DeckPreviewFrame(QFrame):
 
         self.setFixedSize(
             220,
-            315,
+            360,
         )
 
         self.setCursor(
@@ -2185,6 +2320,53 @@ class DeckPreviewFrame(QFrame):
             self.image_label
         )
 
+        # -------------------------------------------------
+        # FAVORITO
+        # -------------------------------------------------
+
+        self.favorite_button = QPushButton(
+            "★",
+            self.preview_frame,
+        )
+
+        self.favorite_button.setObjectName(
+            "DeckFavoriteButton"
+        )
+
+        self.favorite_button.setCheckable(True)
+
+        self.favorite_button.setChecked(
+            bool(deck_data.get("favorite"))
+        )
+
+        self.favorite_button.setCursor(
+            Qt.CursorShape.PointingHandCursor
+        )
+
+        self.favorite_button.setToolTip(
+            "Marcar deck como favorito"
+        )
+
+        self.favorite_button.setFixedSize(
+            30,
+            30,
+        )
+
+        self.favorite_button.move(
+            176,
+            8,
+        )
+
+        self.favorite_button.raise_()
+
+        self.favorite_button.toggled.connect(
+            lambda checked:
+            self.favoriteToggled.emit(
+                int(deck_data.get("id") or 0),
+                bool(checked),
+            )
+        )
+
         layout.addWidget(
             self.preview_frame
         )
@@ -2221,6 +2403,50 @@ class DeckPreviewFrame(QFrame):
 
         layout.addWidget(
             self.total_label
+        )
+
+        # -------------------------------------------------
+        # META — FORMATO E ATUALIZAÇÃO
+        # -------------------------------------------------
+
+        meta_row = QHBoxLayout()
+
+        meta_row.setContentsMargins(0, 0, 0, 0)
+
+        meta_row.setSpacing(6)
+
+        self.format_label = QLabel(
+            format_label(
+                deck_data.get("format")
+            )
+        )
+
+        self.format_label.setObjectName(
+            "DeckFormatBadge"
+        )
+
+        meta_row.addWidget(
+            self.format_label
+        )
+
+        meta_row.addStretch()
+
+        self.updated_label = QLabel(
+            _relative_time(
+                deck_data.get("updated_at")
+            )
+        )
+
+        self.updated_label.setObjectName(
+            "DeckPreviewTotal"
+        )
+
+        meta_row.addWidget(
+            self.updated_label
+        )
+
+        layout.addLayout(
+            meta_row
         )
 
         if (
@@ -6072,6 +6298,7 @@ class DecksPage(QWidget):
         self.current_deck_id = None
         self.current_deck_name = ""
         self.current_deck_cards = []
+        self.current_deck_format = "livre"
         self._ui_ready = False
         self._resize_refresh_pending = False
 
@@ -6243,6 +6470,98 @@ class DecksPage(QWidget):
             0,
             0,
             0,
+        )
+
+        # -------------------------------------------------
+        # BUSCA / ORDENAÇÃO
+        # -------------------------------------------------
+
+        decks_toolbar = QFrame()
+
+        decks_toolbar.setObjectName(
+            "DeckFilterBar"
+        )
+
+        decks_toolbar_layout = QHBoxLayout(
+            decks_toolbar
+        )
+
+        decks_toolbar_layout.setContentsMargins(
+            12,
+            10,
+            12,
+            10,
+        )
+
+        decks_toolbar_layout.setSpacing(8)
+
+        self.decks_search = QLineEdit()
+
+        self.decks_search.setObjectName(
+            "DeckFilterSearch"
+        )
+
+        self.decks_search.setPlaceholderText(
+            "Buscar deck..."
+        )
+
+        self.decks_search.setClearButtonEnabled(True)
+
+        self.decks_search.textChanged.connect(
+            lambda _text: self.show_decks()
+        )
+
+        decks_toolbar_layout.addWidget(
+            self.decks_search,
+            1,
+        )
+
+        self.decks_sort = QComboBox()
+
+        self.decks_sort.setObjectName(
+            "DeckFilterCombo"
+        )
+
+        for label, key in (
+            ("Atualizados primeiro", "updated"),
+            ("Nome (A-Z)", "name"),
+            ("Mais cartas", "cards"),
+            ("Favoritos primeiro", "favorite"),
+        ):
+            self.decks_sort.addItem(label, key)
+
+        self.decks_sort.currentIndexChanged.connect(
+            lambda _index: self.show_decks()
+        )
+
+        decks_toolbar_layout.addWidget(
+            self.decks_sort
+        )
+
+        self.decks_favorites_button = QPushButton(
+            "★ Favoritos"
+        )
+
+        self.decks_favorites_button.setObjectName(
+            "DeckToolbarButton"
+        )
+
+        self.decks_favorites_button.setCheckable(True)
+
+        self.decks_favorites_button.setCursor(
+            Qt.CursorShape.PointingHandCursor
+        )
+
+        self.decks_favorites_button.toggled.connect(
+            lambda _checked: self.show_decks()
+        )
+
+        decks_toolbar_layout.addWidget(
+            self.decks_favorites_button
+        )
+
+        decks_layout.addWidget(
+            decks_toolbar
         )
 
         self.decks_scroll = QScrollArea()
@@ -6826,6 +7145,24 @@ class DecksPage(QWidget):
         )
 
         # =================================================
+        # FILTROS DO DECK
+        # =================================================
+
+        self.deck_filter_bar = DeckFilterBar()
+
+        self.deck_filter_bar.filtersChanged.connect(
+            self._apply_deck_filters
+        )
+
+        self.deck_filter_bar.groupingChanged.connect(
+            lambda _checked: self._apply_deck_filters()
+        )
+
+        deck_layout.addWidget(
+            self.deck_filter_bar
+        )
+
+        # =================================================
         # CONTEÚDO
         # =================================================
 
@@ -6894,6 +7231,25 @@ class DecksPage(QWidget):
         self.deck_content_layout.addWidget(
             self.cards_scroll,
             1,
+        )
+
+        # -------------------------------------------------
+        # SIDEBAR — ESTATÍSTICAS
+        # -------------------------------------------------
+
+        self.deck_stats_sidebar = DeckStatsSidebar()
+
+        self.deck_stats_sidebar.formatChanged.connect(
+            self._on_deck_format_changed
+        )
+
+        self.deck_stats_sidebar.favoriteToggled.connect(
+            self._on_deck_favorite_toggled
+        )
+
+        self.deck_content_layout.addWidget(
+            self.deck_stats_sidebar,
+            0,
         )
 
         # -------------------------------------------------
@@ -7115,6 +7471,96 @@ class DecksPage(QWidget):
                 widget.deleteLater()
 
     # =====================================================
+    # BUSCA / ORDENAÇÃO DA LISTA
+    # =====================================================
+
+    def _visible_decks(
+        self,
+        decks,
+    ):
+
+        decks = [
+            dict(deck)
+            for deck in (decks or [])
+        ]
+
+        for deck in decks:
+
+            deck["total_cards"] = get_deck_total_cards(
+                deck["id"]
+            )
+
+        search = (
+            self.decks_search.text().strip().casefold()
+            if hasattr(self, "decks_search")
+            else ""
+        )
+
+        if search:
+
+            decks = [
+                deck
+                for deck in decks
+                if search in str(deck.get("name") or "").casefold()
+                or search in format_label(
+                    deck.get("format")
+                ).casefold()
+            ]
+
+        if (
+            hasattr(self, "decks_favorites_button")
+            and self.decks_favorites_button.isChecked()
+        ):
+
+            decks = [
+                deck
+                for deck in decks
+                if deck.get("favorite")
+            ]
+
+        order = (
+            self.decks_sort.currentData()
+            if hasattr(self, "decks_sort")
+            else "updated"
+        )
+
+        if order == "name":
+
+            decks.sort(
+                key=lambda deck:
+                str(deck.get("name") or "").casefold()
+            )
+
+        elif order == "cards":
+
+            decks.sort(
+                key=lambda deck: deck["total_cards"],
+                reverse=True,
+            )
+
+        elif order == "favorite":
+
+            decks.sort(
+                key=lambda deck: (
+                    0 if deck.get("favorite") else 1,
+                    str(deck.get("updated_at") or ""),
+                )
+            )
+
+        return decks
+
+    def _on_deck_list_favorite(
+        self,
+        deck_id,
+        favorite,
+    ):
+
+        set_deck_favorite(
+            deck_id,
+            favorite,
+        )
+
+    # =====================================================
     # MOSTRAR DECKS
     # =====================================================
 
@@ -7126,7 +7572,9 @@ class DecksPage(QWidget):
                 self.decks_grid
             )
 
-            decks = get_all_decks()
+            decks = self._visible_decks(
+                get_all_decks()
+            )
 
             columns = 4
 
@@ -7147,14 +7595,16 @@ class DecksPage(QWidget):
                 )
 
                 frame.set_total(
-                    get_deck_total_cards(
-                        deck["id"]
-                    )
+                    deck.get("total_cards", 0)
                 )
 
                 frame.clicked.connect(
                     lambda did=deck["id"]:
                     self.open_deck(did)
+                )
+
+                frame.favoriteToggled.connect(
+                    self._on_deck_list_favorite
                 )
 
                 row = index // columns
@@ -7342,8 +7792,20 @@ class DecksPage(QWidget):
             deck["name"]
         )
 
+        self.current_deck_format = normalize_format(
+            deck.get("format")
+        )
+
         self.deck_name_label.setText(
             self.current_deck_name
+        )
+
+        self.deck_stats_sidebar.set_format(
+            self.current_deck_format
+        )
+
+        self.deck_stats_sidebar.set_favorite(
+            bool(deck.get("favorite"))
         )
 
         self.stack.setCurrentWidget(
@@ -7385,13 +7847,117 @@ class DecksPage(QWidget):
             f"{'carta' if total == 1 else 'cartas'}"
         )
 
+        self.update_deck_analysis(
+            total
+        )
+
         self.render_deck_cards(
-            self.current_deck_cards
+            self._filtered_deck_cards()
         )
 
         if load_preview:
 
             self.load_current_preview()
+
+    # =====================================================
+    # ANÁLISE DO DECK
+    # =====================================================
+
+    def update_deck_analysis(
+        self,
+        total=None,
+    ):
+
+        cards = self.current_deck_cards or []
+
+        stats = compute_deck_stats(
+            cards
+        )
+
+        self.deck_stats_sidebar.update_stats(
+            stats,
+            cards,
+        )
+
+        result = validate_deck(
+            cards,
+            self.current_deck_format,
+            total_cards=(
+                stats["total"]
+                if total is None
+                else total
+            ),
+        )
+
+        self.deck_stats_sidebar.update_validation(
+            result
+        )
+
+    # =====================================================
+    # FILTROS DO DECK
+    # =====================================================
+
+    def _filtered_deck_cards(
+        self,
+    ):
+
+        cards = self.current_deck_cards or []
+
+        if not hasattr(self, "deck_filter_bar"):
+            return list(cards)
+
+        return [
+            card
+            for card in cards
+            if self.deck_filter_bar.matches(card)
+        ]
+
+    def _apply_deck_filters(
+        self,
+    ):
+
+        if not self.current_deck_id:
+            return
+
+        self.render_deck_cards(
+            self._filtered_deck_cards()
+        )
+
+    # =====================================================
+    # FORMATO / FAVORITO
+    # =====================================================
+
+    def _on_deck_format_changed(
+        self,
+        format_key,
+    ):
+
+        if not self.current_deck_id:
+            return
+
+        self.current_deck_format = normalize_format(
+            format_key
+        )
+
+        set_deck_format(
+            self.current_deck_id,
+            self.current_deck_format,
+        )
+
+        self.update_deck_analysis()
+
+    def _on_deck_favorite_toggled(
+        self,
+        favorite,
+    ):
+
+        if not self.current_deck_id:
+            return
+
+        set_deck_favorite(
+            self.current_deck_id,
+            bool(favorite),
+        )
 
     # =====================================================
     # RENDER DECK
@@ -7429,8 +7995,14 @@ class DecksPage(QWidget):
 
             if not cards:
 
+                has_cards = bool(
+                    self.current_deck_cards
+                )
+
                 empty = QLabel(
-                    "Nenhuma carta neste deck."
+                    "Nenhuma carta com esses filtros."
+                    if has_cards
+                    else "Nenhuma carta neste deck."
                 )
 
                 empty.setObjectName(
@@ -7481,124 +8053,248 @@ class DecksPage(QWidget):
                 ),
             )
 
-            for index, card in enumerate(
-                cards
-            ):
+            grouped = (
+                hasattr(self, "deck_filter_bar")
+                and self.deck_filter_bar.group_by_type
+            )
 
-                card_id = int(
-                    _get_card_value(
-                        card,
-                        "id",
-                        0,
-                        0,
-                    )
-                    or 0
+            if grouped:
+
+                groups = self._group_deck_cards(
+                    cards
                 )
 
-                quantity = int(
-                    _get_card_value(
-                        card,
-                        "deck_quantity",
-                        14,
-                        0,
-                    )
-                    or 0
-                )
+            else:
 
-                frame = DeckCardFrame()
+                groups = [
+                    (None, cards)
+                ]
 
-                self._deck_card_frames[
-                    card_id
-                ] = frame
+            row = 0
 
-                frame.set_quantity(
-                    quantity
-                )
+            for title, group_cards in groups:
 
-                frame.doubleClicked.connect(
-                    lambda c=card:
-                    self.show_card_details(c)
-                )
+                if not group_cards:
+                    continue
 
-                frame.minus_button.clicked.connect(
-                    lambda checked=False,
-                    cid=card_id:
-                    self.change_card_quantity(
-                        cid,
-                        -1,
-                    )
-                )
+                if title:
 
-                frame.plus_button.clicked.connect(
-                    lambda checked=False,
-                    cid=card_id:
-                    self.change_card_quantity(
-                        cid,
-                        1,
-                    )
-                )
-
-                frame.quantityEdited.connect(
-                    lambda new_quantity,
-                           cid=card_id:
-                    self.set_deck_card_quantity(
-                        cid,
-                        new_quantity,
-                    )
-                )
-
-                row = index // columns
-
-                column = index % columns
-
-                # Carregar imagem SÍNCRONA antes de adicionar ao grid
-                image_path = _get_card_value(
-                    card,
-                    "image_path",
-                    11,
-                )
-
-                pixmap = _load_pixmap(
-                    image_path
-                )
-
-                if pixmap:
-                    scaled = pixmap.scaled(
-                        176,
-                        246,
-                        Qt.AspectRatioMode.KeepAspectRatio,
-                        Qt.TransformationMode.SmoothTransformation,
-                    )
-
-                    frame.image_label.setPixmap(
-                        scaled
-                    )
-
-                    frame.image_label.setText("")
-                else:
-                    # Usar card.png como placeholder
-                    if CARD_ICON_PATH.exists():
-                        placeholder = QPixmap(str(CARD_ICON_PATH))
-                        if not placeholder.isNull():
-                            scaled = placeholder.scaled(
-                                156,
-                                226,
-                                Qt.AspectRatioMode.KeepAspectRatio,
-                                Qt.TransformationMode.SmoothTransformation,
+                    total_group = sum(
+                        int(
+                            _get_card_value(
+                                card,
+                                "deck_quantity",
+                                14,
+                                0,
                             )
-                            frame.image_label.setPixmap(scaled)
-                            frame.image_label.setText("")
+                            or 0
+                        )
+                        for card in group_cards
+                    )
 
-                self.cards_grid.addWidget(
-                    frame,
-                    row,
-                    column,
-                    Qt.AlignmentFlag.AlignTop,
-                )
+                    header = DeckGroupHeader(
+                        title,
+                        total_group,
+                    )
+
+                    self.cards_grid.addWidget(
+                        header,
+                        row,
+                        0,
+                        1,
+                        columns,
+                    )
+
+                    row += 1
+
+                for index, card in enumerate(
+                    group_cards
+                ):
+
+                    frame = self._build_deck_card_frame(
+                        card
+                    )
+
+                    self.cards_grid.addWidget(
+                        frame,
+                        row + index // columns,
+                        index % columns,
+                        Qt.AlignmentFlag.AlignTop,
+                    )
+
+                row += (
+                    len(group_cards)
+                    + columns
+                    - 1
+                ) // columns
 
         finally:
 
             self._rendering_cards = False
+
+    # =====================================================
+    # AGRUPAR CARTAS POR TIPO
+    # =====================================================
+
+    def _group_deck_cards(
+        self,
+        cards,
+    ):
+
+        buckets = {
+            key: []
+            for key in TYPE_ORDER
+        }
+
+        for card in cards:
+
+            buckets[
+                card_type_key(
+                    _get_card_value(
+                        card,
+                        "type_line",
+                        7,
+                        "",
+                    )
+                )
+            ].append(card)
+
+        return [
+            (
+                TYPE_LABELS[key],
+                buckets[key],
+            )
+            for key in TYPE_ORDER
+        ]
+
+    # =====================================================
+    # CRIAR CARTA DO DECK
+    # =====================================================
+
+    def _build_deck_card_frame(
+        self,
+        card,
+    ):
+
+        card_id = int(
+            _get_card_value(
+                card,
+                "id",
+                0,
+                0,
+            )
+            or 0
+        )
+
+        quantity = int(
+            _get_card_value(
+                card,
+                "deck_quantity",
+                14,
+                0,
+            )
+            or 0
+        )
+
+        frame = DeckCardFrame()
+
+        self._deck_card_frames[
+            card_id
+        ] = frame
+
+        frame.set_quantity(
+            quantity
+        )
+
+        frame.set_color_identity(
+            identity_colors(
+                card
+                if isinstance(card, dict)
+                else _card_to_dict(card)
+            )
+        )
+
+        frame.doubleClicked.connect(
+            lambda c=card:
+            self.show_card_details(c)
+        )
+
+        frame.minus_button.clicked.connect(
+            lambda checked=False,
+            cid=card_id:
+            self.change_card_quantity(
+                cid,
+                -1,
+            )
+        )
+
+        frame.plus_button.clicked.connect(
+            lambda checked=False,
+            cid=card_id:
+            self.change_card_quantity(
+                cid,
+                1,
+            )
+        )
+
+        frame.quantityEdited.connect(
+            lambda new_quantity,
+                   cid=card_id:
+            self.set_deck_card_quantity(
+                cid,
+                new_quantity,
+            )
+        )
+
+        # Carregar imagem SÍNCRONA antes de adicionar ao grid
+        image_path = _get_card_value(
+            card,
+            "image_path",
+            11,
+        )
+
+        pixmap = _load_pixmap(
+            image_path
+        )
+
+        if pixmap:
+
+            scaled = pixmap.scaled(
+                176,
+                246,
+                Qt.AspectRatioMode.KeepAspectRatio,
+                Qt.TransformationMode.SmoothTransformation,
+            )
+
+            frame.image_label.setPixmap(
+                scaled
+            )
+
+            frame.image_label.setText("")
+
+        elif CARD_ICON_PATH.exists():
+
+            placeholder = QPixmap(
+                str(CARD_ICON_PATH)
+            )
+
+            if not placeholder.isNull():
+
+                scaled = placeholder.scaled(
+                    156,
+                    226,
+                    Qt.AspectRatioMode.KeepAspectRatio,
+                    Qt.TransformationMode.SmoothTransformation,
+                )
+
+                frame.image_label.setPixmap(
+                    scaled
+                )
+
+                frame.image_label.setText("")
+
+        return frame
+
     def set_deck_card_quantity(
         self,
         card_id,
